@@ -1,0 +1,14 @@
+{
+	"required": true,
+	"minVersion": "0.8",
+	"package": "gjum.minecraft.civ.mapsync.common.mixins",
+	"compatibilityLevel": "JAVA_8",
+	"mixins": [],
+	"client": [
+		"MixinClientPacketListener"
+	],
+	"server": [],
+	"injectors": {
+		"defaultRequire": 1
+	}
+}

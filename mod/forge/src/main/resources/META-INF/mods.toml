@@ -1,0 +1,28 @@
+modLoader = "javafml"
+loaderVersion = "[37,)"
+#issueTrackerURL = ""
+license = "All Rights Reserved"
+
+[[mods]]
+modId = "civmapsync"
+version = "${version}"
+displayName = "Civ Map Sync"
+authors = "Gjum"
+description = '''
+Sync map data with others instantly.
+'''
+#logoFile = ""
+
+[[dependencies.civmapsync]]
+modId = "forge"
+mandatory = true
+versionRange = "[37,)"
+ordering = "NONE"
+side = "CLIENT"
+
+[[dependencies.civmapsync]]
+modId = "minecraft"
+mandatory = true
+versionRange = "[1.17.1,)"
+ordering = "NONE"
+side = "CLIENT"

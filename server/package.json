@@ -1,0 +1,29 @@
+{
+	"name": "civmap-server",
+	"version": "0.1.0",
+	"private": true,
+	"author": "Gjum",
+	"license": "All Rights Reserved",
+	"scripts": {
+		"build": "tsc"
+	},
+	"dependencies": {
+		"node-fetch": "^3.1.1",
+		"sqlite3": "^5.0.2",
+		"ws": "^8.4.2"
+	},
+	"devDependencies": {
+		"@types/node": "^16.11.10",
+		"@types/sqlite3": "^3.1.8",
+		"@types/ws": "^8.2.0",
+		"dotenv": "^14.2.0",
+		"typescript": "^4.5.4"
+	},
+	"prettier": {
+		"useTabs": true,
+		"tabWidth": 2,
+		"trailingComma": "all",
+		"singleQuote": true,
+		"semi": false
+	}
+}

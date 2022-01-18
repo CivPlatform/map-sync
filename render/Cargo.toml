@@ -1,0 +1,9 @@
+[package]
+name = "civmap-render"
+version = "0.1.0"
+edition = "2021"
+authors = ["Gjum <code.gjum@gmail.com>"]
+
+[dependencies]
+byteorder = "~1.4.3"
+lodepng = "~3.4.7"

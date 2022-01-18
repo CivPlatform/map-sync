@@ -1,0 +1,24 @@
+{
+	"compilerOptions": {
+		"allowSyntheticDefaultImports": true,
+		"esModuleInterop": true,
+		"forceConsistentCasingInFileNames": true,
+		"isolatedModules": true,
+		"lib": [
+			"esnext"
+		],
+		"module": "CommonJS",
+		"moduleResolution": "node",
+		"noFallthroughCasesInSwitch": true,
+		"noImplicitAny": true,
+		"outDir": "dist",
+		"resolveJsonModule": true,
+		"skipLibCheck": true,
+		"sourceMap": true,
+		"strict": true,
+		"target": "ESNext"
+	},
+	"include": [
+		"src"
+	]
+}

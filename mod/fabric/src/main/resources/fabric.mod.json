@@ -1,0 +1,30 @@
+{
+	"schemaVersion": 1,
+	"id": "civ-map-sync",
+	"version": "${version}",
+	"name": "Civ Map Sync",
+	"description": "Sync map data with others instantly.",
+	"authors": [
+		"Gjum"
+	],
+	"contact": {
+		"homepage": "https://github.com/Gjum/civ-map-sync",
+		"sources": "https://github.com/Gjum/civ-map-sync"
+	},
+	"license": "All Rights Reserved",
+	"icon": "assets/civ-map-sync/icon.png",
+	"environment": "client",
+	"entrypoints": {
+		"client": [
+			"gjum.minecraft.civ.mapsync.fabric.FabricMapSyncMod"
+		]
+	},
+	"depends": {
+		"fabricloader": ">=0.7.4",
+		"fabric": "*",
+		"minecraft": "1.18.x"
+	},
+	"mixins": [
+		"mixin.civ-map-sync.json"
+	]
+}

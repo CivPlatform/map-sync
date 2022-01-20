@@ -5,40 +5,46 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Registry;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.Level;
 
-import static java.nio.charset.StandardCharsets.UTF_8;
+import static gjum.minecraft.civ.mapsync.common.Utils.readStringFromBuf;
+import static gjum.minecraft.civ.mapsync.common.Utils.writeStringToBuf;
 
 public record ChunkTile(
 		ResourceKey<Level> dimension,
 		int x, int z,
-		int version,
+		int dataVersion,
+		String dataHash,
 		BlockColumn[] columns
 ) {
+	public ChunkPos chunkPos() {
+		return new ChunkPos(x, z);
+	}
+
 	public void write(ByteBuf buf) {
-		String dimensionStr = dimension.location().toString();
-		buf.writeShort(dimensionStr.length());
-		buf.writeCharSequence(dimensionStr, UTF_8);
+		writeStringToBuf(buf, dimension.location().toString());
 		buf.writeInt(x);
 		buf.writeInt(z);
-		buf.writeShort(version);
+		buf.writeShort(dataVersion);
+		writeStringToBuf(buf, dataHash);
 		for (BlockColumn column : columns) {
 			column.write(buf);
 		}
 	}
 
 	public static ChunkTile fromBuf(ByteBuf buf) {
-		int dimensionStrLen = buf.readUnsignedShort();
-		String dimensionStr = buf.readCharSequence(dimensionStrLen, UTF_8).toString();
+		String dimensionStr = readStringFromBuf(buf);
 		var dimension = ResourceKey.create(Registry.DIMENSION_REGISTRY, new ResourceLocation(dimensionStr));
 		int x = buf.readInt();
 		int z = buf.readInt();
+		int dataVersion = buf.readUnsignedShort();
+		String hash = readStringFromBuf(buf);
 		var columns = new BlockColumn[256];
-		int version = buf.readUnsignedShort();
 		for (int i = 0; i < 256; i++) {
 			columns[i] = BlockColumn.fromBuf(buf);
 		}
-		return new ChunkTile(dimension, x, z, version, columns);
+		return new ChunkTile(dimension, x, z, dataVersion, hash, columns);
 	}
 
 	public static ChunkTile fromLevel(Level level, int cx, int cz) {
@@ -55,9 +61,14 @@ public record ChunkTile(
 				columns[i++] = BlockColumn.fromChunk(chunk, pos, biomeRegistry);
 			}
 		}
+		int dataVersion = 1;
 
-		int version = 1;
+		String dataHash = computeDataHash(columns);
 
-		return new ChunkTile(dimension, cx, cz, version, columns);
+		return new ChunkTile(dimension, cx, cz, dataVersion, dataHash, columns);
+	}
+
+	public static String computeDataHash(BlockColumn[] columns) {
+		return ""; // XXX computeDataHash
 	}
 }

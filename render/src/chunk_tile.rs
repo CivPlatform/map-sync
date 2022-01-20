@@ -10,7 +10,7 @@ pub type ChunkPos = (i32, i32);
 #[derive(Debug)]
 pub struct ChunkTile {
     pub pos: ChunkPos,
-    pub version: u16,
+    pub data_version: u16,
     pub columns: [BlockColumn; CHUNK_COLUMNS],
 }
 
@@ -18,7 +18,7 @@ impl ChunkTile {
     pub fn read(r: &mut dyn Read) -> Result<ChunkTile, io::Error> {
         let x = r.read_i32::<BigEndian>()?;
         let z = r.read_i32::<BigEndian>()?;
-        let version = r.read_u16::<BigEndian>()?;
+        let data_version = r.read_u16::<BigEndian>()?;
         // TODO build directly, do not use heap
         let mut columns_vec = Vec::with_capacity(CHUNK_COLUMNS);
         for _ in [0..CHUNK_COLUMNS] {
@@ -27,7 +27,7 @@ impl ChunkTile {
         let columns = columns_vec.try_into().expect("number of columns");
         Ok(ChunkTile {
             pos: (x, z),
-            version,
+            data_version,
             columns,
         })
     }
@@ -56,18 +56,22 @@ impl BlockColumn {
             layers,
         })
     }
+
+    pub fn ground_layer(&self) -> &BlockInfo {
+        self.layers.last().unwrap()
+    }
 }
 
 #[derive(Debug)]
 pub struct BlockInfo {
-    pub y: i32,
+    pub y: i16,
     pub id: u32,
 }
 
 impl BlockInfo {
     pub fn read(r: &mut dyn Read) -> Result<BlockInfo, io::Error> {
         Ok(BlockInfo {
-            y: r.read_i32::<BigEndian>()?,
+            y: r.read_i16::<BigEndian>()?,
             id: r.read_u32::<BigEndian>()?,
         })
     }

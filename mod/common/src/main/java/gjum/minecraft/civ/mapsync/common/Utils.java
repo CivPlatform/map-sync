@@ -1,6 +1,7 @@
 package gjum.minecraft.civ.mapsync.common;
 
 import com.mojang.authlib.exceptions.AuthenticationException;
+import io.netty.buffer.ByteBuf;
 import net.minecraft.client.Minecraft;
 import org.jetbrains.annotations.NotNull;
 
@@ -8,6 +9,8 @@ import java.math.BigInteger;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.HashMap;
+
+import static java.nio.charset.StandardCharsets.UTF_8;
 
 public class Utils {
 	private static final Minecraft mc = Minecraft.getInstance();
@@ -39,5 +42,15 @@ public class Utils {
 		} catch (NoSuchAlgorithmException e) {
 			throw new AuthenticationException(e);
 		}
+	}
+
+	public static void writeStringToBuf(ByteBuf buf, String string) {
+		buf.writeShort(string.length());
+		buf.writeCharSequence(string, UTF_8);
+	}
+
+	public static String readStringFromBuf(ByteBuf buf) {
+		int strLen = buf.readUnsignedShort();
+		return buf.readCharSequence(strLen, UTF_8).toString();
 	}
 }

@@ -23,6 +23,7 @@ public record BlockColumn(
 	public void write(ByteBuf buf) {
 		buf.writeShort(biomeId);
 		buf.writeByte(light);
+		buf.writeShort(layers.size());
 		for (BlockInfo layer : layers) {
 			layer.write(buf);
 		}

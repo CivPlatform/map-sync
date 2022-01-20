@@ -4,6 +4,7 @@ import com.mojang.authlib.exceptions.AuthenticationException;
 import io.netty.buffer.ByteBuf;
 import net.minecraft.client.Minecraft;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.math.BigInteger;
 import java.security.MessageDigest;
@@ -44,7 +45,11 @@ public class Utils {
 		}
 	}
 
-	public static void writeStringToBuf(ByteBuf buf, String string) {
+	public static void writeStringToBuf(ByteBuf buf, @Nullable String string) {
+		if (string == null) {
+			buf.writeShort(0);
+			return;
+		}
 		buf.writeShort(string.length());
 		buf.writeCharSequence(string, UTF_8);
 	}

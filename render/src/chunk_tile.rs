@@ -65,14 +65,14 @@ impl BlockColumn {
 #[derive(Debug)]
 pub struct BlockInfo {
     pub y: i16,
-    pub id: u32,
+    pub id: u16,
 }
 
 impl BlockInfo {
     pub fn read(r: &mut dyn Read) -> Result<BlockInfo, io::Error> {
         Ok(BlockInfo {
             y: r.read_i16::<BigEndian>()?,
-            id: r.read_u32::<BigEndian>()?,
+            id: r.read_u16::<BigEndian>()?,
         })
     }
 }

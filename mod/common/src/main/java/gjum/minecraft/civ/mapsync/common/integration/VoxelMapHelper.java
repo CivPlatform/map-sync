@@ -25,7 +25,7 @@ public class VoxelMapHelper {
 	private static Field dataUpdatedField;
 	private static Method loadCachedDataMethod;
 
-	// these are necessary because they take a BlockState, which is obfuscated in the VoxelMap jar.
+	// these are necessary because they take a BlockState, which is obfuscated in the VoxelMap jar
 	private static Method setTransparentBlockstateMethod;
 	private static Method setFoliageBlockstateMethod;
 	private static Method setBlockstateMethod;
@@ -73,31 +73,31 @@ public class VoxelMapHelper {
 
 			var mapData = (CompressibleMapData) regionDataField.get(region);
 
+			int x0 = (chunkTile.x() * 16) & 0xff;
+			int z0 = (chunkTile.z() * 16) & 0xff;
+
 			int i = 0;
-			for (int x = 0; x < 16; ++x) {
-				for (int z = 0; z < 16; ++z) {
+			for (int x = x0; x < x0 + 16; ++x) {
+				for (int z = z0; z < z0 + 16; ++z) {
 					var col = chunkTile.columns()[i++];
-					// "x/z in region"
-					int xir = chunkTile.x() * 16 - rx + x;
-					int zir = chunkTile.z() * 16 - rz + z;
 
-					mapData.setBiomeID(xir, zir, col.biomeId());
+					mapData.setBiomeID(x, z, col.biomeId());
 
-					mapData.setTransparentLight(xir, zir, col.light());
-					mapData.setTransparentHeight(xir, zir, transparentHeight);
-					setTransparentBlockstateMethod.invoke(mapData, xir, zir, transparentBlockState);
+					mapData.setTransparentLight(x, z, col.light());
+					mapData.setTransparentHeight(x, z, transparentHeight);
+					setTransparentBlockstateMethod.invoke(mapData, x, z, transparentBlockState);
 
-					mapData.setFoliageLight(xir, zir, col.light());
-					mapData.setFoliageHeight(xir, zir, foliageHeight);
-					setFoliageBlockstateMethod.invoke(mapData, xir, zir, foliageBlockState);
+					mapData.setFoliageLight(x, z, col.light());
+					mapData.setFoliageHeight(x, z, foliageHeight);
+					setFoliageBlockstateMethod.invoke(mapData, x, z, foliageBlockState);
 
-					mapData.setLight(xir, zir, col.light());
-					mapData.setHeight(xir, zir, surfaceHeight);
-					setBlockstateMethod.invoke(mapData, xir, zir, surfaceBlockState);
+					mapData.setLight(x, z, col.light());
+					mapData.setHeight(x, z, surfaceHeight);
+					setBlockstateMethod.invoke(mapData, x, z, surfaceBlockState);
 
-					mapData.setOceanFloorLight(xir, zir, col.light());
-					mapData.setOceanFloorHeight(xir, zir, seafloorHeight);
-					setOceanFloorBlockstateMethod.invoke(mapData, xir, zir, seafloorBlockState);
+					mapData.setOceanFloorLight(x, z, col.light());
+					mapData.setOceanFloorHeight(x, z, seafloorHeight);
+					setOceanFloorBlockstateMethod.invoke(mapData, x, z, seafloorBlockState);
 				}
 			}
 

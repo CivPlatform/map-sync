@@ -73,6 +73,7 @@ public class VoxelMapHelper {
 
 			var mapData = (CompressibleMapData) regionDataField.get(region);
 
+//			int x0 = chunkTile.x() * 16 - rx * 256;
 			int x0 = (chunkTile.x() * 16) & 0xff;
 			int z0 = (chunkTile.z() * 16) & 0xff;
 
@@ -83,21 +84,22 @@ public class VoxelMapHelper {
 
 					mapData.setBiomeID(x, z, col.biomeId());
 
-					mapData.setTransparentLight(x, z, col.light());
-					mapData.setTransparentHeight(x, z, transparentHeight);
-					setTransparentBlockstateMethod.invoke(mapData, x, z, transparentBlockState);
-
-					mapData.setFoliageLight(x, z, col.light());
-					mapData.setFoliageHeight(x, z, foliageHeight);
-					setFoliageBlockstateMethod.invoke(mapData, x, z, foliageBlockState);
-
-					mapData.setLight(x, z, col.light());
-					mapData.setHeight(x, z, surfaceHeight);
-					setBlockstateMethod.invoke(mapData, x, z, surfaceBlockState);
-
-					mapData.setOceanFloorLight(x, z, col.light());
-					mapData.setOceanFloorHeight(x, z, seafloorHeight);
-					setOceanFloorBlockstateMethod.invoke(mapData, x, z, seafloorBlockState);
+					// XXX
+//					mapData.setTransparentLight(x, z, col.light());
+//					mapData.setTransparentHeight(x, z, transparentHeight);
+//					setTransparentBlockstateMethod.invoke(mapData, x, z, transparentBlockState);
+//
+//					mapData.setFoliageLight(x, z, col.light());
+//					mapData.setFoliageHeight(x, z, foliageHeight);
+//					setFoliageBlockstateMethod.invoke(mapData, x, z, foliageBlockState);
+//
+//					mapData.setLight(x, z, col.light());
+//					mapData.setHeight(x, z, surfaceHeight);
+//					setBlockstateMethod.invoke(mapData, x, z, surfaceBlockState);
+//
+//					mapData.setOceanFloorLight(x, z, col.light());
+//					mapData.setOceanFloorHeight(x, z, seafloorHeight);
+//					setOceanFloorBlockstateMethod.invoke(mapData, x, z, seafloorBlockState);
 				}
 			}
 

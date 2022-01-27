@@ -1,4 +1,4 @@
-package gjum.minecraft.civ.mapsync.common.protocol;
+package gjum.minecraft.mapsync.common.protocol;
 
 import io.netty.buffer.ByteBuf;
 import net.minecraft.core.Registry;
@@ -7,8 +7,8 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.Level;
 
-import static gjum.minecraft.civ.mapsync.common.Utils.readStringFromBuf;
-import static gjum.minecraft.civ.mapsync.common.Utils.writeStringToBuf;
+import static gjum.minecraft.mapsync.common.Utils.readStringFromBuf;
+import static gjum.minecraft.mapsync.common.Utils.writeStringToBuf;
 
 public record ChunkHash(
 		ResourceKey<Level> dimension,

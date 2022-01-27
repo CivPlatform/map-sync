@@ -1,9 +1,9 @@
-package gjum.minecraft.civ.mapsync.common.integration;
+package gjum.minecraft.mapsync.common.integration;
 
 import com.mamiyaotaru.voxelmap.VoxelMap;
 import com.mamiyaotaru.voxelmap.interfaces.IPersistentMap;
 import com.mamiyaotaru.voxelmap.persistent.*;
-import gjum.minecraft.civ.mapsync.common.protocol.ChunkTile;
+import gjum.minecraft.mapsync.common.protocol.ChunkTile;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.world.level.block.state.BlockState;
 import org.jetbrains.annotations.Nullable;

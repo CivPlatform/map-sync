@@ -1,4 +1,4 @@
-package gjum.minecraft.civ.mapsync.common.mixins;
+package gjum.minecraft.mapsync.common.mixins;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientPacketListener;
@@ -13,8 +13,8 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 import java.lang.reflect.Field;
 
-import static gjum.minecraft.civ.mapsync.common.MapSyncMod.getMod;
-import static gjum.minecraft.civ.mapsync.common.Utils.printErrorRateLimited;
+import static gjum.minecraft.mapsync.common.MapSyncMod.getMod;
+import static gjum.minecraft.mapsync.common.Utils.printErrorRateLimited;
 
 @Mixin(ClientPacketListener.class)
 public abstract class MixinClientPacketListener {

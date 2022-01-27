@@ -11,4 +11,4 @@ include("common")
 include("fabric")
 include("forge")
 
-rootProject.name = "civ-map-sync"
+rootProject.name = "map-sync"

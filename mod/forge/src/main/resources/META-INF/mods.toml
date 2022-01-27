@@ -4,23 +4,23 @@ loaderVersion = "[37,)"
 license = "All Rights Reserved"
 
 [[mods]]
-modId = "civmapsync"
+modId = "mapsync"
 version = "${version}"
-displayName = "Civ Map Sync"
+displayName = "Map Sync"
 authors = "Gjum"
 description = '''
 Sync map data with others instantly.
 '''
 #logoFile = ""
 
-[[dependencies.civmapsync]]
+[[dependencies.mapsync]]
 modId = "forge"
 mandatory = true
 versionRange = "[37,)"
 ordering = "NONE"
 side = "CLIENT"
 
-[[dependencies.civmapsync]]
+[[dependencies.mapsync]]
 modId = "minecraft"
 mandatory = true
 versionRange = "[1.17.1,)"

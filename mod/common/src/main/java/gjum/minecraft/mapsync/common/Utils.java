@@ -1,4 +1,4 @@
-package gjum.minecraft.civ.mapsync.common;
+package gjum.minecraft.mapsync.common;
 
 import com.mojang.authlib.exceptions.AuthenticationException;
 import io.netty.buffer.ByteBuf;

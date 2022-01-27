@@ -1,4 +1,4 @@
-package gjum.minecraft.civ.mapsync.common.protocol;
+package gjum.minecraft.mapsync.common.protocol;
 
 import io.netty.buffer.ByteBuf;
 import net.minecraft.world.level.block.Block;

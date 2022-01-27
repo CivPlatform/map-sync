@@ -1,9 +1,9 @@
-package gjum.minecraft.civ.mapsync.common;
+package gjum.minecraft.mapsync.common;
 
 import com.mojang.blaze3d.platform.InputConstants;
-import gjum.minecraft.civ.mapsync.common.integration.VoxelMapHelper;
-import gjum.minecraft.civ.mapsync.common.protocol.ChunkHash;
-import gjum.minecraft.civ.mapsync.common.protocol.ChunkTile;
+import gjum.minecraft.mapsync.common.integration.VoxelMapHelper;
+import gjum.minecraft.mapsync.common.protocol.ChunkHash;
+import gjum.minecraft.mapsync.common.protocol.ChunkTile;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
 import net.minecraft.network.protocol.game.ClientboundLoginPacket;
@@ -19,10 +19,10 @@ public abstract class MapSyncMod {
 	private static MapSyncMod INSTANCE;
 
 	private static final KeyMapping openGuiKey = new KeyMapping(
-			"key.civ-map-sync.openGui",
+			"key.map-sync.openGui",
 			InputConstants.Type.KEYSYM,
 			GLFW.GLFW_KEY_COMMA,
-			"category.civ-map-sync"
+			"category.map-sync"
 	);
 
 	/**

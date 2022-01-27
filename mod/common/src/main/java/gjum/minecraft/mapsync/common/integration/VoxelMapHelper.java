@@ -1,6 +1,6 @@
 package gjum.minecraft.mapsync.common.integration;
 
-import com.mamiyaotaru.voxelmap.VoxelMap;
+import com.mamiyaotaru.voxelmap.interfaces.AbstractVoxelMap;
 import com.mamiyaotaru.voxelmap.interfaces.IPersistentMap;
 import com.mamiyaotaru.voxelmap.persistent.*;
 import gjum.minecraft.mapsync.common.protocol.ChunkTile;
@@ -116,7 +116,7 @@ public class VoxelMapHelper {
 	@Nullable
 	private static CachedRegion getRegion(int rx, int rz)
 			throws IllegalAccessException, InvocationTargetException, InstantiationException {
-		var vm = VoxelMap.getInstance();
+		var vm = AbstractVoxelMap.getInstance();
 		PersistentMap pm = (PersistentMap) vm.getPersistentMap();
 
 		@SuppressWarnings("unchecked")

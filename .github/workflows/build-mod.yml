@@ -1,4 +1,4 @@
-name: Gradle build
+name: Build Mod
 
 on: [ push, pull_request ]
 
@@ -12,7 +12,7 @@ jobs:
       with:
         java-version: '11'
         distribution: 'adopt'
-    - run: ./gradlew build
+    - run: cd mod && ./gradlew build
 
     - name: Release Tag
       if: startsWith(github.ref, 'refs/tags/v')
@@ -21,6 +21,6 @@ jobs:
         prerelease: true
         fail_on_unmatched_files: true
         files: |
-          dist/*.jar
+          mod/dist/*.jar
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

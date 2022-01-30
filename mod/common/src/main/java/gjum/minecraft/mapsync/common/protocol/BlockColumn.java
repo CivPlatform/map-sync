@@ -6,7 +6,6 @@ import net.minecraft.world.level.biome.Biome;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.Collectors;
 
 public record BlockColumn(
 		int biomeId,
@@ -20,16 +19,14 @@ public record BlockColumn(
 	public void write(ByteBuf buf) {
 		buf.writeShort(biomeId);
 		buf.writeByte(light);
-		// make sure there's at most 127 elements, and the last element is the bottom layer
-		var layersLimited = layers.stream().limit(127)
-				.collect(Collectors.toCollection(() ->
-						new ArrayList<>(Math.min(127, layers.size()))));
-		// last layer may be before 127; will be first and only entry most of the time
-		layersLimited.set(layersLimited.size() - 1, layers.get(layers.size() - 1));
-		buf.writeByte(layersLimited.size());
-		for (BlockInfo layer : layersLimited) {
+		// write at most 127 layers, and always include the bottom layer
+		buf.writeByte(Math.min(127, layers.size()));
+		int i = 0;
+		for (BlockInfo layer : layers) {
+			if (++i == 127) break;
 			layer.write(buf);
 		}
+		if (i == 127) layers.get(layers.size() - 1).write(buf);
 	}
 
 	public static BlockColumn fromBuf(ByteBuf buf) {

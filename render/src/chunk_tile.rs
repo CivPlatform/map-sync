@@ -45,7 +45,7 @@ impl BlockColumn {
     pub fn read(r: &mut dyn Read) -> Result<BlockColumn, io::Error> {
         let biome = r.read_u16::<BigEndian>()?;
         let light = r.read_u8()?;
-        let num_layers = r.read_u16::<BigEndian>()? as usize;
+        let num_layers = r.read_u8()? as usize;
         let mut layers = Vec::with_capacity(num_layers);
         for _ in 0..num_layers {
             layers.push(BlockInfo::read(r)?);

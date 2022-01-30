@@ -2,15 +2,23 @@ package gjum.minecraft.mapsync.common;
 
 import com.mojang.blaze3d.platform.InputConstants;
 import gjum.minecraft.mapsync.common.integration.VoxelMapHelper;
-import gjum.minecraft.mapsync.common.protocol.ChunkHash;
-import gjum.minecraft.mapsync.common.protocol.ChunkTile;
+import gjum.minecraft.mapsync.common.protocol.*;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Registry;
 import net.minecraft.network.protocol.game.ClientboundLoginPacket;
 import net.minecraft.network.protocol.game.ClientboundRespawnPacket;
 import net.minecraft.world.level.ChunkPos;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.biome.Biome;
+import net.minecraft.world.level.block.*;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.chunk.LevelChunk;
+import net.minecraft.world.level.levelgen.Heightmap;
 import org.lwjgl.glfw.GLFW;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 
 public abstract class MapSyncMod {
@@ -60,7 +68,7 @@ public abstract class MapSyncMod {
 		if (mc.level == null) return;
 		// TODO disable in nether (no meaningful "surface layer")
 
-		var chunkTile = ChunkTile.fromLevel(mc.level, cx, cz);
+		var chunkTile = chunkTileFromLevel(mc.level, cx, cz);
 		sendChunkTileToMapDataServer(chunkTile);
 	}
 
@@ -99,5 +107,47 @@ public abstract class MapSyncMod {
 
 		if (mc.level.hasChunk(chunkTile.x(), chunkTile.z())) return; // don't update loaded chunks
 		VoxelMapHelper.updateWithChunkTile(chunkTile);
+	}
+
+	public static ChunkTile chunkTileFromLevel(Level level, int cx, int cz) {
+		var dimension = level.dimension();
+		var chunk = level.getChunk(cx, cz);
+		var biomeRegistry = level.registryAccess().registryOrThrow(Registry.BIOME_REGISTRY);
+
+		var columns = new BlockColumn[256];
+		var pos = new BlockPos.MutableBlockPos(0, 0, 0);
+		int i = 0;
+		for (int z = 0; z < 16; z++) {
+			for (int x = 0; x < 16; x++) {
+				pos.set(x, 0, z);
+				columns[i++] = blockColumnFromChunk(chunk, pos, biomeRegistry);
+			}
+		}
+		int dataVersion = 1;
+
+		String dataHash = ChunkTile.computeDataHash(columns);
+
+		return new ChunkTile(dimension, cx, cz, dataVersion, dataHash, columns);
+	}
+
+	public static BlockColumn blockColumnFromChunk(LevelChunk chunk, BlockPos.MutableBlockPos pos, Registry<Biome> biomeRegistry) {
+		var layers = new ArrayList<BlockInfo>();
+		int y = chunk.getHeight(Heightmap.Types.WORLD_SURFACE, pos.getX(), pos.getZ());
+		pos.setY(y);
+		var bs = chunk.getBlockState(pos);
+		while (true) {
+			layers.add(new BlockInfo(pos.getY(), bs));
+			if (bs.getMaterial().isSolidBlocking()) break;
+			var prevBS = bs;
+			do {
+				pos.setY(--y);
+				bs = chunk.getBlockState(pos);
+			} while (bs == prevBS || bs.isAir());
+		}
+
+		int light = chunk.getLightEmission(pos);
+		var biome = Minecraft.getInstance().level.getBiome(pos);
+		int biomeId = biomeRegistry.getId(biome);
+		return new BlockColumn(biomeId, light, layers);
 	}
 }

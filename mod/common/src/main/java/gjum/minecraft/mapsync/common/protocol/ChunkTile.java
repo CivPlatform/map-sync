@@ -1,7 +1,6 @@
 package gjum.minecraft.mapsync.common.protocol;
 
 import io.netty.buffer.ByteBuf;
-import net.minecraft.core.BlockPos;
 import net.minecraft.core.Registry;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
@@ -45,27 +44,6 @@ public record ChunkTile(
 			columns[i] = BlockColumn.fromBuf(buf);
 		}
 		return new ChunkTile(dimension, x, z, dataVersion, hash, columns);
-	}
-
-	public static ChunkTile fromLevel(Level level, int cx, int cz) {
-		var dimension = level.dimension();
-		var chunk = level.getChunk(cx, cz);
-		var biomeRegistry = level.registryAccess().registryOrThrow(Registry.BIOME_REGISTRY);
-
-		var columns = new BlockColumn[256];
-		var pos = new BlockPos.MutableBlockPos(0, 0, 0);
-		int i = 0;
-		for (int z = 0; z < 16; z++) {
-			for (int x = 0; x < 16; x++) {
-				pos.set(x, 0, z);
-				columns[i++] = BlockColumn.fromChunk(chunk, pos, biomeRegistry);
-			}
-		}
-		int dataVersion = 1;
-
-		String dataHash = computeDataHash(columns);
-
-		return new ChunkTile(dimension, cx, cz, dataVersion, dataHash, columns);
 	}
 
 	public static String computeDataHash(BlockColumn[] columns) {

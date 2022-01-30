@@ -10,6 +10,9 @@ import net.minecraft.world.level.Level;
 import static gjum.minecraft.mapsync.common.Utils.readStringFromBuf;
 import static gjum.minecraft.mapsync.common.Utils.writeStringToBuf;
 
+/**
+ * communicate what chunk state is the latest known without sending the full data, by comparing only the hash of the data.
+ */
 public record ChunkHash(
 		ResourceKey<Level> dimension,
 		int x, int z,

@@ -1,12 +1,8 @@
 package gjum.minecraft.mapsync.common.protocol;
 
 import io.netty.buffer.ByteBuf;
-import net.minecraft.client.Minecraft;
-import net.minecraft.core.BlockPos.MutableBlockPos;
 import net.minecraft.core.Registry;
 import net.minecraft.world.level.biome.Biome;
-import net.minecraft.world.level.chunk.LevelChunk;
-import net.minecraft.world.level.levelgen.Heightmap;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -37,27 +33,6 @@ public record BlockColumn(
 		for (int i = 0; i < numLayers; i++) {
 			layers.add(BlockInfo.fromBuf(buf));
 		}
-		return new BlockColumn(biomeId, light, layers);
-	}
-
-	public static BlockColumn fromChunk(LevelChunk chunk, MutableBlockPos pos, Registry<Biome> biomeRegistry) {
-		var layers = new ArrayList<BlockInfo>();
-		int y = chunk.getHeight(Heightmap.Types.WORLD_SURFACE, pos.getX(), pos.getZ());
-		pos.setY(y);
-		var bs = chunk.getBlockState(pos);
-		while (true) {
-			layers.add(new BlockInfo(pos.getY(), bs));
-			if (bs.getMaterial().isSolidBlocking()) break;
-			var prevBS = bs;
-			do {
-				pos.setY(--y);
-				bs = chunk.getBlockState(pos);
-			} while (bs == prevBS || bs.isAir());
-		}
-
-		int light = chunk.getLightEmission(pos);
-		var biome = Minecraft.getInstance().level.getBiome(pos);
-		int biomeId = biomeRegistry.getId(biome);
 		return new BlockColumn(biomeId, light, layers);
 	}
 }

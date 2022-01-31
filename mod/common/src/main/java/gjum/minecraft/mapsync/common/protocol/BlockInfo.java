@@ -5,6 +5,8 @@ import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
 
 public record BlockInfo(int y, BlockState state) {
+	public static final int NUM_BYTES = 4;
+
 	public void write(ByteBuf buf) {
 		buf.writeShort(y);
 		buf.writeShort(Block.BLOCK_STATE_REGISTRY.getId(state)); // we can assume this never becomes large enough to overflow

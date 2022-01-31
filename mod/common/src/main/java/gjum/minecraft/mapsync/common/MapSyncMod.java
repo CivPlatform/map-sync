@@ -3,6 +3,7 @@ package gjum.minecraft.mapsync.common;
 import com.mojang.blaze3d.platform.InputConstants;
 import gjum.minecraft.mapsync.common.integration.VoxelMapHelper;
 import gjum.minecraft.mapsync.common.protocol.*;
+import io.netty.buffer.Unpooled;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
@@ -125,7 +126,10 @@ public abstract class MapSyncMod {
 		}
 		int dataVersion = 1;
 
-		String dataHash = ChunkTile.computeDataHash(columns);
+		// TODO speedup: don't serialize twice (once here, once later when writing to network)
+		var columnsBuf = Unpooled.buffer();
+		ChunkTile.writeColumns(columns, columnsBuf);
+		String dataHash = ChunkTile.computeDataHash(columnsBuf);
 
 		return new ChunkTile(dimension, cx, cz, dataVersion, dataHash, columns);
 	}

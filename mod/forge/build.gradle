@@ -78,3 +78,17 @@ publishing {
 		// Add repositories to publish to here.
 	}
 }
+
+task cleanJar(type: Delete) {
+	delete fileTree('../dist') {
+		include "*-forge.jar"
+	}
+}
+
+task copyJar(type: Copy) {
+	from remapJar
+	into '../dist'
+}
+
+build.dependsOn copyJar
+copyJar.dependsOn cleanJar

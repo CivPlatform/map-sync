@@ -23,6 +23,6 @@ side = "CLIENT"
 [[dependencies.mapsync]]
 modId = "minecraft"
 mandatory = true
-versionRange = "[1.17.1,)"
+versionRange = "[1.18.1,)"
 ordering = "NONE"
 side = "CLIENT"

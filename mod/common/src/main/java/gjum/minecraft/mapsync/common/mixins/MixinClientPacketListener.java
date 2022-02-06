@@ -96,7 +96,7 @@ public abstract class MixinClientPacketListener {
 		}
 	}
 
-	@Inject(method = "handleBlockBreakAck   ", at = @At("RETURN"))
+	@Inject(method = "handleBlockBreakAck", at = @At("RETURN"))
 	protected void onHandleBlockBreakAck(ClientboundBlockBreakAckPacket packet, CallbackInfo ci) {
 		if (!Minecraft.getInstance().isSameThread()) return; // will be called again on mc thread in a moment
 		try {

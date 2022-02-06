@@ -7,6 +7,12 @@ architectury {
 	forge()
 }
 
+loom {
+	forge {
+		mixinConfig "mixin.map-sync.json"
+	}
+}
+
 configurations {
 	common
 	shadowCommon // Don't use shadow from the shadow plugin because we don't want IDEA to index this.
@@ -46,7 +52,7 @@ shadowJar {
 remapJar {
 	input.set shadowJar.archiveFile
 	dependsOn shadowJar
-	classifier null
+	classifier "forge"
 }
 
 jar {

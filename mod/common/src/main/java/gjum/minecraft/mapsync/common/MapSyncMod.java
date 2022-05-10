@@ -1,7 +1,7 @@
 package gjum.minecraft.mapsync.common;
 
 import com.mojang.blaze3d.platform.InputConstants;
-import gjum.minecraft.mapsync.common.integration.VoxelMapHelper;
+import gjum.minecraft.mapsync.common.integration.JourneyMapHelper;
 import gjum.minecraft.mapsync.common.protocol.*;
 import io.netty.buffer.Unpooled;
 import net.minecraft.client.KeyMapping;
@@ -107,7 +107,7 @@ public abstract class MapSyncMod {
 		serverKnownChunkHashes.put(chunkTile.chunkPos(), chunkTile.dataHash());
 
 		if (mc.level.hasChunk(chunkTile.x(), chunkTile.z())) return; // don't update loaded chunks
-		VoxelMapHelper.updateWithChunkTile(chunkTile);
+		JourneyMapHelper.updateWithChunkTile(chunkTile);
 	}
 
 	public static ChunkTile chunkTileFromLevel(Level level, int cx, int cz) {

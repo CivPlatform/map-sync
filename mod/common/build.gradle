@@ -7,7 +7,8 @@ dependencies {
 	mappings loom.officialMojangMappings()
 
 	implementation 'org.java-websocket:Java-WebSocket:1.5.2'
-	implementation fileTree('../lib') { include '*jar' }
+
+	modCompileOnly files('../libs/journeymap-1.18.2-5.8.3-fabric.jar')
 }
 
 architectury {

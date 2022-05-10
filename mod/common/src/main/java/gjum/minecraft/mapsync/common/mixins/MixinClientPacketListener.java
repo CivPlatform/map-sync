@@ -20,9 +20,9 @@ import static gjum.minecraft.mapsync.common.Utils.printErrorRateLimited;
 public abstract class MixinClientPacketListener {
 
 	@Nullable
-	private Field posField;
+	private static Field posField;
 
-	public MixinClientPacketListener() {
+	static {
 		try {
 			//noinspection JavaReflectionMemberAccess
 			posField = ClientboundSectionBlocksUpdatePacket.class.getField("sectionPos");

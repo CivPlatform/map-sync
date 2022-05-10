@@ -1,5 +1,5 @@
 modLoader = "javafml"
-loaderVersion = "[37,)"
+loaderVersion = "[40,)"
 #issueTrackerURL = ""
 license = "All Rights Reserved"
 
@@ -16,13 +16,13 @@ Sync map data with others instantly.
 [[dependencies.mapsync]]
 modId = "forge"
 mandatory = true
-versionRange = "[37,)"
+versionRange = "[40,)"
 ordering = "NONE"
 side = "CLIENT"
 
 [[dependencies.mapsync]]
 modId = "minecraft"
 mandatory = true
-versionRange = "[1.18.1,)"
+versionRange = "[1.18.2,)"
 ordering = "NONE"
 side = "CLIENT"

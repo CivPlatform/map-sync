@@ -150,7 +150,7 @@ public abstract class MapSyncMod {
 		}
 
 		int light = chunk.getLightEmission(pos);
-		var biome = Minecraft.getInstance().level.getBiome(pos);
+		var biome = Minecraft.getInstance().level.getBiome(pos).value();
 		int biomeId = biomeRegistry.getId(biome);
 		return new BlockColumn(biomeId, light, layers);
 	}

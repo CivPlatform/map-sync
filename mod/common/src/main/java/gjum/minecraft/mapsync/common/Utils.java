@@ -3,6 +3,8 @@ package gjum.minecraft.mapsync.common;
 import com.mojang.authlib.exceptions.AuthenticationException;
 import io.netty.buffer.ByteBuf;
 import net.minecraft.client.Minecraft;
+import net.minecraft.core.Registry;
+import net.minecraft.world.level.biome.Biome;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -14,7 +16,11 @@ import java.util.HashMap;
 import static java.nio.charset.StandardCharsets.UTF_8;
 
 public class Utils {
-	private static final Minecraft mc = Minecraft.getInstance();
+	public static final Minecraft mc = Minecraft.getInstance();
+
+	public static Registry<Biome> getBiomeRegistry() {
+		return Minecraft.getInstance().level.registryAccess().registryOrThrow(Registry.BIOME_REGISTRY);
+	}
 
 	private static HashMap<String, Long> lastTimeSeenError = new HashMap<>();
 

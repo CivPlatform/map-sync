@@ -22,6 +22,8 @@ import org.lwjgl.glfw.GLFW;
 import java.util.ArrayList;
 import java.util.HashMap;
 
+import static gjum.minecraft.mapsync.common.Utils.getBiomeRegistry;
+
 public abstract class MapSyncMod {
 	private static final Minecraft mc = Minecraft.getInstance();
 
@@ -102,18 +104,22 @@ public abstract class MapSyncMod {
 
 	public void handleSharedChunk(ChunkTile chunkTile) {
 		if (mc.level == null) return;
-		if (chunkTile.dimension() != mc.level.dimension()) return;
+		if (chunkTile.dimension() != mc.level.dimension()) {
+			return;
+		}
 
 		serverKnownChunkHashes.put(chunkTile.chunkPos(), chunkTile.dataHash());
 
-		if (mc.level.hasChunk(chunkTile.x(), chunkTile.z())) return; // don't update loaded chunks
+		if (mc.level.getChunkSource().hasChunk(chunkTile.x(), chunkTile.z())) {
+			return; // don't update loaded chunks
+		}
 		JourneyMapHelper.updateWithChunkTile(chunkTile);
 	}
 
 	public static ChunkTile chunkTileFromLevel(Level level, int cx, int cz) {
 		var dimension = level.dimension();
 		var chunk = level.getChunk(cx, cz);
-		var biomeRegistry = level.registryAccess().registryOrThrow(Registry.BIOME_REGISTRY);
+		var biomeRegistry = getBiomeRegistry();
 
 		var columns = new BlockColumn[256];
 		var pos = new BlockPos.MutableBlockPos(0, 0, 0);

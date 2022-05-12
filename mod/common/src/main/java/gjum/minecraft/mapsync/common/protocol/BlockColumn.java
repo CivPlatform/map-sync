@@ -12,8 +12,6 @@ public record BlockColumn(
 		int light,
 		List<BlockInfo> layers
 ) {
-	public static final int MIN_BYTES = 4 + BlockInfo.NUM_BYTES;
-
 	public Biome biome(Registry<Biome> biomeRegistry) {
 		return biomeRegistry.byId(biomeId);
 	}

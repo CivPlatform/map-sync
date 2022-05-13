@@ -1,33 +1,28 @@
-import sqlite3 from 'sqlite3'
-
-export interface MapChunk {
-	world: string
-	chunk_x: number
-	chunk_z: number
-	uuid: string
-	ts: number
-	hash: string
-	/** binary representation of map data */
-	data: Uint8Array
-}
+import { connectDB } from './db'
+import { PlayerChunk, PlayerChunkDB } from './MapChunk'
 
 async function main() {
-	const db = new SqliteDB('db.sqlite')
-	db.all('', [])
+	await connectDB()
+
+	// XXX
+
+	const playerChunk: PlayerChunk = {
+		world: 'minecraft:overworld',
+		chunk_x: 1,
+		chunk_z: -2,
+		uuid: 'abcd1234',
+		ts: Date.now(),
+		data: { hash: 'the hash', version: 1, data: Buffer.from('the data') },
+	}
+
+	await PlayerChunkDB.store(playerChunk)
+
+	const chunks = await PlayerChunkDB.find({
+		// where: { chunk_x: 0 },
+		relations: { data: true },
+	})
+
+	console.log(chunks)
 }
 
 main()
-
-export class SqliteDB {
-	private db: sqlite3.Database
-
-	constructor(filename: string) {
-		this.db = new sqlite3.Database(filename)
-	}
-
-	all<T = unknown>(sql: string, params: any[]): Promise<T[]> {
-		return new Promise((res, rej) =>
-			this.db.all(sql, params, (err, rows) => (err ? rej(err) : res(rows))),
-		)
-	}
-}

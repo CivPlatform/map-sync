@@ -1,28 +1,55 @@
 import { connectDB } from './db'
 import { PlayerChunk, PlayerChunkDB } from './MapChunk'
+import { ClientPacket, ProtocolClient, ProtocolHandler } from './protocol'
+import { ChunkTilePacket } from './protocol/ChunkTilePacket'
+import { TlsServer } from './server'
 
-async function main() {
-	await connectDB()
+connectDB().then(() => new Main())
 
-	// XXX
+class Main implements ProtocolHandler {
+	server = new TlsServer({}, this)
 
-	const playerChunk: PlayerChunk = {
-		world: 'minecraft:overworld',
-		chunk_x: 1,
-		chunk_z: -2,
-		uuid: 'abcd1234',
-		ts: Date.now(),
-		data: { hash: 'the hash', version: 1, data: Buffer.from('the data') },
+	handleClientConnected(client: ProtocolClient) {
+		// XXX challenge with mojang auth
 	}
 
-	await PlayerChunkDB.store(playerChunk)
+	handleClientDisconnected(client: ProtocolClient) {}
 
-	const chunks = await PlayerChunkDB.find({
-		// where: { chunk_x: 0 },
-		relations: { data: true },
-	})
+	handleClientPacketReceived(client: ProtocolClient, pkt: ClientPacket) {
+		if (!client.uuid) {
+			// not authenticated yet
+			// switch (pkt.type) {
+			// 	case 'Auth':
+			// 		return XXX
+			// }
+			throw new Error(`Packet ${pkt.type} from unauth'd client ${client.id}`)
+		}
+		switch (pkt.type) {
+			case 'ChunkTile':
+				return this.handleChunkTilePacket(client, pkt)
+			default:
+				throw new Error(`Unknown client packet ${pkt.type}`)
+		}
+	}
 
-	console.log(chunks)
+	async handleChunkTilePacket(client: ProtocolClient, pkt: ChunkTilePacket) {
+		if (!client.uuid) throw new Error(`Client${client.id} is not authenticated`)
+		const playerChunk: PlayerChunk = {
+			uuid: client.uuid,
+			world: pkt.world,
+			chunk_x: pkt.chunk_x,
+			chunk_z: pkt.chunk_z,
+			data: pkt.data,
+			ts: Date.now(),
+		}
+		await PlayerChunkDB.store(playerChunk)
+
+		for (const otherClient of Object.values(this.server.clients)) {
+			if (client === otherClient) continue
+			// TODO don't send if client already has that chunk
+			otherClient.send(pkt)
+		}
+
+		// TODO queue render
+	}
 }
-
-main()

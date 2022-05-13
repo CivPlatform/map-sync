@@ -5,6 +5,7 @@ import io.netty.buffer.Unpooled;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.LightLayer;
 import net.minecraft.world.level.chunk.LevelChunk;
 import net.minecraft.world.level.levelgen.Heightmap;
 
@@ -49,8 +50,9 @@ public class Cartography {
 			} while (bs == prevBS || bs.isAir());
 		}
 
-		int light = chunk.getLightEmission(pos);
-		var biome = Minecraft.getInstance().level.getBiome(pos).value();
+		var world = Minecraft.getInstance().level;
+		int light = world.getBrightness(LightLayer.BLOCK, pos);
+		var biome = world.getBiome(pos).value();
 		return new BlockColumn(biome, light, layers);
 	}
 }

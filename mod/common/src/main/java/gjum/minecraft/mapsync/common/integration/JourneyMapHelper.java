@@ -102,7 +102,7 @@ public class JourneyMapHelper {
 
 		@Override
 		public Biome getBiome(BlockPos pos) {
-			return getCol(pos).biome(getBiomeRegistry());
+			return getCol(pos).biome();
 		}
 	}
 

@@ -2,23 +2,18 @@ package gjum.minecraft.mapsync.common;
 
 import com.mojang.blaze3d.platform.InputConstants;
 import gjum.minecraft.mapsync.common.integration.JourneyMapHelper;
-import gjum.minecraft.mapsync.common.protocol.*;
-import io.netty.buffer.Unpooled;
+import gjum.minecraft.mapsync.common.protocol.ChunkHash;
+import gjum.minecraft.mapsync.common.protocol.ChunkTile;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
-import net.minecraft.core.BlockPos;
 import net.minecraft.network.protocol.game.ClientboundLoginPacket;
 import net.minecraft.network.protocol.game.ClientboundRespawnPacket;
 import net.minecraft.world.level.ChunkPos;
-import net.minecraft.world.level.Level;
-import net.minecraft.world.level.block.*;
-import net.minecraft.world.level.block.state.BlockState;
-import net.minecraft.world.level.chunk.LevelChunk;
-import net.minecraft.world.level.levelgen.Heightmap;
 import org.lwjgl.glfw.GLFW;
 
-import java.util.ArrayList;
 import java.util.HashMap;
+
+import static gjum.minecraft.mapsync.common.Cartography.chunkTileFromLevel;
 
 public abstract class MapSyncMod {
 	private static final Minecraft mc = Minecraft.getInstance();
@@ -110,48 +105,5 @@ public abstract class MapSyncMod {
 			return; // don't update loaded chunks
 		}
 		JourneyMapHelper.updateWithChunkTile(chunkTile);
-	}
-
-	public static ChunkTile chunkTileFromLevel(Level level, int cx, int cz) {
-		var dimension = level.dimension();
-		var chunk = level.getChunk(cx, cz);
-
-		var columns = new BlockColumn[256];
-		var pos = new BlockPos.MutableBlockPos(0, 0, 0);
-		int i = 0;
-		for (int z = 0; z < 16; z++) {
-			for (int x = 0; x < 16; x++) {
-				pos.set(x, 0, z);
-				columns[i++] = blockColumnFromChunk(chunk, pos);
-			}
-		}
-		int dataVersion = 1;
-
-		// TODO speedup: don't serialize twice (once here, once later when writing to network)
-		var columnsBuf = Unpooled.buffer();
-		ChunkTile.writeColumns(columns, columnsBuf);
-		String dataHash = ChunkTile.computeDataHash(columnsBuf);
-
-		return new ChunkTile(dimension, cx, cz, dataVersion, dataHash, columns);
-	}
-
-	public static BlockColumn blockColumnFromChunk(LevelChunk chunk, BlockPos.MutableBlockPos pos) {
-		var layers = new ArrayList<BlockInfo>();
-		int y = chunk.getHeight(Heightmap.Types.WORLD_SURFACE, pos.getX(), pos.getZ());
-		pos.setY(y);
-		var bs = chunk.getBlockState(pos);
-		while (true) {
-			layers.add(new BlockInfo(pos.getY(), bs));
-			if (bs.getMaterial().isSolidBlocking()) break;
-			var prevBS = bs;
-			do {
-				pos.setY(--y);
-				bs = chunk.getBlockState(pos);
-			} while (bs == prevBS || bs.isAir());
-		}
-
-		int light = chunk.getLightEmission(pos);
-		var biome = Minecraft.getInstance().level.getBiome(pos).value();
-		return new BlockColumn(biome, light, layers);
 	}
 }

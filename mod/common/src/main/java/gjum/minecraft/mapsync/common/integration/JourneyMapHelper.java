@@ -1,73 +1,115 @@
 package gjum.minecraft.mapsync.common.integration;
 
-import gjum.minecraft.mapsync.common.protocol.BlockInfo;
-import gjum.minecraft.mapsync.common.protocol.ChunkTile;
+import gjum.minecraft.mapsync.common.protocol.*;
 import journeymap.client.JourneymapClient;
 import journeymap.client.io.FileHandler;
 import journeymap.client.model.*;
 import journeymap.common.nbt.RegionData;
 import journeymap.common.nbt.RegionDataStorageHandler;
 import net.minecraft.client.Minecraft;
-import net.minecraft.nbt.CompoundTag;
-import net.minecraft.nbt.NbtUtils;
+import net.minecraft.core.BlockPos;
+import net.minecraft.world.level.biome.Biome;
+import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.chunk.LevelChunk;
+
+import java.util.List;
 
 import static gjum.minecraft.mapsync.common.Utils.getBiomeRegistry;
 import static gjum.minecraft.mapsync.common.Utils.mc;
 
 public class JourneyMapHelper {
 	public static void updateWithChunkTile(ChunkTile chunkTile) {
-		var chunkMd = jmNBTChunkMDFromChunkTile(chunkTile);
+		var renderController = JourneymapClient.getInstance().getChunkRenderController();
+		if (renderController == null) return;
 
-		MapType mapType = MapType.day(chunkTile.dimension());
+		var chunkMd = new TileChunkMD(chunkTile);
 
 		var rCoord = RegionCoord.fromChunkPos(
 				FileHandler.getJMWorldDir(mc),
-				mapType,
+				MapType.day(chunkTile.dimension()), // type doesn't matter, only dimension is used
 				chunkMd.getCoord().x,
 				chunkMd.getCoord().z);
 
-		var key = new RegionDataStorageHandler.Key(rCoord, mapType);
+		var key = new RegionDataStorageHandler.Key(rCoord, MapType.day(chunkTile.dimension()));
 		RegionData regionData = RegionDataStorageHandler.getInstance().getRegionData(key);
 
-		var renderController = JourneymapClient.getInstance().getChunkRenderController();
+		final boolean renderedDay = renderController.renderChunk(rCoord,
+				MapType.day(chunkTile.dimension()), chunkMd, regionData);
+		if (!renderedDay) System.out.println("Failed rendering day at " + chunkTile.chunkPos());
 
-		final boolean rendered = renderController.renderChunk(rCoord, mapType, chunkMd, regionData);
+		final boolean renderedBiome = renderController.renderChunk(rCoord,
+				MapType.biome(chunkTile.dimension()), chunkMd, regionData);
+		if (!renderedBiome) System.out.println("Failed rendering biome at " + chunkTile.chunkPos());
+
+		final boolean renderedTopo = renderController.renderChunk(rCoord,
+				MapType.topo(chunkTile.dimension()), chunkMd, regionData);
+		if (!renderedTopo) System.out.println("Failed rendering topo at " + chunkTile.chunkPos());
 	}
 
-	public static NBTChunkMD jmNBTChunkMDFromChunkTile(ChunkTile chunkTile) {
-		var biomeRegistry = getBiomeRegistry();
-		var data = new CompoundTag();
-		int colNr = 0;
-		int cx0 = chunkTile.chunkPos().x * 16;
-		int cz0 = chunkTile.chunkPos().z * 16;
-		// "x/z in chunk"
-		for (int zic = 0; zic < 16; zic++) {
-			for (int xic = 0; xic < 16; xic++) {
-				String colKey = (cx0 + xic) + "," + (cz0 + zic);
+	private static class TileChunkMD extends NBTChunkMD {
+		private final ChunkTile chunkTile;
 
-				var col = chunkTile.columns()[colNr++];
-				var colTag = new CompoundTag();
-
-				int topY = col.layers().get(0).y();
-				colTag.putInt("top_y", topY);
-
-				String biomeName = biomeRegistry.getKey(col.biome(biomeRegistry)).toString();
-				colTag.putString("biome_name", biomeName);
-
-				var bsTag = new CompoundTag();
-				for (BlockInfo layer : col.layers()) {
-					var stateNbt = NbtUtils.writeBlockState(layer.state());
-					bsTag.put(String.valueOf(layer.y()), stateNbt);
-				}
-				colTag.put("blockstates", bsTag);
-
-				data.put(colKey, colTag);
-			}
+		public TileChunkMD(ChunkTile chunkTile) {
+			super(new LevelChunk(Minecraft.getInstance().level, chunkTile.chunkPos()),
+					chunkTile.chunkPos(),
+					null, // all accessing methods are overridden
+					MapType.day(chunkTile.dimension()) // just has to not be `underground`
+			);
+			this.chunkTile = chunkTile;
 		}
 
-		MapType mapType = MapType.day(chunkTile.dimension());
-		LevelChunk mcChunk = new LevelChunk(Minecraft.getInstance().level, chunkTile.chunkPos());
-		return new NBTChunkMD(mcChunk, chunkTile.chunkPos(), data, mapType);
+		@Override
+		public boolean hasChunk() {
+			return true;
+		}
+
+		private BlockColumn getCol(int x, int z) {
+			int xic = x & 0xf;
+			int zic = z & 0xf;
+			return chunkTile.columns()[xic + zic * 16];
+		}
+
+		private BlockColumn getCol(BlockPos pos) {
+			return getCol(pos.getX(), pos.getZ());
+		}
+
+		@Override
+		public BlockState getBlockState(BlockPos pos) {
+			var layers = getCol(pos.getX(), pos.getZ()).layers();
+			// XXX index from y
+			for (BlockInfo layer : layers) {
+				if (layer.y() == pos.getY()) {
+					return layer.state();
+				}
+			}
+			return getLast(layers).state();
+		}
+
+		@Override
+		public Integer getGetLightValue(BlockPos pos) {
+			return getCol(pos.getX(), pos.getZ()).light();
+		}
+
+		@Override
+		public Integer getTopY(BlockPos pos) {
+			return getCol(pos.getX(), pos.getZ()).layers().get(0).y();
+		}
+
+		@Override
+		public int getHeight(BlockPos pos) {
+			return this.getTopY(pos);
+		}
+
+		@Override
+		public Biome getBiome(BlockPos pos) {
+			return getCol(pos).biome(getBiomeRegistry());
+		}
+	}
+
+	private static <T> T getLast(List<T> l) {
+		if (l.isEmpty()) {
+			throw new Error("Empty list");
+		}
+		return l.get(l.size() - 1);
 	}
 }

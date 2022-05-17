@@ -51,13 +51,17 @@ export class BufReader {
 		return val
 	}
 
-	/** length-prefixed (16 bits), UTF-8 encoded */
+	/** length-prefixed (32 bits), UTF-8 encoded */
 	readString() {
-		const len = this.buf.readUInt16BE(this.off)
-		this.off += 2
+		const len = this.readUInt32()
 		const str = this.buf.toString('utf8', this.off, this.off + len)
 		this.off += len
 		return str
+	}
+
+	readBufWithLen() {
+		const len = this.readUInt32()
+		return this.readBufLen(len)
 	}
 
 	readBufLen(length: number) {

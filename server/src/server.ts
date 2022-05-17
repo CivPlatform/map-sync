@@ -3,12 +3,15 @@ import net from 'net'
 import type { ProtocolClient, ProtocolHandler, ServerPacket } from './protocol'
 import { decodePacket, encodePacket } from './protocol'
 import { BufReader } from './protocol/BufReader'
+import { BufWriter } from './protocol/BufWriter'
 
 const { PORT = '12312', HOST = '127.0.0.1' } = process.env
 
 export class TcpServer {
 	server: net.Server
 	clients: Record<number, TcpClient> = {}
+
+	serverKey = new NodeRSA({ b: 1024 })
 
 	constructor(handler: ProtocolHandler) {
 		this.server = net.createServer({}, (socket) => {
@@ -33,6 +36,9 @@ let nextClientId = 1
 /** Prefixes packets with their length (UInt32BE) */
 export class TcpClient implements ProtocolClient {
 	readonly id = nextClientId++
+
+	verifyToken: Buffer | undefined
+	publicKeyBuffer: Buffer | undefined
 
 	uuid: string | undefined
 
@@ -77,7 +83,8 @@ export class TcpClient implements ProtocolClient {
 				pktBuf = this.decipher.update(pktBuf)
 			}
 
-			const packet = decodePacket(pktBuf)
+			const reader = new BufReader(pktBuf)
+			const packet = decodePacket(reader)
 
 			handler.handleClientPacketReceived(this, packet)
 		})
@@ -104,7 +111,9 @@ export class TcpClient implements ProtocolClient {
 
 	sendUnencrypted(pkt: ServerPacket) {
 		if (!this.socket.writable) return
-		const pktBuf = encodePacket(pkt)
+		const writer = new BufWriter() // TODO size hint
+		encodePacket(pkt, writer)
+		const pktBuf = writer.getBuffer()
 		this.frameAndSend(pktBuf)
 	}
 
@@ -114,7 +123,9 @@ export class TcpClient implements ProtocolClient {
 			return
 		}
 		if (!this.socket.writable) return
-		const pktBufRaw = encodePacket(pkt)
+		const writer = new BufWriter() // TODO size hint
+		encodePacket(pkt, writer)
+		const pktBufRaw = writer.getBuffer()
 		const pktBuf = this.cipher.update(pktBufRaw)
 		this.frameAndSend(pktBuf)
 	}

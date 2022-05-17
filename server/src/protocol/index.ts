@@ -1,10 +1,18 @@
 import { BufReader } from './BufReader'
 import { BufWriter } from './BufWriter'
 import { ChunkTilePacket } from './ChunkTilePacket'
+import { EncryptionRequestPacket } from './EncryptionRequestPacket'
+import { EncryptionResponsePacket } from './EncryptionResponsePacket'
+import { HandshakePacket } from './HandshakePacket'
 
 export interface ProtocolClient {
 	/** unique among all clients */
 	readonly id: number
+
+	/** used during authentication handshake */
+	verifyToken: Buffer | undefined
+	/** used during authentication handshake */
+	publicKeyBuffer: Buffer | undefined
 
 	/** if set, client has authenticated with Mojang */
 	uuid: string | undefined
@@ -25,7 +33,20 @@ export interface ProtocolHandler {
 	handleClientPacketReceived(client: ProtocolClient, packet: ClientPacket): void
 }
 
-export const packetIds = ['ERROR', 'Auth', 'ChunkTile', 'SyncTime']
+export type ClientPacket =
+	| ChunkTilePacket
+	| EncryptionResponsePacket
+	| HandshakePacket
+
+export type ServerPacket = ChunkTilePacket | EncryptionRequestPacket
+
+export const packetIds = [
+	'ERROR:pkt0',
+	'Handshake',
+	'EncryptionRequest',
+	'EncryptionResponse',
+	'ChunkTile',
+]
 
 export function getPacketId(type: ServerPacket['type']) {
 	const id = packetIds.indexOf(type)
@@ -33,29 +54,28 @@ export function getPacketId(type: ServerPacket['type']) {
 	return id
 }
 
-export type ClientPacket = ChunkTilePacket
-
-export type ServerPacket = ChunkTilePacket
-
-export function decodePacket(pktBuf: Buffer): ClientPacket {
-	const reader = new BufReader(pktBuf)
+export function decodePacket(reader: BufReader): ClientPacket {
 	const packetType = reader.readUInt8()
 	switch (packetIds[packetType]) {
 		case 'ChunkTile':
 			return ChunkTilePacket.decode(reader)
+		case 'Handshake':
+			return HandshakePacket.decode(reader)
+		case 'EncryptionResponse':
+			return EncryptionResponsePacket.decode(reader)
 		default:
 			throw new Error(`Unknown packet type ${packetType}`)
 	}
 }
 
-export function encodePacket(pkt: ServerPacket): Buffer {
-	const writer = new BufWriter() // TODO size hint
+export function encodePacket(pkt: ServerPacket, writer: BufWriter): void {
 	writer.writeUInt8(getPacketId(pkt.type))
 	switch (pkt.type) {
 		case 'ChunkTile':
-			ChunkTilePacket.encode(pkt, writer)
-			return writer.getBuffer()
+			return ChunkTilePacket.encode(pkt, writer)
+		case 'EncryptionRequest':
+			return EncryptionRequestPacket.encode(pkt, writer)
 		default:
-			throw new Error(`Unknown packet type ${pkt.type}`)
+			throw new Error(`Unknown packet type ${(pkt as any).type}`)
 	}
 }

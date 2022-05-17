@@ -30,6 +30,6 @@ export namespace ChunkTilePacket {
 		writer.writeInt32(pkt.chunk_z)
 		writer.writeUInt8(pkt.data.version)
 		writer.writeString(pkt.data.hash)
-		writer.writeBuf(pkt.data.data)
+		writer.writeBufRaw(pkt.data.data) // XXX do we need to prefix with length?
 	}
 }

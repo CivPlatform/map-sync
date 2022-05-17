@@ -49,17 +49,26 @@ export class BufWriter {
 		this.off += 4
 	}
 
-	/** length-prefixed (16 bits), UTF-8 encoded */
+	/** length-prefixed (32 bits), UTF-8 encoded */
 	writeString(str: string) {
 		const strBuf = Buffer.from(str, 'utf8')
-		this.ensureSpace(2 + strBuf.length)
-		this.buf.writeUInt16BE(strBuf.length, this.off)
-		this.off += 2
+		this.ensureSpace(4 + strBuf.length)
+		this.buf.writeUInt32BE(strBuf.length, this.off)
+		this.off += 4
 		this.buf.set(strBuf, this.off)
 		this.off += strBuf.length
 	}
 
-	writeBuf(buf: Buffer) {
+	/** length-prefixed (32 bits), UTF-8 encoded */
+	writeBufWithLen(buf: Buffer) {
+		this.ensureSpace(4 + buf.length)
+		this.buf.writeUInt32BE(buf.length, this.off)
+		this.off += 4
+		this.buf.set(buf, this.off)
+		this.off += buf.length
+	}
+
+	writeBufRaw(buf: Buffer) {
 		this.ensureSpace(buf.length)
 		this.buf.set(buf, this.off)
 		this.off += buf.length

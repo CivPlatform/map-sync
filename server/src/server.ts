@@ -42,6 +42,10 @@ export class TcpClient implements ProtocolClient {
 	private cipher?: crypto.Cipher
 	private decipher?: crypto.Decipher
 
+	get isEncrypted() {
+		return !!(this.cipher && this.decipher)
+	}
+
 	constructor(private socket: net.Socket, handler: ProtocolHandler) {
 		this.log('Connected', socket.remoteAddress)
 		handler.handleClientConnected(this)
@@ -98,12 +102,24 @@ export class TcpClient implements ProtocolClient {
 		})
 	}
 
-	send(pkt: ServerPacket) {
+	sendUnencrypted(pkt: ServerPacket) {
 		if (!this.socket.writable) return
-		let pktBuf = encodePacket(pkt)
-		if (this.cipher) {
-			pktBuf = this.cipher.update(pktBuf)
+		const pktBuf = encodePacket(pkt)
+		this.frameAndSend(pktBuf)
+	}
+
+	send(pkt: ServerPacket) {
+		if (!this.cipher) {
+			this.debug('Not encrypted, dropping packet', pkt.type)
+			return
 		}
+		if (!this.socket.writable) return
+		const pktBufRaw = encodePacket(pkt)
+		const pktBuf = this.cipher.update(pktBufRaw)
+		this.frameAndSend(pktBuf)
+	}
+
+	private frameAndSend(pktBuf: Buffer) {
 		const lenBuf = Buffer.alloc(4)
 		lenBuf.writeUInt32BE(pktBuf.length)
 		if (!this.socket.writable) return
@@ -111,7 +127,7 @@ export class TcpClient implements ProtocolClient {
 		this.socket.write(pktBuf)
 	}
 
-	enableCrypto(secret: string) {
+	enableCrypto(secret: Buffer) {
 		if (this.cipher || this.decipher) {
 			throw new Error('Crypto is already enabled')
 		}

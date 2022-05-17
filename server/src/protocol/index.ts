@@ -9,6 +9,13 @@ export interface ProtocolClient {
 	/** if set, client has authenticated with Mojang */
 	uuid: string | undefined
 
+	/** if set, client has authenticated with Mojang */
+	isEncrypted: boolean
+
+	enableCrypto(secret: Buffer): void
+
+	sendUnencrypted(packet: ServerPacket): void
+
 	send(packet: ServerPacket): void
 }
 

@@ -4,11 +4,15 @@ import com.mojang.blaze3d.platform.InputConstants;
 import gjum.minecraft.mapsync.common.data.ChunkHash;
 import gjum.minecraft.mapsync.common.data.ChunkTile;
 import gjum.minecraft.mapsync.common.integration.JourneyMapHelper;
+import gjum.minecraft.mapsync.common.net.TcpClient;
+import gjum.minecraft.mapsync.common.net.packet.ChunkTilePacket;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.multiplayer.ServerData;
 import net.minecraft.network.protocol.game.ClientboundLoginPacket;
 import net.minecraft.network.protocol.game.ClientboundRespawnPacket;
 import net.minecraft.world.level.ChunkPos;
+import org.jetbrains.annotations.Nullable;
 import org.lwjgl.glfw.GLFW;
 
 import java.util.HashMap;
@@ -16,9 +20,11 @@ import java.util.HashMap;
 import static gjum.minecraft.mapsync.common.Cartography.chunkTileFromLevel;
 
 public abstract class MapSyncMod {
+	public static final String VERSION = "1.0.0";
+
 	private static final Minecraft mc = Minecraft.getInstance();
 
-	private static MapSyncMod INSTANCE;
+	public static MapSyncMod INSTANCE;
 
 	private static final KeyMapping openGuiKey = new KeyMapping(
 			"key.map-sync.openGui",
@@ -26,6 +32,8 @@ public abstract class MapSyncMod {
 			GLFW.GLFW_KEY_COMMA,
 			"category.map-sync"
 	);
+
+	private @Nullable TcpClient syncClient;
 
 	/**
 	 * for current dimension
@@ -54,10 +62,28 @@ public abstract class MapSyncMod {
 	}
 
 	public void handleConnectedToServer(ClientboundLoginPacket packet) {
-		// XXX connect
+		final ServerData currentServer = Minecraft.getInstance().getCurrentServer();
+		if (currentServer == null) return;
+		String gameAddress = currentServer.ip;
+
+		@Nullable String syncServerAddress = "localhost:12312"; // XXX
+
+		if (syncClient != null) {
+			if (!syncClient.gameAddress.equals(gameAddress)
+					|| !syncClient.address.equals(syncServerAddress)
+			) {
+				syncClient.shutDown();
+				syncClient = null;
+			}
+		}
+
+		if (syncClient == null || syncClient.isShutDown) {
+			syncClient = new TcpClient(syncServerAddress, gameAddress);
+		}
 	}
 
 	public void handleRespawn(ClientboundRespawnPacket packet) {
+		// TODO handle dimensions correctly
 	}
 
 	/**
@@ -89,7 +115,17 @@ public abstract class MapSyncMod {
 		boolean hashKnownToServer = chunkTile.dataHash().equals(serverKnownChunkHashes.get(chunkTile.chunkPos()));
 		if (hashKnownToServer) return; // server already has this chunk
 
-		// XXX send to server
+		boolean sent = syncClient.send(new ChunkTilePacket(chunkTile));
+		if (sent) serverKnownChunkHashes.put(chunkTile.chunkPos(), chunkTile.dataHash());
+		// else: send again next time chunk loads
+	}
+
+	public void handleSyncServerConnected() {
+
+	}
+
+	public void handleSyncServerEncryptionSuccess() {
+
 	}
 
 	public void handleSharedChunkHash(ChunkHash chunkHash) {

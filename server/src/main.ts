@@ -2,12 +2,12 @@ import { connectDB } from './db'
 import { PlayerChunk, PlayerChunkDB } from './MapChunk'
 import { ClientPacket, ProtocolClient, ProtocolHandler } from './protocol'
 import { ChunkTilePacket } from './protocol/ChunkTilePacket'
-import { TlsServer } from './server'
+import { TcpServer } from './server'
 
 connectDB().then(() => new Main())
 
 class Main implements ProtocolHandler {
-	server = new TlsServer({}, this)
+	server = new TcpServer(this)
 
 	handleClientConnected(client: ProtocolClient) {
 		// XXX challenge with mojang auth
@@ -34,6 +34,9 @@ class Main implements ProtocolHandler {
 
 	async handleChunkTilePacket(client: ProtocolClient, pkt: ChunkTilePacket) {
 		if (!client.uuid) throw new Error(`Client${client.id} is not authenticated`)
+
+		// TODO ignore if same chunk hash exists in db
+
 		const playerChunk: PlayerChunk = {
 			uuid: client.uuid,
 			world: pkt.world,
@@ -44,9 +47,9 @@ class Main implements ProtocolHandler {
 		}
 		await PlayerChunkDB.store(playerChunk)
 
+		// TODO small timeout, then skip if other client already has it
 		for (const otherClient of Object.values(this.server.clients)) {
 			if (client === otherClient) continue
-			// TODO don't send if client already has that chunk
 			otherClient.send(pkt)
 		}
 

@@ -1,49 +1,28 @@
-import fs from 'fs'
-import tls from 'tls'
+import net from 'net'
 import type { ProtocolClient, ProtocolHandler, ServerPacket } from './protocol'
 import { decodePacket, encodePacket } from './protocol'
 import { BufReader } from './protocol/BufReader'
 
 const { PORT = '12312', HOST = '127.0.0.1' } = process.env
 
-/*
-https://nodejs.org/api/tls.html#tlsssl-concepts
+export class TcpServer {
+	server: net.Server
+	clients: Record<number, TcpClient> = {}
 
-create private key:
-openssl genrsa -out private-key.pem 4096
-
-create CSR (certificate signing request):
-openssl req -new -key private-key.pem -out csr.pem
-
-create public cert by signing private key:
-openssl x509 -req -in csr.pem -signkey private-key.pem -out public-cert.pem
-*/
-const defaultOptions: tls.TlsOptions = {
-	key: fs.readFileSync('private-key.pem'),
-	cert: fs.readFileSync('public-cert.pem'),
-	// rejectUnauthorized: false,
-}
-
-export class TlsServer {
-	server: tls.Server
-	clients: Record<number, TlsClient> = {}
-
-	constructor(options: tls.TlsOptions, handler: ProtocolHandler) {
-		options = { ...defaultOptions, ...options }
-
-		this.server = tls.createServer(options, (socket) => {
-			const client = new TlsClient(socket, handler)
+	constructor(handler: ProtocolHandler) {
+		this.server = net.createServer({}, (socket) => {
+			const client = new TcpClient(socket, handler)
 			this.clients[client.id] = client
 			socket.on('end', () => delete this.clients[client.id])
 		})
 
 		this.server.on('error', (err: Error) => {
-			console.error('[Server] Error:', err)
+			console.error('[TcpServer] Error:', err)
 			this.server.close()
 		})
 
 		this.server.listen({ port: PORT, hostname: HOST }, () => {
-			console.log('[Server] Listening on', HOST, PORT)
+			console.log('[TcpServer] Listening on', HOST, PORT)
 		})
 	}
 }
@@ -51,7 +30,7 @@ export class TlsServer {
 let nextClientId = 1
 
 /** Prefixes packets with their length (UInt32BE) */
-export class TlsClient implements ProtocolClient {
+export class TcpClient implements ProtocolClient {
 	readonly id = nextClientId++
 
 	uuid: string | undefined
@@ -59,7 +38,7 @@ export class TlsClient implements ProtocolClient {
 	/** prevent Out of Memory when client sends a large packet */
 	maxFrameSize = 2 ** 24
 
-	constructor(private socket: tls.TLSSocket, handler: ProtocolHandler) {
+	constructor(private socket: net.Socket, handler: ProtocolHandler) {
 		this.log('Connected', socket.remoteAddress)
 		handler.handleClientConnected(this)
 

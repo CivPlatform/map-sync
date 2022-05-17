@@ -1,6 +1,6 @@
 package gjum.minecraft.mapsync.common;
 
-import gjum.minecraft.mapsync.common.protocol.*;
+import gjum.minecraft.mapsync.common.data.*;
 import io.netty.buffer.Unpooled;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;

@@ -1,4 +1,4 @@
-package gjum.minecraft.mapsync.common.protocol;
+package gjum.minecraft.mapsync.common.data;
 
 import io.netty.buffer.ByteBuf;
 import net.minecraft.core.Registry;
@@ -42,6 +42,7 @@ public record ChunkTile(
 	}
 
 	public static void writeColumns(BlockColumn[] columns, ByteBuf buf) {
+		// TODO compress
 		for (BlockColumn column : columns) {
 			column.write(buf);
 		}

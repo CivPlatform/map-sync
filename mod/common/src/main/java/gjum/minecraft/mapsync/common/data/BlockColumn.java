@@ -1,4 +1,4 @@
-package gjum.minecraft.mapsync.common.protocol;
+package gjum.minecraft.mapsync.common.data;
 
 import io.netty.buffer.ByteBuf;
 import net.minecraft.world.level.biome.Biome;

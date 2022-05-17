@@ -1,6 +1,6 @@
 package gjum.minecraft.mapsync.common.integration;
 
-import gjum.minecraft.mapsync.common.protocol.*;
+import gjum.minecraft.mapsync.common.data.*;
 import journeymap.client.JourneymapClient;
 import journeymap.client.io.FileHandler;
 import journeymap.client.model.*;
@@ -14,7 +14,6 @@ import net.minecraft.world.level.chunk.LevelChunk;
 
 import java.util.List;
 
-import static gjum.minecraft.mapsync.common.Utils.getBiomeRegistry;
 import static gjum.minecraft.mapsync.common.Utils.mc;
 
 public class JourneyMapHelper {

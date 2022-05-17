@@ -1,9 +1,9 @@
 package gjum.minecraft.mapsync.common;
 
 import com.mojang.blaze3d.platform.InputConstants;
+import gjum.minecraft.mapsync.common.data.ChunkHash;
+import gjum.minecraft.mapsync.common.data.ChunkTile;
 import gjum.minecraft.mapsync.common.integration.JourneyMapHelper;
-import gjum.minecraft.mapsync.common.protocol.ChunkHash;
-import gjum.minecraft.mapsync.common.protocol.ChunkTile;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
 import net.minecraft.network.protocol.game.ClientboundLoginPacket;

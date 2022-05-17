@@ -1,3 +1,4 @@
+import crypto from 'crypto'
 import net from 'net'
 import type { ProtocolClient, ProtocolHandler, ServerPacket } from './protocol'
 import { decodePacket, encodePacket } from './protocol'
@@ -38,6 +39,9 @@ export class TcpClient implements ProtocolClient {
 	/** prevent Out of Memory when client sends a large packet */
 	maxFrameSize = 2 ** 24
 
+	private cipher?: crypto.Cipher
+	private decipher?: crypto.Decipher
+
 	constructor(private socket: net.Socket, handler: ProtocolHandler) {
 		this.log('Connected', socket.remoteAddress)
 		handler.handleClientConnected(this)
@@ -46,6 +50,8 @@ export class TcpClient implements ProtocolClient {
 		let accBuf: Buffer = Buffer.alloc(0)
 
 		socket.on('data', (data: Buffer) => {
+			// TODO what if an exception happens anywhere here?
+
 			this.debug('Received', data.length, 'bytes')
 
 			// creating a new buffer every time is fine in our case, because we expect most frames to be large
@@ -60,8 +66,12 @@ export class TcpClient implements ProtocolClient {
 
 			const frameReader = new BufReader(accBuf)
 			frameReader.readUInt32() // skip frame size
-			const pktBuf = frameReader.readBufLen(frameSize)
+			let pktBuf = frameReader.readBufLen(frameSize)
 			accBuf = frameReader.readRemainder()
+
+			if (this.decipher) {
+				pktBuf = this.decipher.update(pktBuf)
+			}
 
 			const packet = decodePacket(pktBuf)
 
@@ -73,6 +83,8 @@ export class TcpClient implements ProtocolClient {
 		})
 
 		socket.on('end', () => {
+			this.cipher?.final()
+			this.decipher?.final()
 			this.log('Ended')
 		})
 
@@ -88,12 +100,23 @@ export class TcpClient implements ProtocolClient {
 
 	send(pkt: ServerPacket) {
 		if (!this.socket.writable) return
-		const pktBuf = encodePacket(pkt)
+		let pktBuf = encodePacket(pkt)
+		if (this.cipher) {
+			pktBuf = this.cipher.update(pktBuf)
+		}
 		const lenBuf = Buffer.alloc(4)
 		lenBuf.writeUInt32BE(pktBuf.length)
 		if (!this.socket.writable) return
 		this.socket.write(lenBuf)
 		this.socket.write(pktBuf)
+	}
+
+	enableCrypto(secret: string) {
+		if (this.cipher || this.decipher) {
+			throw new Error('Crypto is already enabled')
+		}
+		this.cipher = crypto.createCipheriv('aes-128-cfb8', secret, secret)
+		this.decipher = crypto.createDecipheriv('aes-128-cfb8', secret, secret)
 	}
 
 	debug(...args: any[]) {

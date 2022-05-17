@@ -47,6 +47,12 @@ public abstract class MapSyncMod {
 		registerKeyBinding(openGuiKey);
 	}
 
+	public void handleTick() {
+		while (openGuiKey.consumeClick()) {
+			// XXX handle key press
+		}
+	}
+
 	public void handleConnectedToServer(ClientboundLoginPacket packet) {
 		// XXX connect
 	}

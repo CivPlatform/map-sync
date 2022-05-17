@@ -4,6 +4,8 @@ import gjum.minecraft.mapsync.common.MapSyncMod;
 import net.minecraft.client.KeyMapping;
 import net.minecraftforge.client.ClientRegistry;
 import net.minecraftforge.common.MinecraftForge;
+import net.minecraftforge.event.TickEvent;
+import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.event.lifecycle.FMLClientSetupEvent;
 import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
@@ -17,6 +19,17 @@ public class ForgeMapSyncMod extends MapSyncMod {
 
 	public void clientSetup(FMLClientSetupEvent event) {
 		init();
+	}
+
+	@SubscribeEvent
+	public void onClientTick(TickEvent.ClientTickEvent event) {
+		try {
+			if (event.phase == TickEvent.Phase.START) {
+				handleTick();
+			}
+		} catch (Throwable e) {
+			e.printStackTrace();
+		}
 	}
 
 	@Override

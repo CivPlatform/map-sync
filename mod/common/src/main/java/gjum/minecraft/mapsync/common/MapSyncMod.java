@@ -1,7 +1,6 @@
 package gjum.minecraft.mapsync.common;
 
 import com.mojang.blaze3d.platform.InputConstants;
-import gjum.minecraft.mapsync.common.data.ChunkHash;
 import gjum.minecraft.mapsync.common.data.ChunkTile;
 import gjum.minecraft.mapsync.common.integration.JourneyMapHelper;
 import gjum.minecraft.mapsync.common.net.TcpClient;
@@ -126,13 +125,6 @@ public abstract class MapSyncMod {
 
 	public void handleSyncServerEncryptionSuccess() {
 
-	}
-
-	public void handleSharedChunkHash(ChunkHash chunkHash) {
-		if (mc.level == null) return;
-		if (chunkHash.dimension() != mc.level.dimension()) return;
-
-		serverKnownChunkHashes.put(chunkHash.chunkPos(), chunkHash.dataHash());
 	}
 
 	public void handleSharedChunk(ChunkTile chunkTile) {

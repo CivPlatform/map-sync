@@ -14,6 +14,7 @@ import net.minecraft.world.level.ChunkPos;
 import org.jetbrains.annotations.Nullable;
 import org.lwjgl.glfw.GLFW;
 
+import java.util.Arrays;
 import java.util.HashMap;
 
 import static gjum.minecraft.mapsync.common.Cartography.chunkTileFromLevel;
@@ -37,7 +38,7 @@ public abstract class MapSyncMod {
 	/**
 	 * for current dimension
 	 */
-	private HashMap<ChunkPos, String> serverKnownChunkHashes = new HashMap<>();
+	private HashMap<ChunkPos, byte[]> serverKnownChunkHashes = new HashMap<>();
 
 	public static MapSyncMod getMod() {
 		return INSTANCE;
@@ -68,18 +69,23 @@ public abstract class MapSyncMod {
 		@Nullable String syncServerAddress = "localhost:12312"; // XXX
 
 		if (syncClient != null) {
+			// avoid reconnecting to same sync server, to keep shared state (expensive to resync)
 			if (!syncClient.gameAddress.equals(gameAddress)
 					|| !syncClient.address.equals(syncServerAddress)
 			) {
 				syncClient.shutDown();
 				syncClient = null;
+				serverKnownChunkHashes.clear();
 			}
 		}
 
 		if (syncClient == null || syncClient.isShutDown) {
+			serverKnownChunkHashes.clear();
 			syncClient = new TcpClient(syncServerAddress, gameAddress);
 		}
 	}
+
+	// TODO on mc disconnect, tell server our dimension is null, so it doesn't send full chunks that we can't use
 
 	public void handleRespawn(ClientboundRespawnPacket packet) {
 		// TODO handle dimensions correctly
@@ -111,9 +117,11 @@ public abstract class MapSyncMod {
 	 * if connection failed, the chunk is dropped.
 	 */
 	private void sendChunkTileToMapDataServer(ChunkTile chunkTile) {
-		boolean hashKnownToServer = chunkTile.dataHash().equals(serverKnownChunkHashes.get(chunkTile.chunkPos()));
-		if (hashKnownToServer) return; // server already has this chunk
-
+		if (syncClient == null) return;
+		var serverKnownHash = serverKnownChunkHashes.get(chunkTile.chunkPos());
+		if (Arrays.equals(chunkTile.dataHash(), serverKnownHash)) {
+			return; // server already has this chunk
+		}
 		boolean sent = syncClient.send(new ChunkTilePacket(chunkTile));
 		if (sent) serverKnownChunkHashes.put(chunkTile.chunkPos(), chunkTile.dataHash());
 		// else: send again next time chunk loads

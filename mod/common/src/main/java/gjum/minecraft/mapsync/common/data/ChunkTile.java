@@ -7,7 +7,6 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.Level;
 
-import java.math.BigInteger;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 
@@ -18,7 +17,7 @@ public record ChunkTile(
 		ResourceKey<Level> dimension,
 		int x, int z,
 		int dataVersion,
-		String dataHash,
+		byte[] dataHash,
 		BlockColumn[] columns
 ) {
 	public ChunkPos chunkPos() {
@@ -38,7 +37,8 @@ public record ChunkTile(
 		buf.writeInt(x);
 		buf.writeInt(z);
 		buf.writeShort(dataVersion);
-		writeStringToBuf(buf, dataHash);
+		buf.writeInt(dataHash.length); // TODO could be Short as hash length is known to be small
+		buf.writeBytes(dataHash);
 	}
 
 	public static void writeColumns(BlockColumn[] columns, ByteBuf buf) {
@@ -54,7 +54,8 @@ public record ChunkTile(
 		int x = buf.readInt();
 		int z = buf.readInt();
 		int dataVersion = buf.readUnsignedShort();
-		String hash = readStringFromBuf(buf);
+		byte[] hash = new byte[buf.readInt()];
+		buf.readBytes(hash);
 		var columns = new BlockColumn[256];
 		for (int i = 0; i < 256; i++) {
 			columns[i] = BlockColumn.fromBuf(buf);
@@ -62,16 +63,15 @@ public record ChunkTile(
 		return new ChunkTile(dimension, x, z, dataVersion, hash, columns);
 	}
 
-	// could be sped up a little by using a static (shared) upper-bound size buffer and marking method as synchronized, since we only call this method once at a time
-	public static String computeDataHash(ByteBuf columns) {
+	public static byte[] computeDataHash(ByteBuf columns) {
 		try {
 			// SHA-1 is faster than SHA-256, and other algorithms are not required to be implemented in every JVM
 			MessageDigest md = MessageDigest.getInstance("SHA-1");
 			md.update(columns.array());
-			return new BigInteger(md.digest()).toString(16);
+			return md.digest();
 		} catch (NoSuchAlgorithmException e) {
 			e.printStackTrace();
-			return "";
+			return new byte[]{};
 		}
 	}
 }

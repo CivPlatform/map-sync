@@ -30,7 +30,7 @@ public class Cartography {
 		// TODO speedup: don't serialize twice (once here, once later when writing to network)
 		var columnsBuf = Unpooled.buffer();
 		ChunkTile.writeColumns(columns, columnsBuf);
-		String dataHash = ChunkTile.computeDataHash(columnsBuf);
+		byte[] dataHash = ChunkTile.computeDataHash(columnsBuf);
 
 		return new ChunkTile(dimension, cx, cz, dataVersion, dataHash, columns);
 	}

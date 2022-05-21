@@ -2,7 +2,6 @@ package gjum.minecraft.mapsync.common;
 
 import com.mojang.blaze3d.platform.InputConstants;
 import gjum.minecraft.mapsync.common.data.ChunkTile;
-import gjum.minecraft.mapsync.common.integration.JourneyMapHelper;
 import gjum.minecraft.mapsync.common.net.TcpClient;
 import gjum.minecraft.mapsync.common.net.packet.ChunkTilePacket;
 import net.minecraft.client.KeyMapping;
@@ -10,12 +9,11 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ServerData;
 import net.minecraft.network.protocol.game.ClientboundLoginPacket;
 import net.minecraft.network.protocol.game.ClientboundRespawnPacket;
-import net.minecraft.world.level.ChunkPos;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.lwjgl.glfw.GLFW;
 
 import java.util.Arrays;
-import java.util.HashMap;
 
 import static gjum.minecraft.mapsync.common.Cartography.chunkTileFromLevel;
 
@@ -25,6 +23,10 @@ public abstract class MapSyncMod {
 	private static final Minecraft mc = Minecraft.getInstance();
 
 	public static MapSyncMod INSTANCE;
+
+	public static MapSyncMod getMod() {
+		return INSTANCE;
+	}
 
 	private static final KeyMapping openGuiKey = new KeyMapping(
 			"key.map-sync.openGui",
@@ -36,18 +38,20 @@ public abstract class MapSyncMod {
 	private @Nullable TcpClient syncClient;
 
 	/**
-	 * for current dimension
+	 * Tracks state and render thread for current mc dimension.
+	 * Never access this directly; always go through `getDimensionState()`.
 	 */
-	private HashMap<ChunkPos, byte[]> serverKnownChunkHashes = new HashMap<>();
-
-	public static MapSyncMod getMod() {
-		return INSTANCE;
-	}
+	private @Nullable DimensionState dimensionState;
 
 	public MapSyncMod() {
 		if (INSTANCE != null) throw new IllegalStateException("Constructor called twice");
 		INSTANCE = this;
 	}
+
+	/**
+	 * for example: 1.0.0+forge
+	 */
+	public abstract String getVersion();
 
 	public abstract void registerKeyBinding(KeyMapping mapping);
 
@@ -75,13 +79,13 @@ public abstract class MapSyncMod {
 			) {
 				syncClient.shutDown();
 				syncClient = null;
-				serverKnownChunkHashes.clear();
+				shutDownDimensionState();
 			}
 		}
 
 		if (syncClient == null || syncClient.isShutDown) {
-			serverKnownChunkHashes.clear();
 			syncClient = new TcpClient(syncServerAddress, gameAddress);
+			shutDownDimensionState();
 		}
 	}
 
@@ -89,6 +93,31 @@ public abstract class MapSyncMod {
 
 	public void handleRespawn(ClientboundRespawnPacket packet) {
 		// TODO handle dimensions correctly
+		// shutDownDimensionState();
+	}
+
+	/**
+	 * for current dimension
+	 */
+	public @NotNull DimensionState getDimensionState() {
+		if (mc.level == null)
+			throw new Error("Can't map while not in a dimension");
+		if (syncClient == null)
+			throw new Error("Can't map while not connected to sync server"); // XXX ensure this is never called then
+		if (dimensionState != null && dimensionState.dimension != mc.level.dimension()) {
+			shutDownDimensionState();
+		}
+		if (dimensionState == null || dimensionState.hasShutDown) {
+			dimensionState = new DimensionState(syncClient.gameAddress, mc.level.dimension());
+		}
+		return dimensionState;
+	}
+
+	private void shutDownDimensionState() {
+		if (dimensionState != null) {
+			dimensionState.shutDown();
+			dimensionState = null;
+		}
 	}
 
 	/**
@@ -100,6 +129,11 @@ public abstract class MapSyncMod {
 		// TODO disable in nether (no meaningful "surface layer")
 
 		var chunkTile = chunkTileFromLevel(mc.level, cx, cz);
+
+		// assume this is rendered through the installed map mod
+		// note that journeymap rate limits rendering and may skip chunks entirely
+		getDimensionState().setChunkTimestamp(chunkTile.chunkPos(), chunkTile.timestamp());
+
 		sendChunkTileToMapDataServer(chunkTile);
 	}
 
@@ -118,12 +152,12 @@ public abstract class MapSyncMod {
 	 */
 	private void sendChunkTileToMapDataServer(ChunkTile chunkTile) {
 		if (syncClient == null) return;
-		var serverKnownHash = serverKnownChunkHashes.get(chunkTile.chunkPos());
+		var serverKnownHash = getDimensionState().getServerKnownChunkHash(chunkTile.chunkPos());
 		if (Arrays.equals(chunkTile.dataHash(), serverKnownHash)) {
 			return; // server already has this chunk
 		}
 		boolean sent = syncClient.send(new ChunkTilePacket(chunkTile));
-		if (sent) serverKnownChunkHashes.put(chunkTile.chunkPos(), chunkTile.dataHash());
+		if (sent) getDimensionState().setServerKnownChunkHash(chunkTile.chunkPos(), chunkTile.dataHash());
 		// else: send again next time chunk loads
 	}
 
@@ -136,16 +170,6 @@ public abstract class MapSyncMod {
 	}
 
 	public void handleSharedChunk(ChunkTile chunkTile) {
-		if (mc.level == null) return;
-		if (chunkTile.dimension() != mc.level.dimension()) {
-			return;
-		}
-
-		serverKnownChunkHashes.put(chunkTile.chunkPos(), chunkTile.dataHash());
-
-		if (mc.level.getChunkSource().hasChunk(chunkTile.x(), chunkTile.z())) {
-			return; // don't update loaded chunks
-		}
-		JourneyMapHelper.updateWithChunkTile(chunkTile);
+		getDimensionState().processSharedChunk(chunkTile);
 	}
 }

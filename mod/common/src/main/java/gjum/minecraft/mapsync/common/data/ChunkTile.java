@@ -16,6 +16,7 @@ import static gjum.minecraft.mapsync.common.Utils.writeStringToBuf;
 public record ChunkTile(
 		ResourceKey<Level> dimension,
 		int x, int z,
+		long timestamp,
 		int dataVersion,
 		byte[] dataHash,
 		BlockColumn[] columns
@@ -36,6 +37,7 @@ public record ChunkTile(
 		writeStringToBuf(buf, dimension.location().toString());
 		buf.writeInt(x);
 		buf.writeInt(z);
+		buf.writeLong(timestamp);
 		buf.writeShort(dataVersion);
 		buf.writeInt(dataHash.length); // TODO could be Short as hash length is known to be small
 		buf.writeBytes(dataHash);
@@ -53,6 +55,7 @@ public record ChunkTile(
 		var dimension = ResourceKey.create(Registry.DIMENSION_REGISTRY, new ResourceLocation(dimensionStr));
 		int x = buf.readInt();
 		int z = buf.readInt();
+		long timestamp = buf.readLong();
 		int dataVersion = buf.readUnsignedShort();
 		byte[] hash = new byte[buf.readInt()];
 		buf.readBytes(hash);
@@ -60,7 +63,7 @@ public record ChunkTile(
 		for (int i = 0; i < 256; i++) {
 			columns[i] = BlockColumn.fromBuf(buf);
 		}
-		return new ChunkTile(dimension, x, z, dataVersion, hash, columns);
+		return new ChunkTile(dimension, x, z, timestamp, dataVersion, hash, columns);
 	}
 
 	public static byte[] computeDataHash(ByteBuf columns) {

@@ -13,6 +13,7 @@ import java.util.ArrayList;
 
 public class Cartography {
 	public static ChunkTile chunkTileFromLevel(Level level, int cx, int cz) {
+		long timestamp = System.currentTimeMillis();
 		var dimension = level.dimension();
 		var chunk = level.getChunk(cx, cz);
 
@@ -32,7 +33,7 @@ public class Cartography {
 		ChunkTile.writeColumns(columns, columnsBuf);
 		byte[] dataHash = ChunkTile.computeDataHash(columnsBuf);
 
-		return new ChunkTile(dimension, cx, cz, dataVersion, dataHash, columns);
+		return new ChunkTile(dimension, cx, cz, timestamp, dataVersion, dataHash, columns);
 	}
 
 	public static BlockColumn blockColumnFromChunk(LevelChunk chunk, BlockPos.MutableBlockPos pos) {

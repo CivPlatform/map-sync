@@ -17,6 +17,11 @@ public class ForgeMapSyncMod extends MapSyncMod {
 		MinecraftForge.EVENT_BUS.register(this);
 	}
 
+	@Override
+	public String getVersion() {
+		return VERSION + "+forge";
+	}
+
 	public void clientSetup(FMLClientSetupEvent event) {
 		init();
 	}

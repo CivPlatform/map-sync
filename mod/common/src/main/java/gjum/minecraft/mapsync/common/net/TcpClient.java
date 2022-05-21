@@ -1,6 +1,5 @@
 package gjum.minecraft.mapsync.common.net;
 
-import gjum.minecraft.mapsync.common.MapSyncMod;
 import gjum.minecraft.mapsync.common.net.packet.CHandshake;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.*;
@@ -14,6 +13,8 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.concurrent.TimeUnit;
+
+import static gjum.minecraft.mapsync.common.MapSyncMod.getMod;
 
 public class TcpClient {
 	public static final Logger logger = LogManager.getLogger(TcpClient.class);
@@ -85,11 +86,11 @@ public class TcpClient {
 			channel = channelFuture.channel();
 
 			channel.writeAndFlush(new CHandshake(
-					MapSyncMod.VERSION,
+					getMod().getVersion(),
 					Minecraft.getInstance().getUser().getName(),
 					gameAddress));
 
-			MapSyncMod.INSTANCE.handleSyncServerConnected();
+			getMod().handleSyncServerConnected();
 		} catch (Throwable e) {
 			if (e.getMessage() == null || !e.getMessage().startsWith("Connection refused: ")) { // reduce spam
 				logger.error("[map-sync] Connection to '" + address + "' failed: " + e);
@@ -121,7 +122,7 @@ public class TcpClient {
 
 	public void handleEncryptionSuccess() {
 		isEncrypted = true;
-		MapSyncMod.INSTANCE.handleSyncServerEncryptionSuccess();
+		getMod().handleSyncServerEncryptionSuccess();
 	}
 
 	boolean isConnected() {

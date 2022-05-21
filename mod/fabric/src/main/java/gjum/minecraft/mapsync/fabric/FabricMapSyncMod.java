@@ -20,6 +20,11 @@ public class FabricMapSyncMod extends MapSyncMod implements ClientModInitializer
 	}
 
 	@Override
+	public String getVersion() {
+		return VERSION + "+fabric";
+	}
+
+	@Override
 	public void registerKeyBinding(KeyMapping mapping) {
 		KeyBindingHelper.registerKeyBinding(mapping);
 	}

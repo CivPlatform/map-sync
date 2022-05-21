@@ -75,11 +75,18 @@ public class JourneyMapHelper {
 		@Override
 		public BlockState getBlockState(BlockPos pos) {
 			var layers = getCol(pos.getX(), pos.getZ()).layers();
-			// XXX index from y
+			BlockInfo prevLayer = null;
+			// note that layers are ordered top-down
 			for (BlockInfo layer : layers) {
 				if (layer.y() == pos.getY()) {
 					return layer.state();
 				}
+				if (layer.y() < pos.getY()) {
+					// top of layer is below pos, so pos is inside prevLayer
+					if (prevLayer == null) return null; // first layer is already below pos
+					return prevLayer.state();
+				}
+				prevLayer = layer;
 			}
 			return getLast(layers).state();
 		}

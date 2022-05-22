@@ -125,7 +125,7 @@ public abstract class MapSyncMod {
 	 * send it to the map data server right away.
 	 */
 	public void handleMcFullChunk(int cx, int cz) {
-		if (mc.level == null) return;
+		if (mc.level == null || syncClient == null) return;
 		// TODO disable in nether (no meaningful "surface layer")
 
 		var chunkTile = chunkTileFromLevel(mc.level, cx, cz);

@@ -41,14 +41,14 @@ public class Cartography {
 		int y = chunk.getHeight(Heightmap.Types.WORLD_SURFACE, pos.getX(), pos.getZ());
 		pos.setY(y);
 		var bs = chunk.getBlockState(pos);
-		while (true) {
+		while (y >= -4096) {
 			layers.add(new BlockInfo(pos.getY(), bs));
 			if (bs.getMaterial().isSolidBlocking()) break;
 			var prevBS = bs;
 			do {
 				pos.setY(--y);
 				bs = chunk.getBlockState(pos);
-			} while (bs == prevBS || bs.isAir());
+			} while ((bs == prevBS || bs.isAir()) && y >= -4096);
 		}
 
 		var world = Minecraft.getInstance().level;

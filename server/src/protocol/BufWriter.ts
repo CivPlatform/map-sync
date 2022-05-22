@@ -87,8 +87,12 @@ export class BufWriter {
 	}
 
 	private ensureSpace(bytes: number) {
-		if (this.off + bytes > this.buf.length) {
-			const newBuf = Buffer.alloc(this.buf.length * 2)
+		let len = this.buf.length
+		while (len <= this.off + bytes) {
+			len = len * 2
+		}
+		if (len !== this.buf.length) {
+			const newBuf = Buffer.alloc(len)
 			this.buf.copy(newBuf, 0, 0, this.off)
 			this.buf = newBuf
 		}

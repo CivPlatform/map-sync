@@ -12,7 +12,9 @@ import org.apache.logging.log4j.Logger;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.ArrayList;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 import static gjum.minecraft.mapsync.common.MapSyncMod.getMod;
 
@@ -26,6 +28,7 @@ public class TcpClient {
 
 	public boolean isShutDown = false;
 	private boolean isEncrypted = false;
+	private ArrayList<Packet> queue = new ArrayList<>();
 	private @Nullable Channel channel;
 	private static @Nullable NioEventLoopGroup workerGroup;
 
@@ -47,6 +50,7 @@ public class TcpClient {
 				workerGroup.shutdownGracefully();
 			}
 			workerGroup = new NioEventLoopGroup();
+			isEncrypted = false;
 
 			var bootstrap = new Bootstrap();
 			bootstrap.group(workerGroup);
@@ -120,9 +124,15 @@ public class TcpClient {
 		}
 	}
 
-	public void handleEncryptionSuccess() {
+	public synchronized void handleEncryptionSuccess() {
 		isEncrypted = true;
 		getMod().handleSyncServerEncryptionSuccess();
+
+		for (Packet packet : queue) {
+			channel.write(packet);
+		}
+		queue.clear();
+		channel.flush();
 	}
 
 	boolean isConnected() {
@@ -134,27 +144,30 @@ public class TcpClient {
 	}
 
 	/**
-	 * @return true if sent, false if dropped
+	 * Send if encrypted, or queue and send once encryption is set up.
 	 */
-	public boolean send(Packet packet) {
-		return send(packet, true);
+	public void send(Packet packet) {
+		send(packet, true);
 	}
 
 	/**
-	 * @return true if sent, false if dropped
+	 * Send if encrypted, or queue and send once encryption is set up.
 	 */
-	public synchronized boolean send(Packet packet, boolean flush) {
+	public synchronized void send(Packet packet, boolean flush) {
 		try {
 			if (isEncrypted() && channel != null && channel.isActive()) {
 				if (flush) channel.writeAndFlush(packet);
 				else channel.write(packet);
-				return true;
+			} else {
+				queue.add(packet);
+				if (queue.size() > 200) {
+					queue = queue.stream()
+							.skip(100)
+							.collect(Collectors.toCollection(ArrayList::new));
+				}
 			}
-			// TODO queue packet and wait for connection to become encrypted?
-			return false;
 		} catch (Throwable e) {
 			e.printStackTrace();
-			return false;
 		}
 	}
 

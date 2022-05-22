@@ -156,9 +156,10 @@ public abstract class MapSyncMod {
 		if (Arrays.equals(chunkTile.dataHash(), serverKnownHash)) {
 			return; // server already has this chunk
 		}
-		boolean sent = syncClient.send(new ChunkTilePacket(chunkTile));
-		if (sent) getDimensionState().setServerKnownChunkHash(chunkTile.chunkPos(), chunkTile.dataHash());
-		// else: send again next time chunk loads
+
+		syncClient.send(new ChunkTilePacket(chunkTile));
+
+		getDimensionState().setServerKnownChunkHash(chunkTile.chunkPos(), chunkTile.dataHash());
 	}
 
 	public void handleSyncServerConnected() {

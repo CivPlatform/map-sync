@@ -51,6 +51,27 @@ export class BufReader {
 		return val
 	}
 
+	readUInt64() {
+		const valBig = this.buf.readBigUInt64BE(this.off)
+		if (valBig > Number.MAX_SAFE_INTEGER) {
+			throw new Error(`64-bit number too big: ${valBig}`)
+		}
+		this.off += 8
+		return Number(valBig)
+	}
+
+	readInt64() {
+		const valBig = this.buf.readBigInt64BE(this.off)
+		if (valBig > Number.MAX_SAFE_INTEGER) {
+			throw new Error(`64-bit number too big: ${valBig}`)
+		}
+		if (valBig < Number.MIN_SAFE_INTEGER) {
+			throw new Error(`64-bit number too small: ${valBig}`)
+		}
+		this.off += 8
+		return Number(valBig)
+	}
+
 	/** length-prefixed (32 bits), UTF-8 encoded */
 	readString() {
 		const len = this.readUInt32()

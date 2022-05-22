@@ -6,7 +6,8 @@ export interface ChunkTilePacket {
 	world: string
 	chunk_x: number
 	chunk_z: number
-	data: { version: number; hash: string; data: Buffer }
+	ts: number
+	data: { version: number; hash: Buffer; data: Buffer }
 }
 
 export namespace ChunkTilePacket {
@@ -16,9 +17,10 @@ export namespace ChunkTilePacket {
 			world: reader.readString(),
 			chunk_x: reader.readInt32(),
 			chunk_z: reader.readInt32(),
+			ts: reader.readUInt64(),
 			data: {
 				version: reader.readUInt16(),
-				hash: reader.readString(),
+				hash: reader.readBufWithLen(),
 				data: reader.readRemainder(),
 			},
 		}
@@ -28,8 +30,9 @@ export namespace ChunkTilePacket {
 		writer.writeString(pkt.world)
 		writer.writeInt32(pkt.chunk_x)
 		writer.writeInt32(pkt.chunk_z)
+		writer.writeUInt64(pkt.ts)
 		writer.writeUInt8(pkt.data.version)
-		writer.writeString(pkt.data.hash)
+		writer.writeBufWithLen(pkt.data.hash)
 		writer.writeBufRaw(pkt.data.data) // XXX do we need to prefix with length?
 	}
 }

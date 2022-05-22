@@ -49,6 +49,18 @@ export class BufWriter {
 		this.off += 4
 	}
 
+	writeUInt64(val: number) {
+		this.ensureSpace(8)
+		this.buf.writeBigUInt64BE(BigInt(val), this.off)
+		this.off += 8
+	}
+
+	writeInt64(val: number) {
+		this.ensureSpace(8)
+		this.buf.writeBigInt64BE(BigInt(val), this.off)
+		this.off += 8
+	}
+
 	/** length-prefixed (32 bits), UTF-8 encoded */
 	writeString(str: string) {
 		const strBuf = Buffer.from(str, 'utf8')

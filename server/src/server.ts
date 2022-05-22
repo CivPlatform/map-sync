@@ -11,7 +11,6 @@ export class TcpServer {
 	server: net.Server
 	clients: Record<number, TcpClient> = {}
 
-	serverKey = new NodeRSA({ b: 1024 })
 
 	constructor(handler: ProtocolHandler) {
 		this.server = net.createServer({}, (socket) => {

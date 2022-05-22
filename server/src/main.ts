@@ -3,6 +3,8 @@ import { connectDB } from './db'
 import { PlayerChunk, PlayerChunkDB } from './MapChunk'
 import { ClientPacket, ProtocolClient, ProtocolHandler } from './protocol'
 import { ChunkTilePacket } from './protocol/ChunkTilePacket'
+import { EncryptionResponsePacket } from './protocol/EncryptionResponsePacket'
+import { HandshakePacket } from './protocol/HandshakePacket'
 import { TcpServer } from './server'
 
 connectDB().then(() => new Main())
@@ -10,30 +12,9 @@ connectDB().then(() => new Main())
 class Main implements ProtocolHandler {
 	server = new TcpServer(this)
 
-	handleClientConnected(client: ProtocolClient) {
-		// XXX challenge with mojang auth
-		const serverId = crypto.randomBytes(4).toString('hex')
-		client.verifyToken = crypto.randomBytes(4)
-		const publicKeyStrArr = this.serverKey
-			.exportKey('pkcs8-public-pem')
-			.split('\n')
-		let publicKeyStr = ''
-		for (let i = 1; i < publicKeyStrArr.length - 1; i++) {
-			publicKeyStr += publicKeyStrArr[i]
-		}
-		client.publicKey = Buffer.from(publicKeyStr, 'base64')
+	handleClientConnected(client: ProtocolClient) {}
 
-		client.sendUnencrypted({
-			type: 'EncryptionRequest',
-			serverId: serverId,
-			publicKey: client.publicKeyBuffer,
-			verifyToken: client.verifyToken,
-		})
-	}
-
-	handleClientAuthenticated(client: ProtocolClient) {
-		client.send({ type: 'Hello' })
-	}
+	handleClientAuthenticated(client: ProtocolClient) {}
 
 	handleClientDisconnected(client: ProtocolClient) {}
 
@@ -58,33 +39,21 @@ class Main implements ProtocolHandler {
 		}
 	}
 
+	async handleHandshakePacket(client: ProtocolClient, pkt: HandshakePacket) {
+		if (client.isEncrypted) throw new Error(`Already authenticated`)
+		if (client.verifyToken) throw new Error(`Encryption already started`)
+
+		// XXX challenge with mojang auth
+	}
+
 	async handleEncryptionResponsePacket(
 		client: ProtocolClient,
-		pkt: AuthResponsePacket,
+		pkt: EncryptionResponsePacket,
 	) {
 		if (client.isEncrypted) throw new Error(`Already authenticated`)
 		if (!client.verifyToken) throw new Error(`Encryption has not started`)
 
-		const verifyToken = crypto.privateDecrypt(
-			{
-				key: this.serverKey.exportKey(),
-				padding: crypto.constants.RSA_PKCS1_PADDING,
-			},
-			packet.verifyToken,
-		)
-		if (!client.verifyToken.equals(verifyToken)) {
-			throw new Error('VerifyToken mismatch')
-			return
-		}
 
-		const sharedSecret = crypto.privateDecrypt(
-			{
-				key: this.serverKey.exportKey(),
-				padding: crypto.constants.RSA_PKCS1_PADDING,
-			},
-			packet.sharedSecret,
-		)
-		client.enableCrypto(sharedSecret)
 	}
 
 	async handleChunkTilePacket(client: ProtocolClient, pkt: ChunkTilePacket) {

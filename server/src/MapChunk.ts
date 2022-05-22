@@ -18,7 +18,7 @@ export interface PlayerChunk {
 }
 
 export interface ChunkData {
-	hash: string
+	hash: Buffer
 	version: number
 	data: Buffer
 }
@@ -28,8 +28,8 @@ export interface ChunkData {
 export class ChunkDataDB extends BaseEntity implements ChunkData {
 	static primaryCols = ['hash']
 
-	@PrimaryColumn({ type: 'text' })
-	hash!: string
+	@PrimaryColumn({ type: 'blob' })
+	hash!: Buffer
 
 	@Column({ type: 'integer' })
 	version!: number

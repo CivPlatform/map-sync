@@ -6,11 +6,12 @@
 	"license": "All Rights Reserved",
 	"scripts": {
 		"build": "tsc",
-		"start": "node dist/main.js",
-		"start:dev": "tsc && node dist/main.js"
+		"start": "node -r source-map-support/register dist/main.js",
+		"start:dev": "tsc && node -r source-map-support/register dist/main.js"
 	},
 	"dependencies": {
 		"node-fetch": "^3.1.1",
+		"source-map-support": "^0.5.21",
 		"sqlite3": "^5.0.2",
 		"typeorm": "^0.3.6",
 		"ws": "^8.4.2"

@@ -9,6 +9,8 @@ export interface ProtocolClient {
 	/** unique among all clients */
 	readonly id: number
 
+	readonly modVersion: string | undefined
+	readonly gameAddress: string | undefined
 	/** if set, client has authenticated with Mojang */
 	readonly uuid: string | undefined
 

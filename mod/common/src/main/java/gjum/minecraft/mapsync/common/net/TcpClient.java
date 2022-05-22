@@ -108,6 +108,8 @@ public class TcpClient {
 	void handleDisconnect(Throwable err) {
 		isEncrypted = false;
 
+		if (Minecraft.getInstance().level == null) shutDown();
+
 		String errMsg = err.getMessage();
 		if (errMsg == null) errMsg = "";
 		if (isShutDown) {

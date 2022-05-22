@@ -103,19 +103,19 @@ public class TcpClient {
 		isEncrypted = false;
 
 		if (isShutDown) {
-			logger.warn("[map-sync] Connection to '" + address + "' failed." +
+			logger.warn("[map-sync] Got disconnected from '" + address + "'." +
 					" Won't retry (autoReconnect=false)");
-			err.printStackTrace();
+			if (!err.getMessage().contains("Channel inactive")) err.printStackTrace();
 		} else if (workerGroup == null) {
-			logger.warn("[map-sync] Connection to '" + address + "' failed." +
+			logger.warn("[map-sync] Got disconnected from '" + address + "'." +
 					" Won't retry (workerGroup=null)");
 			err.printStackTrace();
 		} else {
 			workerGroup.schedule(this::connect, retrySec, TimeUnit.SECONDS);
 			if (!err.getMessage().startsWith("Connection refused: ")) { // reduce spam
-				logger.warn("[map-sync] Connection to '" + address + "' failed." +
+				logger.warn("[map-sync] Got disconnected from '" + address + "'." +
 						" Retrying in " + retrySec + " sec");
-				err.printStackTrace();
+				if (!err.getMessage().contains("Channel inactive")) err.printStackTrace();
 			}
 		}
 	}

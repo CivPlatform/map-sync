@@ -34,14 +34,14 @@ class Main implements ProtocolHandler {
 		// TODO ignore if same chunk hash exists in db
 
 		const playerChunk: PlayerChunk = {
-			uuid: client.uuid,
 			world: pkt.world,
 			chunk_x: pkt.chunk_x,
 			chunk_z: pkt.chunk_z,
+			uuid: client.uuid,
+			ts: pkt.ts,
 			data: pkt.data,
-			ts: Date.now(),
 		}
-		await PlayerChunkDB.store(playerChunk)
+		PlayerChunkDB.store(playerChunk).catch(console.error)
 
 		// TODO small timeout, then skip if other client already has it
 		for (const otherClient of Object.values(this.server.clients)) {

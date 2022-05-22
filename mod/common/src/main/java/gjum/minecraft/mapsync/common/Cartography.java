@@ -39,9 +39,10 @@ public class Cartography {
 	public static BlockColumn blockColumnFromChunk(LevelChunk chunk, BlockPos.MutableBlockPos pos) {
 		var layers = new ArrayList<BlockInfo>();
 		int y = chunk.getHeight(Heightmap.Types.WORLD_SURFACE, pos.getX(), pos.getZ());
+		int minBuildHeight = chunk.getLevel().getMinBuildHeight();
 		pos.setY(y);
 		var bs = chunk.getBlockState(pos);
-		while (y >= -4096) {
+		do {
 			layers.add(new BlockInfo(pos.getY(), bs));
 			if (bs.getMaterial().isSolidBlocking()) break;
 			var prevBS = bs;
@@ -49,8 +50,7 @@ public class Cartography {
 				pos.setY(--y);
 				bs = chunk.getBlockState(pos);
 			} while ((bs == prevBS || bs.isAir()) && y >= -4096);
-		}
-
+		} while (y >= minBuildHeight);
 		var world = Minecraft.getInstance().level;
 		int light = world.getBrightness(LightLayer.BLOCK, pos);
 		var biome = world.getBiome(pos).value();

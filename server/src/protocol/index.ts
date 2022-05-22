@@ -9,26 +9,17 @@ export interface ProtocolClient {
 	/** unique among all clients */
 	readonly id: number
 
-	/** used during authentication handshake */
-	verifyToken: Buffer | undefined
-	/** used during authentication handshake */
-	publicKeyBuffer: Buffer | undefined
-
 	/** if set, client has authenticated with Mojang */
-	uuid: string | undefined
-
-	/** if set, client has authenticated with Mojang */
-	isEncrypted: boolean
-
-	enableCrypto(secret: Buffer): void
-
-	sendUnencrypted(packet: ServerPacket): void
+	readonly uuid: string | undefined
 
 	send(packet: ServerPacket): void
+
+	kick(): void
 }
 
 export interface ProtocolHandler {
 	handleClientConnected(client: ProtocolClient): void
+	handleClientAuthenticated(client: ProtocolClient): void
 	handleClientDisconnected(client: ProtocolClient): void
 	handleClientPacketReceived(client: ProtocolClient, packet: ClientPacket): void
 }

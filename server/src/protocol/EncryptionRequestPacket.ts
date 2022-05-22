@@ -8,10 +8,13 @@ export interface EncryptionRequestPacket {
 }
 
 export namespace EncryptionRequestPacket {
-	// export function decode(reader: BufReader): EncryptionRequestPacket {
-	// 	// only used clientbound
-	// 	throw new Error('Not implemented')
-	// }
+	export function decode(reader: BufReader): EncryptionRequestPacket {
+		return {
+			type: 'EncryptionRequest',
+			publicKey: reader.readBufWithLen(),
+			verifyToken: reader.readBufWithLen(),
+		}
+	}
 
 	export function encode(pkt: EncryptionRequestPacket, writer: BufWriter) {
 		writer.writeBufWithLen(pkt.publicKey)

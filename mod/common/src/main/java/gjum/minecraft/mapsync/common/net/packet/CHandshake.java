@@ -2,38 +2,36 @@ package gjum.minecraft.mapsync.common.net.packet;
 
 import gjum.minecraft.mapsync.common.net.Packet;
 import io.netty.buffer.ByteBuf;
+import org.jetbrains.annotations.NotNull;
 
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
+import static gjum.minecraft.mapsync.common.Utils.readStringFromBuf;
+import static gjum.minecraft.mapsync.common.Utils.writeStringToBuf;
 
 public class CHandshake extends Packet {
 	public static final int PACKET_ID = 1;
 
-	@Nullable
-	public final String modVersion;
-	@Nonnull
-	public final String username;
-	@Nullable
-	public final String gameAddress;
+	public final @NotNull String modVersion;
+	public final @NotNull String username;
+	public final @NotNull String gameAddress;
 
-	public CHandshake(@Nullable String modVersion, @Nullable String username, @Nullable String gameAddress) {
+	public CHandshake(@NotNull String modVersion, @NotNull String username, @NotNull String gameAddress) {
 		this.modVersion = modVersion;
-		this.username = username == null ? "" : username;
+		this.username = username;
 		this.gameAddress = gameAddress;
 	}
 
 	public static Packet read(ByteBuf buf) {
 		return new CHandshake(
-				readString(buf),
-				readString(buf),
-				readString(buf));
+				readStringFromBuf(buf),
+				readStringFromBuf(buf),
+				readStringFromBuf(buf));
 	}
 
 	@Override
 	public void write(ByteBuf out) {
-		writeString(out, modVersion);
-		writeString(out, username);
-		writeString(out, gameAddress);
+		writeStringToBuf(out, modVersion);
+		writeStringToBuf(out, username);
+		writeStringToBuf(out, gameAddress);
 	}
 
 	@Override

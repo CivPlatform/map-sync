@@ -13,9 +13,9 @@ import net.minecraft.client.User;
 import javax.crypto.*;
 import javax.crypto.spec.SecretKeySpec;
 import java.io.IOException;
-import java.math.BigInteger;
 import java.net.ConnectException;
 import java.security.*;
+import java.util.HexFormat;
 import java.util.concurrent.ThreadLocalRandom;
 
 public class ClientHandler extends ChannelInboundHandlerAdapter {
@@ -38,29 +38,28 @@ public class ClientHandler extends ChannelInboundHandlerAdapter {
 
 	private void setupEncryption(ChannelHandlerContext ctx, SEncryptionRequest packet) {
 		try {
-			PublicKey key = packet.publicKey;
-
 			byte[] sharedSecret = new byte[16];
 			ThreadLocalRandom.current().nextBytes(sharedSecret);
 
-			String sha;
+			String shaHex;
 			try {
 				MessageDigest digest = MessageDigest.getInstance("SHA-1");
 				digest.update(sharedSecret);
-				digest.update(key.getEncoded());
-				sha = new BigInteger(digest.digest()).toString(16);
+				digest.update(packet.publicKey.getEncoded());
+				// note that this is different from minecraft (we get no negative hashes)
+				shaHex = HexFormat.of().formatHex(digest.digest());
 			} catch (NoSuchAlgorithmException e) {
 				throw new RuntimeException(e);
 			}
 
 			User session = Minecraft.getInstance().getUser();
 			Minecraft.getInstance().getMinecraftSessionService().joinServer(
-					session.getGameProfile(), session.getAccessToken(), sha);
+					session.getGameProfile(), session.getAccessToken(), shaHex);
 
 			try {
 				ctx.channel().writeAndFlush(new CEncryptionResponse(
-						encrypt(key, sharedSecret),
-						encrypt(key, packet.verifyToken)));
+						encrypt(packet.publicKey, sharedSecret),
+						encrypt(packet.publicKey, packet.verifyToken)));
 			} catch (NoSuchAlgorithmException | InvalidKeyException | NoSuchPaddingException | BadPaddingException |
 			         IllegalBlockSizeException e) {
 				client.shutDown();

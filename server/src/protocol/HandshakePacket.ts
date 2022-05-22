@@ -4,7 +4,7 @@ import { BufWriter } from './BufWriter'
 export interface HandshakePacket {
 	type: 'Handshake'
 	modVersion: string
-	mcName: string
+	mojangName: string
 	gameAddress: string
 }
 
@@ -13,14 +13,14 @@ export namespace HandshakePacket {
 		return {
 			type: 'Handshake',
 			modVersion: reader.readString(),
-			mcName: reader.readString(),
+			mojangName: reader.readString(),
 			gameAddress: reader.readString(),
 		}
 	}
 
 	export function encode(pkt: HandshakePacket, writer: BufWriter) {
 		writer.writeString(pkt.modVersion)
-		writer.writeString(pkt.mcName)
+		writer.writeString(pkt.mojangName)
 		writer.writeString(pkt.gameAddress)
 	}
 }

@@ -6,6 +6,8 @@ import io.netty.channel.*;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
+import io.netty.handler.codec.LengthFieldBasedFrameDecoder;
+import io.netty.handler.codec.LengthFieldPrepender;
 import net.minecraft.client.Minecraft;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -65,8 +67,8 @@ public class TcpClient {
 
 				public void initChannel(SocketChannel ch) {
 					ch.pipeline().addLast(
-//						new LengthFieldPrepender(4),
-//						new LengthFieldBasedFrameDecoder(1 << 31, 0, 4, 0, 4),
+							new LengthFieldPrepender(4),
+							new LengthFieldBasedFrameDecoder(1 << 24, 0, 4, 0, 4),
 							new ServerPacketDecoder(),
 							new ClientPacketEncoder(),
 							new ClientHandler(TcpClient.this));

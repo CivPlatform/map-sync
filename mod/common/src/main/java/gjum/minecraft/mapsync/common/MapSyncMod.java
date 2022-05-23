@@ -80,6 +80,9 @@ public abstract class MapSyncMod {
 				syncClient.shutDown();
 				syncClient = null;
 				shutDownDimensionState();
+			} else if (syncClient.isConnected()) {
+				// keep using existing connection; this retains shared state
+				syncClient.autoReconnect = true;
 			}
 		}
 
@@ -89,7 +92,13 @@ public abstract class MapSyncMod {
 		}
 	}
 
-	// TODO on mc disconnect, tell server our dimension is null, so it doesn't send full chunks that we can't use
+	public void handleDisconnectedFromMcServer() {
+		if (syncClient != null) {
+			// stay connected (to retain shared state), but don't auto reconnect if the connection is lost
+			syncClient.autoReconnect = false;
+			// TODO tell server our dimension is null, so it doesn't send full chunks that we can't use
+		}
+	}
 
 	public void handleRespawn(ClientboundRespawnPacket packet) {
 		// TODO handle dimensions correctly

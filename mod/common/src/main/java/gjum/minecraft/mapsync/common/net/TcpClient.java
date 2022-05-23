@@ -28,6 +28,7 @@ public class TcpClient {
 	public final @NotNull String address;
 	public final @NotNull String gameAddress;
 
+	public boolean autoReconnect = true;
 	public boolean isShutDown = false;
 	private boolean isEncrypted = false;
 	private ArrayList<Packet> queue = new ArrayList<>();
@@ -114,6 +115,10 @@ public class TcpClient {
 		if (errMsg == null) errMsg = "";
 		if (isShutDown) {
 			logger.warn("[map-sync] Got disconnected from '" + address + "'." +
+					" Won't retry (has shut down)");
+			if (!errMsg.contains("Channel inactive")) err.printStackTrace();
+		} else if (!autoReconnect) {
+			logger.warn("[map-sync] Got disconnected from '" + address + "'." +
 					" Won't retry (autoReconnect=false)");
 			if (!errMsg.contains("Channel inactive")) err.printStackTrace();
 		} else if (workerGroup == null) {
@@ -141,7 +146,7 @@ public class TcpClient {
 		channel.flush();
 	}
 
-	boolean isConnected() {
+	public boolean isConnected() {
 		return channel != null && channel.isActive();
 	}
 

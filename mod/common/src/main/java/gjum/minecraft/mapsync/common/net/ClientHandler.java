@@ -27,13 +27,18 @@ public class ClientHandler extends ChannelInboundHandlerAdapter {
 
 	@Override
 	public void channelRead(ChannelHandlerContext ctx, Object packet) {
-		if (!client.isEncrypted()) {
-			if (packet instanceof SEncryptionRequest) {
-				setupEncryption(ctx, (SEncryptionRequest) packet);
-			} else throw new Error("Expected encryption request, got " + packet);
-		} else if (packet instanceof ChunkTilePacket) {
-			MapSyncMod.INSTANCE.handleSharedChunk(((ChunkTilePacket) packet).chunkTile);
-		} else throw new Error("Expected packet, got " + packet);
+		try {
+			if (!client.isEncrypted()) {
+				if (packet instanceof SEncryptionRequest) {
+					setupEncryption(ctx, (SEncryptionRequest) packet);
+				} else throw new Error("Expected encryption request, got " + packet);
+			} else if (packet instanceof ChunkTilePacket) {
+				MapSyncMod.INSTANCE.handleSharedChunk(((ChunkTilePacket) packet).chunkTile);
+			} else throw new Error("Expected packet, got " + packet);
+		} catch (Throwable err) {
+			err.printStackTrace();
+			ctx.close();
+		}
 	}
 
 	private void setupEncryption(ChannelHandlerContext ctx, SEncryptionRequest packet) {

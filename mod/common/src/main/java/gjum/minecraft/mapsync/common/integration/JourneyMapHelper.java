@@ -17,9 +17,11 @@ import java.util.List;
 import static gjum.minecraft.mapsync.common.Utils.mc;
 
 public class JourneyMapHelper {
-	public static void updateWithChunkTile(ChunkTile chunkTile) {
+	public static boolean updateWithChunkTile(ChunkTile chunkTile) {
+		if (!JourneymapClient.getInstance().isMapping()) return false; // BaseMapTask does this
+
 		var renderController = JourneymapClient.getInstance().getChunkRenderController();
-		if (renderController == null) return;
+		if (renderController == null) return false;
 
 		var chunkMd = new TileChunkMD(chunkTile);
 
@@ -43,6 +45,8 @@ public class JourneyMapHelper {
 		final boolean renderedTopo = renderController.renderChunk(rCoord,
 				MapType.topo(chunkTile.dimension()), chunkMd, regionData);
 		if (!renderedTopo) System.out.println("Failed rendering topo at " + chunkTile.chunkPos());
+
+		return renderedDay && renderedBiome && renderedTopo;
 	}
 
 	private static class TileChunkMD extends NBTChunkMD {

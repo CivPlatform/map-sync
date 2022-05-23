@@ -57,8 +57,11 @@ public class RenderQueue {
 					continue; // don't overwrite newer data with older data
 				}
 
-				JourneyMapHelper.updateWithChunkTile(chunkTile);
-				dimensionState.setChunkTimestamp(chunkTile.chunkPos(), chunkTile.timestamp());
+				boolean renderedJM = JourneyMapHelper.updateWithChunkTile(chunkTile);
+
+				if (renderedJM) {
+					dimensionState.setChunkTimestamp(chunkTile.chunkPos(), chunkTile.timestamp());
+				} // otherwise, update this chunk again when server sends it again
 
 				Thread.sleep(0); // allow stopping via thread.interrupt()
 

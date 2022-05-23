@@ -55,17 +55,7 @@ public class DimensionChunkMeta {
 		long[] longs = new long[RegionPos.CHUNKS_IN_REGION];
 		try {
 			final byte[] byteArray = Files.readAllBytes(getRegionFilePath(regionPos));
-			// from https://stackoverflow.com/questions/3823807/fastest-way-to-read-long-from-file/3823894#3823894
-			for (int i = 0; i < RegionPos.CHUNKS_IN_REGION; i += 8) {
-				longs[i >> 3] = ((long) byteArray[i] << 56) +
-						((long) (byteArray[1 + i] & 255) << 48) +
-						((long) (byteArray[2 + i] & 255) << 40) +
-						((long) (byteArray[3 + i] & 255) << 32) +
-						((long) (byteArray[4 + i] & 255) << 24) +
-						((byteArray[5 + i] & 255) << 16) +
-						((byteArray[6 + i] & 255) << 8) +
-						((byteArray[7 + i] & 255));
-			}
+			ByteBuffer.wrap(byteArray).asLongBuffer().get(longs);
 		} catch (FileNotFoundException | NoSuchFileException ignored) {
 		} catch (IOException e) {
 			e.printStackTrace();

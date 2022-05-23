@@ -23,6 +23,7 @@ public class ServerPacketDecoder extends ReplayingDecoder<Void> {
 		if (packet == null) {
 			TcpClient.logger.error("[ServerPacketDecoder] " +
 					"Unknown server packet id " + id + " 0x" + Integer.toHexString(id));
+			ctx.close();
 			return;
 		}
 		out.add(packet);

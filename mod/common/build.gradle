@@ -8,7 +8,7 @@ dependencies {
 
 	implementation 'org.java-websocket:Java-WebSocket:1.5.2'
 
-	modCompileOnly files('../libs/journeymap-1.18.2-5.8.3-fabric.jar')
+	modCompileOnly "curse.maven:journeymap-32274:3796377" // version 1.18.2-5.8.4-fabric
 }
 
 architectury {

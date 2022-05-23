@@ -139,9 +139,10 @@ public abstract class MapSyncMod {
 
 		var chunkTile = chunkTileFromLevel(mc.level, cx, cz);
 
-		// assume this is rendered through the installed map mod
-		// note that journeymap rate limits rendering and may skip chunks entirely
-		getDimensionState().setChunkTimestamp(chunkTile.chunkPos(), chunkTile.timestamp());
+		// TODO handle journeymap skipping chunks due to rate limiting - probably need mixin on render function
+		if (RenderQueue.areAllMapModsMapping()) {
+			getDimensionState().setChunkTimestamp(chunkTile.chunkPos(), chunkTile.timestamp());
+		}
 
 		sendChunkTileToMapDataServer(chunkTile);
 	}
@@ -156,8 +157,6 @@ public abstract class MapSyncMod {
 
 	/**
 	 * if the server already has the chunk (same hash), the chunk is dropped.
-	 * if still connecting, the chunk is queued, replacing any previous chunk at the same pos.
-	 * if connection failed, the chunk is dropped.
 	 */
 	private void sendChunkTileToMapDataServer(ChunkTile chunkTile) {
 		if (syncClient == null) return;

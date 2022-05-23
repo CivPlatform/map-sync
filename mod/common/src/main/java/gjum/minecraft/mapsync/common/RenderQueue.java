@@ -79,4 +79,8 @@ public class RenderQueue {
 			}
 		}
 	}
+
+	public static boolean areAllMapModsMapping() {
+		return JourneyMapHelper.isMapping();
+	}
 }

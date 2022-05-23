@@ -17,6 +17,12 @@ import java.util.List;
 import static gjum.minecraft.mapsync.common.Utils.mc;
 
 public class JourneyMapHelper {
+	// XXX handle not installed
+
+	public static boolean isMapping() {
+		return JourneymapClient.getInstance().isMapping();
+	}
+
 	public static boolean updateWithChunkTile(ChunkTile chunkTile) {
 		if (!JourneymapClient.getInstance().isMapping()) return false; // BaseMapTask does this
 

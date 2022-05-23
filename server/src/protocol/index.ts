@@ -16,7 +16,7 @@ export interface ProtocolClient {
 
 	send(packet: ServerPacket): void
 
-	kick(): void
+	kick(internalReason: string): void
 }
 
 export interface ProtocolHandler {

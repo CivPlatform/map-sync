@@ -89,32 +89,45 @@ export class TcpClient implements ProtocolClient {
 		let accBuf: Buffer = Buffer.alloc(0)
 
 		socket.on('data', (data: Buffer) => {
-			// TODO what if an exception happens anywhere here?
+			try {
+				this.debug('Received', data.length, 'bytes')
+				// creating a new buffer every time is fine in our case, because we expect most frames to be large
+				accBuf = Buffer.concat([accBuf, data])
 
-			this.debug('Received', data.length, 'bytes')
+				// we may receive multiple frames in one call
+				while (true) {
+					if (accBuf.length <= 4) return // wait for more data
+					const frameSize = accBuf.readUInt32BE()
 
-			// creating a new buffer every time is fine in our case, because we expect most frames to be large
-			accBuf = Buffer.concat([accBuf, data])
-			if (accBuf.length <= 4) return // wait for more data
-			const frameSize = accBuf.readUInt32BE()
+					// prevent Out of Memory
+					if (frameSize > this.maxFrameSize)
+						return this.kick('Frame too large: ' + frameSize)
 
-			// prevent Out of Memory
-			if (frameSize > this.maxFrameSize) return socket.end()
+					if (accBuf.length < 4 + frameSize) return // wait for more data
 
-			if (accBuf.length < 4 + frameSize) return // wait for more data
+					const frameReader = new BufReader(accBuf)
+					frameReader.readUInt32() // skip frame size
+					let pktBuf = frameReader.readBufLen(frameSize)
+					accBuf = frameReader.readRemainder()
 
-			const frameReader = new BufReader(accBuf)
-			frameReader.readUInt32() // skip frame size
-			let pktBuf = frameReader.readBufLen(frameSize)
-			accBuf = frameReader.readRemainder()
+					if (this.decipher) {
+						pktBuf = this.decipher.update(pktBuf)
+					}
 
-			if (this.decipher) {
-				pktBuf = this.decipher.update(pktBuf)
+					const reader = new BufReader(pktBuf)
+
+					try {
+						const packet = decodePacket(reader)
+						this.handlePacketReceived(packet)
+					} catch (err) {
+						this.warn(err)
+						return this.kick('Error in packet handler')
+					}
+				}
+			} catch (err) {
+				this.warn(err)
+				return this.kick('Error in data handler')
 			}
-
-			const reader = new BufReader(pktBuf)
-			const packet = decodePacket(reader)
-			this.handlePacketReceived(packet)
 		})
 
 		socket.on('close', (hadError: boolean) => {
@@ -133,7 +146,7 @@ export class TcpClient implements ProtocolClient {
 
 		socket.on('error', (err: Error) => {
 			this.warn('Error:', err)
-			socket.end()
+			this.kick('Socket error')
 		})
 	}
 
@@ -152,7 +165,8 @@ export class TcpClient implements ProtocolClient {
 		}
 	}
 
-	kick() {
+	kick(internalReason: string) {
+		this.log(`Kicking:`, internalReason)
 		this.socket.end()
 	}
 
@@ -170,7 +184,8 @@ export class TcpClient implements ProtocolClient {
 	}
 
 	private sendUnencrypted(pkt: ServerPacket) {
-		if (!this.socket.writable) return
+		if (!this.socket.writable)
+			return this.debug('Socket closed, dropping', pkt.type)
 		const writer = new BufWriter() // TODO size hint
 		encodePacket(pkt, writer)
 		const pktBuf = writer.getBuffer()
@@ -180,7 +195,8 @@ export class TcpClient implements ProtocolClient {
 	private frameAndSend(pktBuf: Buffer) {
 		const lenBuf = Buffer.alloc(4)
 		lenBuf.writeUInt32BE(pktBuf.length)
-		if (!this.socket.writable) return
+		if (!this.socket.writable)
+			return this.debug('Socket closed, dropping', pktBuf.length, 'bytes')
 		this.socket.write(lenBuf)
 		this.socket.write(pktBuf)
 	}

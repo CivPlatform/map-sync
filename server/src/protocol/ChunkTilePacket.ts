@@ -31,7 +31,7 @@ export namespace ChunkTilePacket {
 		writer.writeInt32(pkt.chunk_x)
 		writer.writeInt32(pkt.chunk_z)
 		writer.writeUInt64(pkt.ts)
-		writer.writeUInt8(pkt.data.version)
+		writer.writeUInt16(pkt.data.version)
 		writer.writeBufWithLen(pkt.data.hash)
 		writer.writeBufRaw(pkt.data.data) // XXX do we need to prefix with length?
 	}

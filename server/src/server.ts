@@ -70,12 +70,12 @@ export class TcpClient implements ProtocolClient {
 	/** sent by client during handshake */
 	private claimedMojangName?: string
 	private verifyToken?: Buffer
-	private cipher?: crypto.Cipher
-	private decipher?: crypto.Decipher
-
-	private get isEncrypted() {
-		return !!(this.cipher && this.decipher)
-	}
+	/** we need to wait for the mojang auth response
+	 * before we can en/decrypt packets following the handshake */
+	private cryptoPromise?: Promise<{
+		cipher: crypto.Cipher
+		decipher: crypto.Decipher
+	}>
 
 	constructor(
 		private socket: net.Socket,
@@ -88,9 +88,13 @@ export class TcpClient implements ProtocolClient {
 		/** Accumulates received data, containing none, one, or multiple frames; the last frame may be partial only. */
 		let accBuf: Buffer = Buffer.alloc(0)
 
-		socket.on('data', (data: Buffer) => {
+		socket.on('data', async (data: Buffer) => {
 			try {
-				this.debug('Received', data.length, 'bytes')
+				if (this.cryptoPromise) {
+					const { decipher } = await this.cryptoPromise
+					data = decipher.update(data)
+				}
+
 				// creating a new buffer every time is fine in our case, because we expect most frames to be large
 				accBuf = Buffer.concat([accBuf, data])
 
@@ -109,10 +113,6 @@ export class TcpClient implements ProtocolClient {
 					frameReader.readUInt32() // skip frame size
 					let pktBuf = frameReader.readBufLen(frameSize)
 					accBuf = frameReader.readRemainder()
-
-					if (this.decipher) {
-						pktBuf = this.decipher.update(pktBuf)
-					}
 
 					const reader = new BufReader(pktBuf)
 
@@ -135,8 +135,6 @@ export class TcpClient implements ProtocolClient {
 		})
 
 		socket.on('end', () => {
-			this.cipher?.final()
-			this.decipher?.final()
 			this.log('Ended')
 		})
 
@@ -170,39 +168,36 @@ export class TcpClient implements ProtocolClient {
 		this.socket.end()
 	}
 
-	send(pkt: ServerPacket) {
-		if (!this.cipher) {
+	async send(pkt: ServerPacket) {
+		if (!this.cryptoPromise) {
 			this.debug('Not encrypted, dropping packet', pkt.type)
 			return
 		}
-		if (!this.socket.writable) return
-		const writer = new BufWriter() // TODO size hint
-		encodePacket(pkt, writer)
-		const pktBufRaw = writer.getBuffer()
-		const pktBuf = this.cipher.update(pktBufRaw)
-		this.frameAndSend(pktBuf)
+		this.sendInternal(pkt, true)
 	}
 
-	private sendUnencrypted(pkt: ServerPacket) {
+	private async sendInternal(pkt: ServerPacket, doCrypto = false) {
 		if (!this.socket.writable)
 			return this.debug('Socket closed, dropping', pkt.type)
+		if (doCrypto && !this.cryptoPromise)
+			throw new Error(`Can't encrypt: handshake not finished`)
+
 		const writer = new BufWriter() // TODO size hint
+		writer.writeUInt32(0) // set later, but reserve space in buffer
 		encodePacket(pkt, writer)
-		const pktBuf = writer.getBuffer()
-		this.frameAndSend(pktBuf)
+		let buf = writer.getBuffer()
+		buf.writeUInt32BE(buf.length - 4, 0) // write into space reserved above
+
+		if (doCrypto) {
+			const { cipher } = await this.cryptoPromise!
+			buf = cipher!.update(buf)
+		}
+
+		this.socket.write(buf)
 	}
 
-	private frameAndSend(pktBuf: Buffer) {
-		const lenBuf = Buffer.alloc(4)
-		lenBuf.writeUInt32BE(pktBuf.length)
-		if (!this.socket.writable)
-			return this.debug('Socket closed, dropping', pktBuf.length, 'bytes')
-		this.socket.write(lenBuf)
-		this.socket.write(pktBuf)
-	}
-
-	private async handleHandshakePacket(packet: HandshakePacket) {
-		if (this.isEncrypted) throw new Error(`Already authenticated`)
+	private handleHandshakePacket(packet: HandshakePacket) {
+		if (this.cryptoPromise) throw new Error(`Already authenticated`)
 		if (this.verifyToken) throw new Error(`Encryption already started`)
 
 		this.modVersion = packet.modVersion
@@ -210,15 +205,15 @@ export class TcpClient implements ProtocolClient {
 		this.claimedMojangName = packet.mojangName
 		this.verifyToken = crypto.randomBytes(4)
 
-		this.sendUnencrypted({
+		this.sendInternal({
 			type: 'EncryptionRequest',
 			publicKey: this.server.publicKeyBuffer,
 			verifyToken: this.verifyToken,
 		})
 	}
 
-	private async handleEncryptionResponsePacket(pkt: EncryptionResponsePacket) {
-		if (this.isEncrypted) throw new Error(`Already authenticated`)
+	private handleEncryptionResponsePacket(pkt: EncryptionResponsePacket) {
+		if (this.cryptoPromise) throw new Error(`Already authenticated`)
 		if (!this.claimedMojangName)
 			throw new Error(`Encryption has not started: no mojangName`)
 		if (!this.verifyToken)
@@ -240,19 +235,27 @@ export class TcpClient implements ProtocolClient {
 			.digest()
 			.toString('hex')
 
-		const mojangAuth = await fetchHasJoined({
+		this.cryptoPromise = fetchHasJoined({
 			username: this.claimedMojangName,
 			shaHex,
+		}).then((mojangAuth) => {
+			if (!mojangAuth?.uuid) {
+				this.kick(`Mojang auth failed`)
+				throw new Error(`Mojang auth failed`)
+			}
+			this.log('Authenticated as', mojangAuth)
+
+			this.uuid = mojangAuth.uuid
+
+			return {
+				cipher: crypto.createCipheriv('aes-128-cfb8', secret, secret),
+				decipher: crypto.createDecipheriv('aes-128-cfb8', secret, secret),
+			}
 		})
-		if (!mojangAuth?.uuid) throw new Error(`Mojang auth failed`)
 
-		this.uuid = mojangAuth.uuid
-
-		this.cipher = crypto.createCipheriv('aes-128-cfb8', secret, secret)
-		this.decipher = crypto.createDecipheriv('aes-128-cfb8', secret, secret)
-
-		this.log('Authenticated as', mojangAuth)
-		this.handler.handleClientAuthenticated(this)
+		this.cryptoPromise.then(() => {
+			this.handler.handleClientAuthenticated(this)
+		})
 	}
 
 	debug(...args: any[]) {

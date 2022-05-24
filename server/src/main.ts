@@ -3,6 +3,9 @@ import { PlayerChunk, PlayerChunkDB } from './MapChunk'
 import { ClientPacket, ProtocolClient, ProtocolHandler } from './protocol'
 import { ChunkTilePacket } from './protocol/ChunkTilePacket'
 import { TcpServer } from './server'
+import {CatchupPacket} from "./protocol/CatchupPacket";
+
+const MOD_VERSION = "1"
 
 connectDB().then(() => new Main())
 
@@ -13,6 +16,11 @@ class Main implements ProtocolHandler {
 
 	handleClientAuthenticated(client: ProtocolClient) {
 		// TODO check version, mc server, user access
+
+		// TODO for above: config file for version, mc server, user access
+
+		// TODO send user the catchup tiles if possible
+
 	}
 
 	handleClientDisconnected(client: ProtocolClient) {}
@@ -51,4 +59,5 @@ class Main implements ProtocolHandler {
 
 		// TODO queue render
 	}
+
 }

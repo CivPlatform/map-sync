@@ -6,6 +6,7 @@
 	"license": "All Rights Reserved",
 	"scripts": {
 		"build": "tsc",
+		"test": "true",
 		"start": "node -r source-map-support/register dist/main.js",
 		"start:dev": "tsc && node -r source-map-support/register dist/main.js"
 	},

@@ -29,7 +29,7 @@ class Main implements ProtocolHandler {
 	}
 
 	async handleChunkTilePacket(client: ProtocolClient, pkt: ChunkTilePacket) {
-		if (!client.uuid) throw new Error(`Client${client.id} is not authenticated`)
+		if (!client.uuid) throw new Error(`${client.name} is not authenticated`)
 
 		// TODO ignore if same chunk hash exists in db
 

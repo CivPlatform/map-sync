@@ -31,6 +31,7 @@ export class TcpServer {
 			const client = new TcpClient(socket, this, handler)
 			this.clients[client.id] = client
 			socket.on('end', () => delete this.clients[client.id])
+			socket.on('close', () => delete this.clients[client.id])
 		})
 
 		this.server.on('error', (err: Error) => {
@@ -59,6 +60,8 @@ let nextClientId = 1
 /** Prefixes packets with their length (UInt32BE) */
 export class TcpClient implements ProtocolClient {
 	readonly id = nextClientId++
+	/** contains mojang name once logged in */
+	name = 'Client' + this.id
 
 	modVersion: string | undefined
 	gameAddress: string | undefined
@@ -104,8 +107,11 @@ export class TcpClient implements ProtocolClient {
 					const frameSize = accBuf.readUInt32BE()
 
 					// prevent Out of Memory
-					if (frameSize > this.maxFrameSize)
-						return this.kick('Frame too large: ' + frameSize)
+					if (frameSize > this.maxFrameSize) {
+						return this.kick(
+							'Frame too large: ' + frameSize + ' have ' + accBuf.length,
+						)
+					}
 
 					if (accBuf.length < 4 + frameSize) return // wait for more data
 
@@ -246,6 +252,7 @@ export class TcpClient implements ProtocolClient {
 			this.log('Authenticated as', mojangAuth)
 
 			this.uuid = mojangAuth.uuid
+			this.name += ':' + mojangAuth.name
 
 			return {
 				cipher: crypto.createCipheriv('aes-128-cfb8', secret, secret),
@@ -260,15 +267,15 @@ export class TcpClient implements ProtocolClient {
 
 	debug(...args: any[]) {
 		if (process.env.NODE_ENV === 'production') return
-		console.debug(`[Client${this.id}]`, ...args)
+		console.debug(`[${this.name}]`, ...args)
 	}
 
 	log(...args: any[]) {
-		console.log(`[Client${this.id}]`, ...args)
+		console.log(`[${this.name}]`, ...args)
 	}
 
 	warn(...args: any[]) {
-		console.error(`[Client${this.id}]`, ...args)
+		console.error(`[${this.name}]`, ...args)
 	}
 }
 

@@ -8,6 +8,8 @@ import { HandshakePacket } from './HandshakePacket'
 export interface ProtocolClient {
 	/** unique among all clients */
 	readonly id: number
+	/** human-friendly, for logging */
+	readonly name: string
 
 	readonly modVersion: string | undefined
 	readonly gameAddress: string | undefined

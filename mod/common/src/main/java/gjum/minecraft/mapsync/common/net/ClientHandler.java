@@ -1,23 +1,18 @@
 package gjum.minecraft.mapsync.common.net;
 
-import com.mojang.authlib.exceptions.AuthenticationException;
-import gjum.minecraft.mapsync.common.MapSyncMod;
-import gjum.minecraft.mapsync.common.net.encryption.EncryptionDecoder;
-import gjum.minecraft.mapsync.common.net.encryption.EncryptionEncoder;
-import gjum.minecraft.mapsync.common.net.packet.*;
+import gjum.minecraft.mapsync.common.net.packet.ChunkTilePacket;
+import gjum.minecraft.mapsync.common.net.packet.SEncryptionRequest;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
-import net.minecraft.client.Minecraft;
-import net.minecraft.client.User;
 
-import javax.crypto.*;
-import javax.crypto.spec.SecretKeySpec;
 import java.io.IOException;
 import java.net.ConnectException;
-import java.security.*;
-import java.util.HexFormat;
-import java.util.concurrent.ThreadLocalRandom;
 
+import static gjum.minecraft.mapsync.common.MapSyncMod.getMod;
+
+/**
+ * tightly coupled to {@link TcpClient}
+ */
 public class ClientHandler extends ChannelInboundHandlerAdapter {
 	private final TcpClient client;
 
@@ -30,10 +25,10 @@ public class ClientHandler extends ChannelInboundHandlerAdapter {
 		try {
 			if (!client.isEncrypted()) {
 				if (packet instanceof SEncryptionRequest) {
-					setupEncryption(ctx, (SEncryptionRequest) packet);
+					client.setUpEncryption(ctx, (SEncryptionRequest) packet);
 				} else throw new Error("Expected encryption request, got " + packet);
 			} else if (packet instanceof ChunkTilePacket) {
-				MapSyncMod.INSTANCE.handleSharedChunk(((ChunkTilePacket) packet).chunkTile);
+				getMod().handleSharedChunk(((ChunkTilePacket) packet).chunkTile);
 			} else throw new Error("Expected packet, got " + packet);
 		} catch (Throwable err) {
 			err.printStackTrace();
@@ -41,60 +36,15 @@ public class ClientHandler extends ChannelInboundHandlerAdapter {
 		}
 	}
 
-	private void setupEncryption(ChannelHandlerContext ctx, SEncryptionRequest packet) {
-		try {
-			byte[] sharedSecret = new byte[16];
-			ThreadLocalRandom.current().nextBytes(sharedSecret);
-
-			String shaHex;
-			try {
-				MessageDigest digest = MessageDigest.getInstance("SHA-1");
-				digest.update(sharedSecret);
-				digest.update(packet.publicKey.getEncoded());
-				// note that this is different from minecraft (we get no negative hashes)
-				shaHex = HexFormat.of().formatHex(digest.digest());
-			} catch (NoSuchAlgorithmException e) {
-				throw new RuntimeException(e);
-			}
-
-			User session = Minecraft.getInstance().getUser();
-			Minecraft.getInstance().getMinecraftSessionService().joinServer(
-					session.getGameProfile(), session.getAccessToken(), shaHex);
-
-			try {
-				ctx.channel().writeAndFlush(new CEncryptionResponse(
-						encrypt(packet.publicKey, sharedSecret),
-						encrypt(packet.publicKey, packet.verifyToken)));
-			} catch (NoSuchAlgorithmException | InvalidKeyException | NoSuchPaddingException | BadPaddingException |
-			         IllegalBlockSizeException e) {
-				client.shutDown();
-				throw new RuntimeException(e);
-			}
-
-			SecretKey secretKey = new SecretKeySpec(sharedSecret, "AES");
-			ctx.pipeline()
-					.addFirst("encrypt", new EncryptionEncoder(secretKey))
-					.addFirst("decrypt", new EncryptionDecoder(secretKey));
-
-			client.handleEncryptionSuccess();
-		} catch (AuthenticationException e) {
-			TcpClient.logger.warn("Auth error: " + e.getMessage(), e);
-		}
-	}
-
-	private static byte[] encrypt(PublicKey key, byte[] data) throws NoSuchPaddingException, NoSuchAlgorithmException, BadPaddingException, IllegalBlockSizeException, InvalidKeyException {
-		Cipher cipher = Cipher.getInstance("RSA/ECB/PKCS1Padding");
-		cipher.init(Cipher.ENCRYPT_MODE, key);
-		return cipher.doFinal(data);
-	}
-
 	@Override
-	public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
-		if (cause instanceof IOException && "Connection reset by peer".equals(cause.getMessage())) return;
-		if (cause instanceof ConnectException && cause.getMessage().startsWith("Connection refused: ")) return;
+	public void exceptionCaught(ChannelHandlerContext ctx, Throwable err) throws Exception {
+		if (err instanceof IOException && "Connection reset by peer".equals(err.getMessage())) return;
+		if (err instanceof ConnectException && err.getMessage().startsWith("Connection refused: ")) return;
 
-		TcpClient.logger.info("[map-sync] Network Error: " + cause);
-		cause.printStackTrace();
+		TcpClient.logger.info("[map-sync] Network Error: " + err);
+		err.printStackTrace();
+		ctx.close();
+		super.exceptionCaught(ctx, err);
 	}
 
 	@Override

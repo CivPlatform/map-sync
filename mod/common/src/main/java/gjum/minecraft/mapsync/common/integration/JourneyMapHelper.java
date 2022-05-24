@@ -6,9 +6,9 @@ import journeymap.client.io.FileHandler;
 import journeymap.client.model.*;
 import journeymap.common.nbt.RegionData;
 import journeymap.common.nbt.RegionDataStorageHandler;
-import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.biome.Biome;
+import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.chunk.LevelChunk;
 
@@ -17,13 +17,22 @@ import java.util.List;
 import static gjum.minecraft.mapsync.common.Utils.mc;
 
 public class JourneyMapHelper {
-	// XXX handle not installed
+	public static boolean isJourneyMapNotAvailable() {
+		try {
+			Class.forName("journeymap.client.JourneymapClient");
+			return false;
+		} catch (NoClassDefFoundError | ClassNotFoundException ignored) {
+			return true;
+		}
+	}
 
 	public static boolean isMapping() {
+		if (isJourneyMapNotAvailable()) return false;
 		return JourneymapClient.getInstance().isMapping();
 	}
 
 	public static boolean updateWithChunkTile(ChunkTile chunkTile) {
+		if (isJourneyMapNotAvailable()) return false;
 		if (!JourneymapClient.getInstance().isMapping()) return false; // BaseMapTask does this
 
 		var renderController = JourneymapClient.getInstance().getChunkRenderController();
@@ -59,7 +68,7 @@ public class JourneyMapHelper {
 		private final ChunkTile chunkTile;
 
 		public TileChunkMD(ChunkTile chunkTile) {
-			super(new LevelChunk(Minecraft.getInstance().level, chunkTile.chunkPos()),
+			super(new LevelChunk(mc.level, chunkTile.chunkPos()),
 					chunkTile.chunkPos(),
 					null, // all accessing methods are overridden
 					MapType.day(chunkTile.dimension()) // just has to not be `underground`
@@ -98,6 +107,7 @@ public class JourneyMapHelper {
 				}
 				prevLayer = layer;
 			}
+			if (layers.isEmpty()) return Blocks.AIR.defaultBlockState();
 			return getLast(layers).state();
 		}
 
@@ -123,9 +133,7 @@ public class JourneyMapHelper {
 	}
 
 	private static <T> T getLast(List<T> l) {
-		if (l.isEmpty()) {
-			throw new Error("Empty list");
-		}
+		if (l.isEmpty()) throw new Error("Empty list");
 		return l.get(l.size() - 1);
 	}
 }

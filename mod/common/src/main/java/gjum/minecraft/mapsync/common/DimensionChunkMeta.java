@@ -27,7 +27,8 @@ public class DimensionChunkMeta {
 		this.mcServerName = mcServerName;
 		this.dimensionName = dimensionName;
 		final String mcRoot = Minecraft.getInstance().gameDirectory.getAbsolutePath();
-		var dir = Path.of(mcRoot, "MapSync", "cache", mcServerName, dimensionName);
+		var dir = Path.of(mcRoot, "MapSync", "cache",
+				mcServerName.replaceAll(":", "~"), dimensionName.replaceAll(":", "~"));
 		dir.toFile().mkdirs();
 		this.dimensionDirPath = dir.toAbsolutePath().toString();
 	}

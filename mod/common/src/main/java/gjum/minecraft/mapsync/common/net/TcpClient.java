@@ -20,6 +20,9 @@ import java.util.stream.Collectors;
 
 import static gjum.minecraft.mapsync.common.MapSyncMod.getMod;
 
+/**
+ * handles reconnection, authentication, encryption
+ */
 public class TcpClient {
 	public static final Logger logger = LogManager.getLogger(TcpClient.class);
 
@@ -28,15 +31,26 @@ public class TcpClient {
 	public final @NotNull String address;
 	public final @NotNull String gameAddress;
 
+	/**
+	 * false = don't auto-reconnect but maintain connection as long as it stays up.
+	 * can be set to true again later.
+	 */
 	public boolean autoReconnect = true;
+	/**
+	 * false = don't reconnect under any circumstances,
+	 * and disconnect when coming across this during a check
+	 */
 	public boolean isShutDown = false;
 	private boolean isEncrypted = false;
+	/**
+	 * limited (on insert) to 199 entries
+	 */
 	private ArrayList<Packet> queue = new ArrayList<>();
 	private @Nullable Channel channel;
 	private static @Nullable NioEventLoopGroup workerGroup;
 
 	public TcpClient(@NotNull String address, @NotNull String gameAddress) {
-		if (address == null || address.trim().isEmpty() || !address.contains(":")) {
+		if (address.trim().isEmpty() || !address.contains(":")) {
 			throw new Error("Invalid address: '" + address + "'");
 		}
 		this.address = address;
@@ -96,11 +110,9 @@ public class TcpClient {
 					getMod().getVersion(),
 					Minecraft.getInstance().getUser().getName(),
 					gameAddress));
-
-			getMod().handleSyncServerConnected();
 		} catch (Throwable e) {
 			if (e.getMessage() == null || !e.getMessage().startsWith("Connection refused: ")) { // reduce spam
-				logger.error("[map-sync] Connection to '" + address + "' failed: " + e);
+				logger.warn("[map-sync] Connection to '" + address + "' failed: " + e);
 				e.printStackTrace();
 			}
 		}
@@ -171,7 +183,9 @@ public class TcpClient {
 				else channel.write(packet);
 			} else {
 				queue.add(packet);
+				// don't let the queue occupy too much memory
 				if (queue.size() > 200) {
+					logger.warn("[map-sync] Dropping 100 oldest packets from queue");
 					queue = queue.stream()
 							.skip(100)
 							.collect(Collectors.toCollection(ArrayList::new));

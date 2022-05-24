@@ -9,6 +9,8 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ServerData;
 import net.minecraft.network.protocol.game.ClientboundLoginPacket;
 import net.minecraft.network.protocol.game.ClientboundRespawnPacket;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.lwjgl.glfw.GLFW;
@@ -21,6 +23,8 @@ public abstract class MapSyncMod {
 	public static final String VERSION = "1.0.0";
 
 	private static final Minecraft mc = Minecraft.getInstance();
+
+	public static final Logger logger = LogManager.getLogger(MapSyncMod.class);
 
 	public static MapSyncMod INSTANCE;
 
@@ -77,10 +81,12 @@ public abstract class MapSyncMod {
 			if (!syncClient.gameAddress.equals(gameAddress)
 					|| !syncClient.address.equals(syncServerAddress)
 			) {
+				debugLog("Disconnecting tcp; different address");
 				syncClient.shutDown();
 				syncClient = null;
 				shutDownDimensionState();
 			} else if (syncClient.isConnected()) {
+				debugLog("Reusing existing tcp");
 				// keep using existing connection; this retains shared state
 				syncClient.autoReconnect = true;
 			}
@@ -101,6 +107,7 @@ public abstract class MapSyncMod {
 	}
 
 	public void handleRespawn(ClientboundRespawnPacket packet) {
+		debugLog("handleRespawn");
 		// TODO handle dimensions correctly
 		// shutDownDimensionState();
 	}
@@ -112,7 +119,7 @@ public abstract class MapSyncMod {
 		if (mc.level == null)
 			throw new Error("Can't map while not in a dimension");
 		if (syncClient == null)
-			throw new Error("Can't map while not connected to sync server"); // XXX ensure this is never called then
+			throw new Error("Can't map while not connected to sync server");
 		if (dimensionState != null && dimensionState.dimension != mc.level.dimension()) {
 			shutDownDimensionState();
 		}
@@ -162,23 +169,26 @@ public abstract class MapSyncMod {
 		if (syncClient == null) return;
 		var serverKnownHash = getDimensionState().getServerKnownChunkHash(chunkTile.chunkPos());
 		if (Arrays.equals(chunkTile.dataHash(), serverKnownHash)) {
+			debugLog("server already has chunk (hash) " + chunkTile.chunkPos());
 			return; // server already has this chunk
 		}
 
 		syncClient.send(new ChunkTilePacket(chunkTile));
 
+		// assume packet will reach server eventually
 		getDimensionState().setServerKnownChunkHash(chunkTile.chunkPos(), chunkTile.dataHash());
 	}
 
-	public void handleSyncServerConnected() {
-
-	}
-
 	public void handleSyncServerEncryptionSuccess() {
-
+		debugLog("tcp encrypted");
 	}
 
 	public void handleSharedChunk(ChunkTile chunkTile) {
 		getDimensionState().processSharedChunk(chunkTile);
+	}
+
+	public static void debugLog(String msg) {
+		// we could also make use of slf4j's debug() but I don't know how to reconfigure that at runtime based on globalConfig
+			logger.info(msg);
 	}
 }

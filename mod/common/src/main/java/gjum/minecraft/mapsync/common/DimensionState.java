@@ -8,6 +8,8 @@ import net.minecraft.world.level.Level;
 
 import java.util.HashMap;
 
+import static gjum.minecraft.mapsync.common.MapSyncMod.debugLog;
+
 /**
  * contains any background processes and data structures, to be able to easily tear down when leaving the dimension
  */
@@ -46,12 +48,13 @@ public class DimensionState {
 	public void processSharedChunk(ChunkTile chunkTile) {
 		if (mc.level == null) return;
 		if (dimension != mc.level.dimension()) {
+			debugLog("Dropping chunk tile: mc changed dimension");
 			shutDown(); // player entered different dimension
 			return;
 		}
 
 		if (chunkTile.dimension() != dimension) {
-			System.out.println("XXX Dropping chunk tile: wrong dimension "
+			debugLog("Dropping chunk tile: wrong dimension "
 					+ chunkTile.dimension() + " wanted " + dimension);
 			return; // don't render tile to the wrong dimension
 		}
@@ -59,7 +62,7 @@ public class DimensionState {
 		serverKnownChunkHashes.put(chunkTile.chunkPos(), chunkTile.dataHash());
 
 		if (mc.level.getChunkSource().hasChunk(chunkTile.x(), chunkTile.z())) {
-			System.out.println("XXX Dropping chunk tile: loaded in world");
+			debugLog("Dropping chunk tile: loaded in world");
 			return; // don't update loaded chunks
 		}
 

@@ -1,7 +1,6 @@
 package gjum.minecraft.mapsync.common.net;
 
 import com.mojang.authlib.exceptions.AuthenticationException;
-import gjum.minecraft.mapsync.common.MapSyncMod;
 import gjum.minecraft.mapsync.common.net.encryption.EncryptionDecoder;
 import gjum.minecraft.mapsync.common.net.encryption.EncryptionEncoder;
 import gjum.minecraft.mapsync.common.net.packet.*;
@@ -18,6 +17,8 @@ import java.security.*;
 import java.util.HexFormat;
 import java.util.concurrent.ThreadLocalRandom;
 
+import static gjum.minecraft.mapsync.common.MapSyncMod.getMod;
+
 public class ClientHandler extends ChannelInboundHandlerAdapter {
 	private final TcpClient client;
 
@@ -33,7 +34,7 @@ public class ClientHandler extends ChannelInboundHandlerAdapter {
 					setupEncryption(ctx, (SEncryptionRequest) packet);
 				} else throw new Error("Expected encryption request, got " + packet);
 			} else if (packet instanceof ChunkTilePacket) {
-				MapSyncMod.INSTANCE.handleSharedChunk(((ChunkTilePacket) packet).chunkTile);
+				getMod().handleSharedChunk(((ChunkTilePacket) packet).chunkTile);
 			} else throw new Error("Expected packet, got " + packet);
 		} catch (Throwable err) {
 			err.printStackTrace();

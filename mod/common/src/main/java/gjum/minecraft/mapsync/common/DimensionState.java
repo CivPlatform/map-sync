@@ -6,8 +6,6 @@ import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.Level;
 
-import java.util.HashMap;
-
 import static gjum.minecraft.mapsync.common.MapSyncMod.debugLog;
 
 /**
@@ -21,8 +19,6 @@ public class DimensionState {
 
 	private final DimensionChunkMeta chunkMeta;
 	private final RenderQueue renderQueue;
-
-	private final HashMap<ChunkPos, byte[]> serverKnownChunkHashes = new HashMap<>();
 
 	DimensionState(String mcServerName, ResourceKey<Level> dimension) {
 		this.dimension = dimension;
@@ -59,21 +55,11 @@ public class DimensionState {
 			return; // don't render tile to the wrong dimension
 		}
 
-		serverKnownChunkHashes.put(chunkTile.chunkPos(), chunkTile.dataHash());
-
 		if (mc.level.getChunkSource().hasChunk(chunkTile.x(), chunkTile.z())) {
 			debugLog("Dropping chunk tile: loaded in world");
 			return; // don't update loaded chunks
 		}
 
 		renderQueue.renderLater(chunkTile);
-	}
-
-	public synchronized byte[] getServerKnownChunkHash(ChunkPos chunkPos) {
-		return serverKnownChunkHashes.get(chunkPos);
-	}
-
-	public synchronized void setServerKnownChunkHash(ChunkPos chunkPos, byte[] hash) {
-		serverKnownChunkHashes.put(chunkPos, hash);
 	}
 }

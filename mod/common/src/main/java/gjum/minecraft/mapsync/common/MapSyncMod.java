@@ -1,8 +1,9 @@
 package gjum.minecraft.mapsync.common;
 
 import com.mojang.blaze3d.platform.InputConstants;
+import gjum.minecraft.mapsync.common.config.ModConfig;
+import gjum.minecraft.mapsync.common.config.ServerConfig;
 import gjum.minecraft.mapsync.common.data.ChunkTile;
-import gjum.minecraft.mapsync.common.net.TcpClient;
 import gjum.minecraft.mapsync.common.net.packet.ChunkTilePacket;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
@@ -11,7 +12,6 @@ import net.minecraft.network.protocol.game.ClientboundLoginPacket;
 import net.minecraft.network.protocol.game.ClientboundRespawnPacket;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.lwjgl.glfw.GLFW;
 
@@ -26,7 +26,9 @@ public abstract class MapSyncMod {
 
 	public static final Logger logger = LogManager.getLogger(MapSyncMod.class);
 
-	public static MapSyncMod INSTANCE;
+	private static MapSyncMod INSTANCE;
+
+	public static ModConfig modConfig;
 
 	public static MapSyncMod getMod() {
 		return INSTANCE;
@@ -39,13 +41,19 @@ public abstract class MapSyncMod {
 			"category.map-sync"
 	);
 
-	private @Nullable TcpClient syncClient;
+	private @Nullable SyncClient syncClient;
 
 	/**
 	 * Tracks state and render thread for current mc dimension.
 	 * Never access this directly; always go through `getDimensionState()`.
 	 */
 	private @Nullable DimensionState dimensionState;
+
+	/**
+	 * Tracks configuration for current mc server.
+	 * Never access this directly; always go through `getServerConfig()`.
+	 */
+	private @Nullable ServerConfig serverConfig;
 
 	public MapSyncMod() {
 		if (INSTANCE != null) throw new IllegalStateException("Constructor called twice");
@@ -61,6 +69,9 @@ public abstract class MapSyncMod {
 
 	public void init() {
 		registerKeyBinding(openGuiKey);
+
+		modConfig = ModConfig.load();
+		modConfig.saveNow(); // creates the default file if it doesn't exist yet
 	}
 
 	public void handleTick() {
@@ -70,61 +81,83 @@ public abstract class MapSyncMod {
 	}
 
 	public void handleConnectedToServer(ClientboundLoginPacket packet) {
-		final ServerData currentServer = Minecraft.getInstance().getCurrentServer();
-		if (currentServer == null) return;
-		String gameAddress = currentServer.ip;
-
-		@Nullable String syncServerAddress = "localhost:12312"; // XXX
-
-		if (syncClient != null) {
-			// avoid reconnecting to same sync server, to keep shared state (expensive to resync)
-			if (!syncClient.gameAddress.equals(gameAddress)
-					|| !syncClient.address.equals(syncServerAddress)
-			) {
-				debugLog("Disconnecting tcp; different address");
-				syncClient.shutDown();
-				syncClient = null;
-				shutDownDimensionState();
-			} else if (syncClient.isConnected()) {
-				debugLog("Reusing existing tcp");
-				// keep using existing connection; this retains shared state
-				syncClient.autoReconnect = true;
-			}
-		}
-
-		if (syncClient == null || syncClient.isShutDown) {
-			syncClient = new TcpClient(syncServerAddress, gameAddress);
-			shutDownDimensionState();
-		}
-	}
-
-	public void handleDisconnectedFromMcServer() {
-		if (syncClient != null) {
-			// stay connected (to retain shared state), but don't auto reconnect if the connection is lost
-			syncClient.autoReconnect = false;
-			// TODO tell server our dimension is null, so it doesn't send full chunks that we can't use
-		}
+		getSyncClient();
 	}
 
 	public void handleRespawn(ClientboundRespawnPacket packet) {
 		debugLog("handleRespawn");
-		// TODO handle dimensions correctly
-		// shutDownDimensionState();
+		// TODO tell sync server to only send chunks for this dimension now
+	}
+
+	/**
+	 * only null when not connected to a server
+	 */
+	public @Nullable ServerConfig getServerConfig() {
+		final ServerData currentServer = Minecraft.getInstance().getCurrentServer();
+		if (currentServer == null) {
+			serverConfig = null;
+			return null;
+		}
+		String gameAddress = currentServer.ip;
+
+		if (serverConfig == null) {
+			serverConfig = ServerConfig.load(gameAddress);
+		}
+		return serverConfig;
+	}
+
+	/**
+	 * makes sure it's connected/connecting to the right address
+	 */
+	public @Nullable SyncClient getSyncClient() {
+		var serverConfig = getServerConfig();
+		if (serverConfig == null) return shutDownSyncClient();
+
+		String syncServerAddress = serverConfig.getSyncServerAddress();
+		if (syncServerAddress == null) return shutDownSyncClient();
+
+		if (syncClient != null && syncClient.isShutDown) syncClient = null;
+
+		if (syncClient != null) {
+			// avoid reconnecting to same sync server, to keep shared state (expensive to resync)
+			if (!syncClient.gameAddress.equals(serverConfig.gameAddress)) {
+				debugLog("Disconnecting sync client; different game server");
+				shutDownSyncClient();
+			} else if (!syncClient.address.equals(syncServerAddress)) {
+				debugLog("Disconnecting sync client; different sync address");
+				shutDownSyncClient();
+			}
+		}
+
+		if (syncClient == null || syncClient.isShutDown) {
+			syncClient = new SyncClient(syncServerAddress, serverConfig.gameAddress);
+		}
+
+		syncClient.autoReconnect = true;
+		return syncClient;
+	}
+
+	private SyncClient shutDownSyncClient() {
+		if (syncClient != null) {
+			syncClient.shutDown();
+			syncClient = null;
+		}
+		return null;
 	}
 
 	/**
 	 * for current dimension
 	 */
-	public @NotNull DimensionState getDimensionState() {
-		if (mc.level == null)
-			throw new Error("Can't map while not in a dimension");
-		if (syncClient == null)
-			throw new Error("Can't map while not connected to sync server");
+	public @Nullable DimensionState getDimensionState() {
+		if (mc.level == null) return null;
+		var serverConfig = getServerConfig();
+		if (serverConfig == null) return null;
+
 		if (dimensionState != null && dimensionState.dimension != mc.level.dimension()) {
 			shutDownDimensionState();
 		}
 		if (dimensionState == null || dimensionState.hasShutDown) {
-			dimensionState = new DimensionState(syncClient.gameAddress, mc.level.dimension());
+			dimensionState = new DimensionState(serverConfig.gameAddress, mc.level.dimension());
 		}
 		return dimensionState;
 	}
@@ -141,14 +174,16 @@ public abstract class MapSyncMod {
 	 * send it to the map data server right away.
 	 */
 	public void handleMcFullChunk(int cx, int cz) {
-		if (mc.level == null || syncClient == null) return;
+		if (mc.level == null) return;
 		// TODO disable in nether (no meaningful "surface layer")
+		var dimensionState = getDimensionState();
+		if (dimensionState == null) return;
 
 		var chunkTile = chunkTileFromLevel(mc.level, cx, cz);
 
 		// TODO handle journeymap skipping chunks due to rate limiting - probably need mixin on render function
 		if (RenderQueue.areAllMapModsMapping()) {
-			getDimensionState().setChunkTimestamp(chunkTile.chunkPos(), chunkTile.timestamp());
+			dimensionState.setChunkTimestamp(chunkTile.chunkPos(), chunkTile.timestamp());
 		}
 
 		sendChunkTileToMapDataServer(chunkTile);
@@ -166,8 +201,10 @@ public abstract class MapSyncMod {
 	 * if the server already has the chunk (same hash), the chunk is dropped.
 	 */
 	private void sendChunkTileToMapDataServer(ChunkTile chunkTile) {
+		var syncClient = getSyncClient();
 		if (syncClient == null) return;
-		var serverKnownHash = getDimensionState().getServerKnownChunkHash(chunkTile.chunkPos());
+
+		var serverKnownHash = syncClient.getServerKnownChunkHash(chunkTile.chunkPos());
 		if (Arrays.equals(chunkTile.dataHash(), serverKnownHash)) {
 			debugLog("server already has chunk (hash) " + chunkTile.chunkPos());
 			return; // server already has this chunk
@@ -176,19 +213,32 @@ public abstract class MapSyncMod {
 		syncClient.send(new ChunkTilePacket(chunkTile));
 
 		// assume packet will reach server eventually
-		getDimensionState().setServerKnownChunkHash(chunkTile.chunkPos(), chunkTile.dataHash());
+		syncClient.setServerKnownChunkHash(chunkTile.chunkPos(), chunkTile.dataHash());
 	}
 
 	public void handleSyncServerEncryptionSuccess() {
 		debugLog("tcp encrypted");
+		// TODO start requesting missed chunks
 	}
 
 	public void handleSharedChunk(ChunkTile chunkTile) {
-		getDimensionState().processSharedChunk(chunkTile);
+		var syncClient = getSyncClient();
+		if (syncClient == null) {
+			// should not happen: we just received this packet from the sync client.
+			// it would indicate a race condition with changing mc server or sync address.
+			return;
+		}
+		syncClient.setServerKnownChunkHash(chunkTile.chunkPos(), chunkTile.dataHash());
+
+		var dimensionState = getDimensionState();
+		if (dimensionState == null) return;
+		dimensionState.processSharedChunk(chunkTile);
 	}
 
 	public static void debugLog(String msg) {
 		// we could also make use of slf4j's debug() but I don't know how to reconfigure that at runtime based on globalConfig
+		if (modConfig.isShowDebugLog()) {
 			logger.info(msg);
+		}
 	}
 }

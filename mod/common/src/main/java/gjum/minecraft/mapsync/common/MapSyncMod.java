@@ -4,7 +4,6 @@ import com.mojang.blaze3d.platform.InputConstants;
 import gjum.minecraft.mapsync.common.config.ModConfig;
 import gjum.minecraft.mapsync.common.config.ServerConfig;
 import gjum.minecraft.mapsync.common.data.ChunkTile;
-import gjum.minecraft.mapsync.common.net.packet.ChunkTilePacket;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ServerData;
@@ -14,8 +13,6 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.jetbrains.annotations.Nullable;
 import org.lwjgl.glfw.GLFW;
-
-import java.util.Arrays;
 
 import static gjum.minecraft.mapsync.common.Cartography.chunkTileFromLevel;
 
@@ -185,8 +182,9 @@ public abstract class MapSyncMod {
 		if (RenderQueue.areAllMapModsMapping()) {
 			dimensionState.setChunkTimestamp(chunkTile.chunkPos(), chunkTile.timestamp());
 		}
-
-		sendChunkTileToMapDataServer(chunkTile);
+		var syncClient = getSyncClient();
+		if (syncClient == null) return;
+		syncClient.sendChunkTile(chunkTile);
 	}
 
 	/**
@@ -195,25 +193,6 @@ public abstract class MapSyncMod {
 	 */
 	public void handleMcChunkPartialChange(int cx, int cz) {
 		// TODO update ChunkTile in a second or so; remember dimension in case it changes til then
-	}
-
-	/**
-	 * if the server already has the chunk (same hash), the chunk is dropped.
-	 */
-	private void sendChunkTileToMapDataServer(ChunkTile chunkTile) {
-		var syncClient = getSyncClient();
-		if (syncClient == null) return;
-
-		var serverKnownHash = syncClient.getServerKnownChunkHash(chunkTile.chunkPos());
-		if (Arrays.equals(chunkTile.dataHash(), serverKnownHash)) {
-			debugLog("server already has chunk (hash) " + chunkTile.chunkPos());
-			return; // server already has this chunk
-		}
-
-		syncClient.send(new ChunkTilePacket(chunkTile));
-
-		// assume packet will reach server eventually
-		syncClient.setServerKnownChunkHash(chunkTile.chunkPos(), chunkTile.dataHash());
 	}
 
 	public void handleSyncServerEncryptionSuccess() {

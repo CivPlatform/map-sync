@@ -179,6 +179,10 @@ export class TcpClient implements ProtocolClient {
 			this.debug('Not encrypted, dropping packet', pkt.type)
 			return
 		}
+		if (!this.uuid) {
+			this.debug('Not authenticated, dropping packet', pkt.type)
+			return
+		}
 		this.sendInternal(pkt, true)
 	}
 

@@ -1,6 +1,8 @@
 import 'reflect-metadata'
 import { BaseEntity, Connection, createConnection } from 'typeorm'
 
+const { SQLITE_PATH = 'db.sqlite' } = process.env
+
 let _dbp: Promise<Connection> | null = null
 
 // TODO accept any EntitySchema<any>[]
@@ -17,7 +19,7 @@ export function connectDB() {
 			entities: Object.values(entities),
 			synchronize: true,
 			type: 'sqlite',
-			database: 'db.sqlite',
+			database: SQLITE_PATH,
 		})
 	}
 	return _dbp

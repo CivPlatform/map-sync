@@ -73,7 +73,7 @@ public abstract class MapSyncMod {
 
 	public void handleTick() {
 		while (openGuiKey.consumeClick()) {
-			// XXX handle key press
+			mc.setScreen(new ModGui(mc.screen));
 		}
 	}
 
@@ -134,7 +134,7 @@ public abstract class MapSyncMod {
 		return syncClient;
 	}
 
-	private SyncClient shutDownSyncClient() {
+	public SyncClient shutDownSyncClient() {
 		if (syncClient != null) {
 			syncClient.shutDown();
 			syncClient = null;

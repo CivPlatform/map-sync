@@ -78,20 +78,30 @@ export class PlayerChunkDB extends BaseEntity implements PlayerChunk {
 	}
 
 	static async getCatchupData(timestamp: number){
-		let qb = await PlayerChunkDB.createQueryBuilder()
+		let chunks = await PlayerChunkDB.createQueryBuilder()
 			.where("player_chunk.ts >= :timestamp", {timestamp: timestamp})
+			.orderBy("player_chunk.ts", "DESC")
 			.getMany()
 
-		let b = new BufWriter();
+		let buf = new BufWriter();
 
-		while (qb.length > 0){
-			let next = qb.pop()
-			if(next){
-				b.writeString(`${next.chunk_x}${next.chunk_z}${next.ts}`)
+		const seenChunks: Record<string, PlayerChunkDB> = {}
+		for (const chunk of chunks) {
+			const chunkPos = `${chunk.chunk_x},${chunk.chunk_z}`
+			if (seenChunks[chunkPos]) continue
+			seenChunks[chunkPos] = chunk
+		}
+		const chunksList = Object.values(seenChunks)
+		buf.writeUInt32(chunksList.length)
+		for(const row of chunksList){
+			if(row){
+				buf.writeInt32(row.chunk_x)
+				buf.writeInt32(row.chunk_z)
+				buf.writeUInt64(row.ts)
 			}
 		}
 
-		return b.getBuffer();
+		return buf.getBuffer();
 	}
 }
 

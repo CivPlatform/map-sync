@@ -96,6 +96,7 @@ public abstract class MapSyncMod {
 			return null;
 		}
 		String gameAddress = currentServer.ip;
+		if (!gameAddress.contains(":")) gameAddress += ":25565";
 
 		if (serverConfig == null) {
 			serverConfig = ServerConfig.load(gameAddress);

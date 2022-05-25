@@ -1,0 +1,7 @@
+{
+	"servers": {
+		"localhost:25565": {
+			"syncServerAddress": "localhost:12312"
+		}
+	}
+}

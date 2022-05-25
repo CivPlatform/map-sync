@@ -139,10 +139,10 @@ public class DimensionState {
 			// request nearbyChunks, then add remaining from farChunks (still sorted new to old)
 			final List<CatchupChunk> chunksToRequest = nearbyChunks;
 			amount -= nearbyChunks.size();
-			chunksToRequest.addAll(farChunks.subList(0, amount));
+			chunksToRequest.addAll(farChunks.subList(0, Math.min(amount, farChunks.size())));
 			// all leftovers go back into catchupChunks for future requests
 			catchupChunks.clear();
-			catchupChunks.addAll(farChunks.subList(amount, farChunks.size()));
+			if (amount < farChunks.size()) catchupChunks.addAll(farChunks.subList(amount, farChunks.size()));
 			return chunksToRequest;
 		}
 	}

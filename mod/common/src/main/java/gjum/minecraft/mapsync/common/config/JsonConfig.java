@@ -13,7 +13,7 @@ import java.util.TimerTask;
  * subclasses must have constructor without args, to create default config
  */
 public class JsonConfig {
-	private static final Gson GSON = new GsonBuilder()
+	static final Gson GSON = new GsonBuilder()
 			.excludeFieldsWithoutExposeAnnotation()
 			.setPrettyPrinting()
 			.create();

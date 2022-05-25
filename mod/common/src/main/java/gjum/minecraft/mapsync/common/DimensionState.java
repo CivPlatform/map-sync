@@ -2,6 +2,8 @@ package gjum.minecraft.mapsync.common;
 
 import gjum.minecraft.mapsync.common.data.CatchupChunk;
 import gjum.minecraft.mapsync.common.data.ChunkTile;
+import gjum.minecraft.mapsync.common.integration.JourneyMapHelper;
+import gjum.minecraft.mapsync.common.integration.VoxelMapHelper;
 import gjum.minecraft.mapsync.common.net.packet.CCatchupRequest;
 import gjum.minecraft.mapsync.common.net.packet.SCatchup;
 import net.minecraft.client.Minecraft;
@@ -77,6 +79,12 @@ public class DimensionState {
 		}
 
 		renderQueue.renderLater(chunkTile);
+
+		// voxelmap doesn't need a render queue
+		boolean voxelRendered = VoxelMapHelper.updateWithChunkTile(chunkTile);
+		if (voxelRendered && !JourneyMapHelper.isMapping()) {
+			setChunkTimestamp(chunkTile.chunkPos(), chunkTile.timestamp());
+		}
 	}
 
 	public void setCatchupChunks(List<CatchupChunk> catchupChunks) {

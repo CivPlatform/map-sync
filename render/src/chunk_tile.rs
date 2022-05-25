@@ -19,9 +19,9 @@ impl ChunkTile {
         let x = r.read_i32::<BigEndian>()?;
         let z = r.read_i32::<BigEndian>()?;
         let data_version = r.read_u16::<BigEndian>()?;
-        // TODO build directly, do not use heap
+        // TODO build array directly, do not use heap
         let mut columns_vec = Vec::with_capacity(CHUNK_COLUMNS);
-        for _ in [0..CHUNK_COLUMNS] {
+        for _ in 0..CHUNK_COLUMNS {
             columns_vec.push(BlockColumn::read(r)?);
         }
         let columns = columns_vec.try_into().expect("number of columns");
@@ -58,7 +58,7 @@ impl BlockColumn {
     }
 
     pub fn ground_layer(&self) -> &BlockInfo {
-        self.layers.last().unwrap()
+        self.layers.last().unwrap_or(&BlockInfo { y: -64, id: 0 })
     }
 }
 

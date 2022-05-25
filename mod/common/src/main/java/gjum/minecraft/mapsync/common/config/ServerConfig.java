@@ -1,10 +1,13 @@
 package gjum.minecraft.mapsync.common.config;
 
+import com.google.gson.Gson;
+import com.google.gson.JsonObject;
 import com.google.gson.annotations.Expose;
 import net.minecraft.client.Minecraft;
 import org.jetbrains.annotations.Nullable;
 
 import java.io.File;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 
 import static gjum.minecraft.mapsync.common.MapSyncMod.getMod;
@@ -36,6 +39,29 @@ public class ServerConfig extends JsonConfig {
 		dir.mkdirs();
 		var conf = load(new File(dir, "server-config.json"), ServerConfig.class);
 		conf.gameAddress = gameAddress;
+
+		loadDefaults(conf);
+
 		return conf;
+	}
+
+	private static void loadDefaults(ServerConfig conf) {
+		ServerConfig defaults;
+		try (var input = ServerConfig.class.getResourceAsStream("/default-config.json")) {
+			if (input == null) return;
+			String json = new String(input.readAllBytes(), StandardCharsets.UTF_8);
+			JsonObject root = new Gson().fromJson(json, JsonObject.class);
+			JsonObject servers = root.get("servers").getAsJsonObject();
+			JsonObject server = servers.get(conf.gameAddress).getAsJsonObject();
+			defaults = GSON.fromJson(server, ServerConfig.class);
+		} catch (IllegalStateException | NullPointerException ignored) {
+			return;
+		} catch (Throwable e) {
+			e.printStackTrace();
+			return;
+		}
+		if (conf.syncServerAddress == null) {
+			conf.syncServerAddress = defaults.syncServerAddress;
+		}
 	}
 }

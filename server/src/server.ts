@@ -67,6 +67,7 @@ export class TcpClient implements ProtocolClient {
 	modVersion: string | undefined
 	gameAddress: string | undefined
 	uuid: string | undefined
+	lastTimestamp: number | undefined
 
 	/** prevent Out of Memory when client sends a large packet */
 	maxFrameSize = 2 ** 24
@@ -214,6 +215,7 @@ export class TcpClient implements ProtocolClient {
 		this.modVersion = packet.modVersion
 		this.gameAddress = packet.gameAddress
 		this.claimedMojangName = packet.mojangName
+		this.lastTimestamp = packet.lastTimeStamp
 		this.verifyToken = crypto.randomBytes(4)
 
 		await this.sendInternal({

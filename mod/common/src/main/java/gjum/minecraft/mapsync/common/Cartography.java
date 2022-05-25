@@ -53,7 +53,7 @@ public class Cartography {
 		} while (y >= minBuildHeight);
 		var world = Minecraft.getInstance().level;
 		int light = world.getBrightness(LightLayer.BLOCK, pos);
-		var biome = chunk.getNoiseBiome(pos.getX(), pos.getY(), pos.getZ()).value();
+		var biome = chunk.getNoiseBiome(pos.getX() >> 3, pos.getY() >> 3, pos.getZ() >> 3).value();
 		return new BlockColumn(biome, light, layers);
 	}
 }

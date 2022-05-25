@@ -21,12 +21,14 @@ public class SCatchup extends Packet {
 
     public static Packet read(ByteBuf buf) {
         return new SCatchup(
-                CatchupChunk.fromBytes(buf)
+                CatchupChunk.fromBuf(buf)
         );
     }
 
     @Override
     public void write(ByteBuf buf) {
-
+        for (CatchupChunk chunk : last_timestamps) {
+            chunk.write(buf);
+        }
     }
 }

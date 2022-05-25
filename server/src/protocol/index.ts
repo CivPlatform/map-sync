@@ -5,6 +5,7 @@ import { EncryptionRequestPacket } from './EncryptionRequestPacket'
 import { EncryptionResponsePacket } from './EncryptionResponsePacket'
 import { HandshakePacket } from './HandshakePacket'
 import {CatchupPacket} from "./CatchupPacket";
+import {CatchupRequestPacket} from "./CatchupRequestPacket";
 
 export interface ProtocolClient {
 	/** unique among all clients */
@@ -34,6 +35,7 @@ export type ClientPacket =
 	| ChunkTilePacket
 	| EncryptionResponsePacket
 	| HandshakePacket
+	| CatchupRequestPacket
 
 export type ServerPacket =
 	| ChunkTilePacket
@@ -47,6 +49,7 @@ export const packetIds = [
 	'EncryptionResponse',
 	'ChunkTile',
 	'Catchup',
+	'CatchupRequest'
 ]
 
 export function getPacketId(type: ServerPacket['type']) {
@@ -64,6 +67,8 @@ export function decodePacket(reader: BufReader): ClientPacket {
 			return HandshakePacket.decode(reader)
 		case 'EncryptionResponse':
 			return EncryptionResponsePacket.decode(reader)
+		case 'CatchupRequest':
+			return CatchupRequestPacket.decode(reader)
 		default:
 			throw new Error(`Unknown packet type ${packetType}`)
 	}

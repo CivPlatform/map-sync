@@ -95,6 +95,7 @@ export class PlayerChunkDB extends BaseEntity implements PlayerChunk {
 		buf.writeUInt32(chunksList.length)
 		for(const row of chunksList){
 			if(row){
+				buf.writeString(row.world)
 				buf.writeInt32(row.chunk_x)
 				buf.writeInt32(row.chunk_z)
 				buf.writeUInt64(row.ts)

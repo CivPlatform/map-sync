@@ -88,7 +88,8 @@ public class DimensionChunkMeta {
 			Path path = getTsFilePath();
 			return Long.parseLong(Files.readString(path));
 		} catch (IOException e) {
-			throw new RuntimeException(e);
+			e.printStackTrace();
+			return 0;
 		}
 	}
 

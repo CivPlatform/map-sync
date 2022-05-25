@@ -135,7 +135,7 @@ public class VoxelMapHelper {
 
 	@NotNull
 	private static CachedRegion getRegion(int rx, int rz)
-			throws IllegalAccessException, InvocationTargetException, InstantiationException {
+			throws IllegalAccessException, InvocationTargetException {
 		var vm = AbstractVoxelMap.getInstance();
 		PersistentMap map = (PersistentMap) vm.getPersistentMap();
 

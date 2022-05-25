@@ -31,7 +31,7 @@ public class ClientHandler extends ChannelInboundHandlerAdapter {
 			} else if (packet instanceof ChunkTilePacket) {
 				getMod().handleSharedChunk(((ChunkTilePacket) packet).chunkTile);
 			} else if (packet instanceof SCatchup){
-				getMod().handleCatchupData(((SCatchup) packet).last_timestamps);
+				getMod().handleCatchupData((SCatchup) packet);
 			}
 
 			else throw new Error("Expected packet, got " + packet);

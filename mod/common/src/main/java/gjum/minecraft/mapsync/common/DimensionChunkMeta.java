@@ -2,7 +2,6 @@ package gjum.minecraft.mapsync.common;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.world.level.ChunkPos;
-import org.lwjgl.system.CallbackI;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -21,7 +20,6 @@ public class DimensionChunkMeta {
 	public final String mcServerName;
 	public final String dimensionName;
 	private final String dimensionDirPath;
-	private final String dimensionTsPath;
 
 	private final HashMap<RegionPos, long[]> regionsTimestamps = new HashMap<>();
 
@@ -33,19 +31,14 @@ public class DimensionChunkMeta {
 				mcServerName.replaceAll(":", "~"), dimensionName.replaceAll(":", "~"));
 		dir.toFile().mkdirs();
 		this.dimensionDirPath = dir.toAbsolutePath().toString();
-
-		var ts_file = Path.of(mcRoot, "MapSync", "ts",
-				mcServerName.replaceAll(":", "~"), dimensionName.replaceAll(":", "~"));
-		dir.toFile().mkdirs();
-		this.dimensionTsPath = dir.toAbsolutePath().toString();
 	}
 
 	private Path getRegionFilePath(RegionPos regionPos) {
 		return Path.of(dimensionDirPath, "r%d,%d.chunkmeta".formatted(regionPos.x, regionPos.z));
 	}
 
-	private Path getTsFilePath(){
-		return Path.of(dimensionTsPath, "last_ts");
+	private Path getTsFilePath() {
+		return Path.of(dimensionDirPath, "last_ts");
 	}
 
 	public synchronized long getTimestamp(ChunkPos chunkPos) {
@@ -90,7 +83,7 @@ public class DimensionChunkMeta {
 		}
 	}
 
-	public long readLastTimestamp(){
+	public long readLastTimestamp() {
 		try {
 			Path path = getTsFilePath();
 			return Long.parseLong(Files.readString(path));
@@ -99,11 +92,11 @@ public class DimensionChunkMeta {
 		}
 	}
 
-	public synchronized void writeLastTimestamp(long current_time){
+	public synchronized void writeLastTimestamp(long current_time) {
 		try {
 			Path path = getTsFilePath();
 			Files.writeString(path, Long.toString(current_time));
-		} catch(IOException e){
+		} catch (IOException e) {
 			e.printStackTrace();
 		}
 	}

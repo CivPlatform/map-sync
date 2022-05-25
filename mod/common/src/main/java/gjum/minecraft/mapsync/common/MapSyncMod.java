@@ -6,6 +6,7 @@ import gjum.minecraft.mapsync.common.config.ServerConfig;
 import gjum.minecraft.mapsync.common.data.CatchupChunk;
 import gjum.minecraft.mapsync.common.data.ChunkTile;
 import gjum.minecraft.mapsync.common.net.packet.CCatchupRequest;
+import gjum.minecraft.mapsync.common.net.packet.SCatchup;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ServerData;
@@ -202,9 +203,7 @@ public abstract class MapSyncMod {
 
 	public void handleSyncServerEncryptionSuccess() {
 		debugLog("tcp encrypted");
-		// TODO start requesting missed chunks
-
-
+		// TODO tell server our current dimension
 	}
 
 	public void handleSharedChunk(ChunkTile chunkTile) {
@@ -221,26 +220,23 @@ public abstract class MapSyncMod {
 		dimensionState.processSharedChunk(chunkTile);
 	}
 
-	/** This only gets run once after authentication secured */
-	public void handleCatchupData(List<CatchupChunk> catchupChunks){
+	public void handleCatchupData(SCatchup packet) {
 		var dimensionState = getDimensionState();
 		if (dimensionState == null) return;
-		dimensionState.setCatchupChunks(catchupChunks);
+		dimensionState.setCatchupChunks(packet.chunks);
 	}
 
-	public void requestCatchupData(List<CatchupChunk> chunks){
-		if (chunks == null || chunks.size() == 0) return;
+	public void requestCatchupData(List<CatchupChunk> chunks) {
+		if (chunks == null || chunks.isEmpty()) return;
 		var syncClient = getSyncClient();
 		if (syncClient == null) {
+			logger.warn("Not connected. Dropping " + chunks.size() + " catchup chunk requests");
 			// hopefully shouldn't happen, as we've received the catchup data.
 			return;
 		}
 
 		// Catchup chunks will be sent back via regular ChunkTilePackets
-		for(CatchupChunk chunk : chunks){
-			var request = new CCatchupRequest(chunk);
-			syncClient.send(request);
-		}
+		syncClient.send(new CCatchupRequest(chunks));
 	}
 
 	public static void debugLog(String msg) {

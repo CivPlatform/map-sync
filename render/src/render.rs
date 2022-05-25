@@ -28,7 +28,7 @@ pub type ChunkMap = HashMap<(i32, i32), Box<ChunkTile>>;
 pub fn get_column_in_map<'map>(map: &'map ChunkMap, x: i32, z: i32) -> Option<&'map BlockColumn> {
     let cx = x >> 4;
     let cz = z >> 4;
-    let col_nr = (x & 0xf + 16 * (z & 0xf)) as usize;
+    let col_nr = ((x & 0xf) + 16 * (z & 0xf)) as usize;
     map.get(&(cx, cz)).map(|c| &c.columns[col_nr])
 }
 
@@ -55,8 +55,8 @@ pub fn render_img(
     let mut i = 0;
     for z in bounds.n..bounds.s {
         for x in bounds.w..bounds.e {
-            i += 1;
             pixbuf[i] = color_fn(&map, x, z);
+            i += 1;
         }
     }
 

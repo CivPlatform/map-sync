@@ -1,3 +1,7 @@
+#[macro_use]
+extern crate lazy_static;
+extern crate serde;
+
 use byteorder::{BigEndian, ReadBytesExt};
 
 use crate::chunk_tile::ChunkTile;
@@ -10,7 +14,7 @@ pub mod coloring;
 pub mod render;
 
 fn main() {
-    emain().unwrap_or_else(|err| println!("{}", err));
+    emain().unwrap_or_else(|err| println!("{}", err.to_string()));
 }
 
 const USAGE: MyErr = MyErr::StrErr("Usage: render <tile x> <tile z> <tiles directory>");
@@ -32,7 +36,6 @@ fn emain<'a>() -> Result<(), MyErr<'a>> {
         let chunk = Box::new(ChunkTile::read(&mut stdin)?);
         map.insert(chunk.pos, chunk);
     }
-    println!("Read {} chunks", num_chunks);
 
     let bounds = Bounds {
         w: 256 * img_x,
@@ -42,12 +45,13 @@ fn emain<'a>() -> Result<(), MyErr<'a>> {
     };
 
     // TODO render all color modes
-    let color_mode = "slope";
+    let color_mode = "terrain";
 
     let img_path = format!("{}/{}/{},{}.png", tiles_dir, color_mode, img_x, img_z);
 
     println!("Rendering {}", img_path);
     render_img(&img_path, &bounds, &map, get_color_fn(color_mode)?)?;
+    println!("Done");
 
     Ok(())
 }

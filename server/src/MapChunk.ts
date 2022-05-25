@@ -7,6 +7,7 @@ import {
 	PrimaryColumn,
 } from 'typeorm'
 import { registerEntity } from './db'
+import {BufWriter} from "./protocol/BufWriter";
 
 export interface PlayerChunk {
 	world: string
@@ -74,6 +75,23 @@ export class PlayerChunkDB extends BaseEntity implements PlayerChunk {
 			skipUpdateIfNoValuesChanged: true,
 		})
 		await PlayerChunkDB.upsert(map_chunk, PlayerChunkDB.primaryCols)
+	}
+
+	static async getCatchupData(timestamp: number){
+		let qb = await PlayerChunkDB.createQueryBuilder()
+			.where("player_chunk.ts >= :timestamp", {timestamp: timestamp})
+			.getMany()
+
+		let b = new BufWriter();
+
+		while (qb.length > 0){
+			let next = qb.pop()
+			if(next){
+				b.writeString(`${next.chunk_x}${next.chunk_z}${next.ts}`)
+			}
+		}
+
+		return b.getBuffer();
 	}
 }
 

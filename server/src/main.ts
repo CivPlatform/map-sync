@@ -20,16 +20,13 @@ class Main implements ProtocolHandler {
 		// TODO for above: config file for version, mc server, user access
 
 		// TODO send user the catchup tiles if possible
-		let chunks = await PlayerChunkDB.find({
-			order: {
-				ts: "DESC"
-			},
-			take: 1260
-		})
-
-		while(chunks.length > 0){
-
+		if(!client.lastTimestamp) throw new Error (`${client.name} is not authenticated`)
+		let catchup_buffer = await PlayerChunkDB.getCatchupData(client.lastTimestamp)
+		const catchup: CatchupPacket = {
+			type: 'Catchup',
+			lastTimestamps: catchup_buffer
 		}
+		client.send(catchup)
 	}
 
 	handleClientDisconnected(client: ProtocolClient) {}

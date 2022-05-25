@@ -72,6 +72,8 @@ export function decodePacket(reader: BufReader): ClientPacket {
 export function encodePacket(pkt: ServerPacket, writer: BufWriter): void {
 	writer.writeUInt8(getPacketId(pkt.type))
 	switch (pkt.type) {
+		case 'Catchup':
+			return CatchupPacket.encode(pkt, writer)
 		case 'ChunkTile':
 			return ChunkTilePacket.encode(pkt, writer)
 		case 'EncryptionRequest':

@@ -12,6 +12,7 @@ import { BufReader } from './protocol/BufReader'
 import { BufWriter } from './protocol/BufWriter'
 import { EncryptionResponsePacket } from './protocol/EncryptionResponsePacket'
 import { HandshakePacket } from './protocol/HandshakePacket'
+import { config, whitelist_check, cache_uuid } from './metadata'
 
 const { PORT = '12312', HOST = '127.0.0.1' } = process.env
 
@@ -125,7 +126,7 @@ export class TcpClient implements ProtocolClient {
 
 					try {
 						const packet = decodePacket(reader)
-						this.handlePacketReceived(packet)
+						await Promise.resolve(this.handlePacketReceived(packet));
 					} catch (err) {
 						this.warn(err)
 						return this.kick('Error in packet handler')
@@ -166,7 +167,7 @@ export class TcpClient implements ProtocolClient {
 			}
 			throw new Error(`Packet ${pkt.type} from unauth'd client ${this.id}`)
 		} else {
-			this.handler.handleClientPacketReceived(this, pkt)
+			return this.handler.handleClientPacketReceived(this, pkt)
 		}
 	}
 
@@ -207,7 +208,7 @@ export class TcpClient implements ProtocolClient {
 		this.socket.write(buf)
 	}
 
-	private handleHandshakePacket(packet: HandshakePacket) {
+	private async handleHandshakePacket(packet: HandshakePacket) {
 		if (this.cryptoPromise) throw new Error(`Already authenticated`)
 		if (this.verifyToken) throw new Error(`Encryption already started`)
 
@@ -217,14 +218,14 @@ export class TcpClient implements ProtocolClient {
 		this.lastTimestamp = packet.lastTimeStamp
 		this.verifyToken = crypto.randomBytes(4)
 
-		this.sendInternal({
+		await this.sendInternal({
 			type: 'EncryptionRequest',
 			publicKey: this.server.publicKeyBuffer,
 			verifyToken: this.verifyToken,
 		})
 	}
 
-	private handleEncryptionResponsePacket(pkt: EncryptionResponsePacket) {
+	private async handleEncryptionResponsePacket(pkt: EncryptionResponsePacket) {
 		if (this.cryptoPromise) throw new Error(`Already authenticated`)
 		if (!this.claimedMojangName)
 			throw new Error(`Encryption has not started: no mojangName`)
@@ -250,12 +251,24 @@ export class TcpClient implements ProtocolClient {
 		this.cryptoPromise = fetchHasJoined({
 			username: this.claimedMojangName,
 			shaHex,
-		}).then((mojangAuth) => {
+		}).then(async (mojangAuth) => {
 			if (!mojangAuth?.uuid) {
 				this.kick(`Mojang auth failed`)
 				throw new Error(`Mojang auth failed`)
 			}
-			this.log('Authenticated as', mojangAuth)
+
+			cache_uuid(this.claimedMojangName!, mojangAuth.uuid);
+			if (config.whitelist) {
+				if (whitelist_check(mojangAuth.uuid)) {
+					this.log('Authenticated as whitelisted user', mojangAuth)
+				} else {
+					this.log(`Rejected unwhitelisted user ${mojangAuth.name} (${mojangAuth.uuid})`);
+					this.kick(`Not whitelisted`);
+					throw new Error(`Not whitelisted`);
+				}
+			} else {
+				this.log('Authenticated as', mojangAuth)
+			}
 
 			this.uuid = mojangAuth.uuid
 			this.name += ':' + mojangAuth.name
@@ -266,9 +279,9 @@ export class TcpClient implements ProtocolClient {
 			}
 		})
 
-		this.cryptoPromise.then(() => {
+		await this.cryptoPromise.then(() => {
 			this.handler.handleClientAuthenticated(this)
-		})
+		});
 	}
 
 	debug(...args: any[]) {

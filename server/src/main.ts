@@ -1,17 +1,20 @@
+import './cli'
 import { connectDB } from './db'
 import { PlayerChunk, PlayerChunkDB } from './MapChunk'
 import { ClientPacket, ProtocolClient, ProtocolHandler } from './protocol'
-import { ChunkTilePacket } from './protocol/ChunkTilePacket'
-import { TcpServer } from './server'
 import { CatchupPacket } from './protocol/CatchupPacket'
 import { CatchupRequestPacket } from './protocol/CatchupRequestPacket'
+import { ChunkTilePacket } from './protocol/ChunkTilePacket'
+import { TcpServer } from './server'
 
 connectDB().then(() => new Main())
+
+const authorizedClients = new WeakSet();
 
 class Main implements ProtocolHandler {
 	server = new TcpServer(this)
 
-	handleClientConnected(client: ProtocolClient) {}
+	async handleClientConnected(client: ProtocolClient) {}
 
 	async handleClientAuthenticated(client: ProtocolClient) {
 		// TODO check version, mc server, user access

@@ -17,6 +17,7 @@ async function handle_input(input: string): Promise<void> {
 		if (extras.length === 0) throw new Error("Did not provide UUID to whitelist");
 		const uuid = extras;
 		await metadata.whitelist_add(uuid);
+		await metadata.whitelist_save();
 	}
 	else if (command === "whitelist_add_ign") {
 		if (extras.length === 0) throw new Error("Did not provide UUID to whitelist");
@@ -24,11 +25,13 @@ async function handle_input(input: string): Promise<void> {
 		const uuid = metadata.lookup_uuid(ign);
 		if (uuid == null) throw new Error("No cached UUID for IGN " + ign);
 		await metadata.whitelist_add(uuid);
+		await metadata.whitelist_save();
 	}
 	else if (command === "whitelist_remove") {
 		if (extras.length === 0) throw new Error("Did not provide UUID to whitelist");
 		const uuid = extras;
 		await metadata.whitelist_remove(uuid);
+		await metadata.whitelist_save();
 	}
 	else if (command === "whitelist_remove_ign") {
 		if (extras.length === 0) throw new Error("Did not provide UUID to whitelist");
@@ -36,6 +39,7 @@ async function handle_input(input: string): Promise<void> {
 		const uuid = metadata.lookup_uuid(ign);
 		if (uuid == null) throw new Error("No cached UUID for IGN " + ign);
 		await metadata.whitelist_remove(uuid);
+		await metadata.whitelist_save();
 	}
 
 	else {

@@ -1,6 +1,7 @@
 package gjum.minecraft.mapsync.common.net;
 
 import gjum.minecraft.mapsync.common.net.packet.ChunkTilePacket;
+import gjum.minecraft.mapsync.common.net.packet.SCatchup;
 import gjum.minecraft.mapsync.common.net.packet.SEncryptionRequest;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
@@ -13,6 +14,7 @@ public class ServerPacketDecoder extends ReplayingDecoder<Void> {
 	public static @Nullable Packet constructServerPacket(int id, ByteBuf buf) {
 		if (id == ChunkTilePacket.PACKET_ID) return ChunkTilePacket.read(buf);
 		if (id == SEncryptionRequest.PACKET_ID) return SEncryptionRequest.read(buf);
+		if (id == SCatchup.PACKET_ID) return SCatchup.read(buf);
 		return null;
 	}
 

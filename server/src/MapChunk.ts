@@ -7,6 +7,7 @@ import {
 	PrimaryColumn,
 } from 'typeorm'
 import { registerEntity } from './db'
+import {BufWriter} from "./protocol/BufWriter";
 
 export interface PlayerChunk {
 	world: string
@@ -74,6 +75,50 @@ export class PlayerChunkDB extends BaseEntity implements PlayerChunk {
 			skipUpdateIfNoValuesChanged: true,
 		})
 		await PlayerChunkDB.upsert(map_chunk, PlayerChunkDB.primaryCols)
+	}
+
+	static async getCatchupData(timestamp: number){
+		let chunks = await PlayerChunkDB.createQueryBuilder()
+			.where("player_chunk.ts >= :timestamp", {timestamp: timestamp})
+			.orderBy("player_chunk.ts", "DESC")
+			.getMany()
+
+		let buf = new BufWriter();
+
+		const seenChunks: Record<string, PlayerChunkDB> = {}
+		for (const chunk of chunks) {
+			const chunkPos = `${chunk.chunk_x},${chunk.chunk_z}`
+			if (seenChunks[chunkPos]) continue
+			seenChunks[chunkPos] = chunk
+		}
+		const chunksList = Object.values(seenChunks)
+		buf.writeUInt32(chunksList.length)
+		for(const row of chunksList){
+			if(row){
+				buf.writeString(row.world)
+				buf.writeInt32(row.chunk_x)
+				buf.writeInt32(row.chunk_z)
+				buf.writeUInt64(row.ts)
+			}
+		}
+
+		return buf.getBuffer();
+	}
+
+	static async getCatchupChunk(world: string, chunk_x: number, chunk_z: number){
+		let chunks = await PlayerChunkDB.findOne({
+			where: {
+				world: world,
+				chunk_x: chunk_x,
+				chunk_z: chunk_z
+			}, order: {
+				ts: "DESC",
+			}
+		})
+
+
+
+		return chunks
 	}
 }
 

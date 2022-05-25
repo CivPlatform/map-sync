@@ -1,6 +1,7 @@
 package gjum.minecraft.mapsync.common.net;
 
 import gjum.minecraft.mapsync.common.net.packet.ChunkTilePacket;
+import gjum.minecraft.mapsync.common.net.packet.SCatchup;
 import gjum.minecraft.mapsync.common.net.packet.SEncryptionRequest;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
@@ -29,7 +30,11 @@ public class ClientHandler extends ChannelInboundHandlerAdapter {
 				} else throw new Error("Expected encryption request, got " + packet);
 			} else if (packet instanceof ChunkTilePacket) {
 				getMod().handleSharedChunk(((ChunkTilePacket) packet).chunkTile);
-			} else throw new Error("Expected packet, got " + packet);
+			} else if (packet instanceof SCatchup){
+				getMod().handleCatchupData(((SCatchup) packet).last_timestamps);
+			}
+
+			else throw new Error("Expected packet, got " + packet);
 		} catch (Throwable err) {
 			err.printStackTrace();
 			ctx.close();

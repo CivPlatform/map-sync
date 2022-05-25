@@ -4,6 +4,8 @@ import { ChunkTilePacket } from './ChunkTilePacket'
 import { EncryptionRequestPacket } from './EncryptionRequestPacket'
 import { EncryptionResponsePacket } from './EncryptionResponsePacket'
 import { HandshakePacket } from './HandshakePacket'
+import {CatchupPacket} from "./CatchupPacket";
+import {CatchupRequestPacket} from "./CatchupRequestPacket";
 
 export interface ProtocolClient {
 	/** unique among all clients */
@@ -13,6 +15,7 @@ export interface ProtocolClient {
 
 	readonly modVersion: string | undefined
 	readonly gameAddress: string | undefined
+	readonly lastTimestamp: number | undefined
 	/** if set, client has authenticated with Mojang */
 	readonly uuid: string | undefined
 
@@ -32,8 +35,12 @@ export type ClientPacket =
 	| ChunkTilePacket
 	| EncryptionResponsePacket
 	| HandshakePacket
+	| CatchupRequestPacket
 
-export type ServerPacket = ChunkTilePacket | EncryptionRequestPacket
+export type ServerPacket =
+	| ChunkTilePacket
+	| EncryptionRequestPacket
+	| CatchupPacket
 
 export const packetIds = [
 	'ERROR:pkt0',
@@ -41,6 +48,8 @@ export const packetIds = [
 	'EncryptionRequest',
 	'EncryptionResponse',
 	'ChunkTile',
+	'Catchup',
+	'CatchupRequest'
 ]
 
 export function getPacketId(type: ServerPacket['type']) {
@@ -58,6 +67,8 @@ export function decodePacket(reader: BufReader): ClientPacket {
 			return HandshakePacket.decode(reader)
 		case 'EncryptionResponse':
 			return EncryptionResponsePacket.decode(reader)
+		case 'CatchupRequest':
+			return CatchupRequestPacket.decode(reader)
 		default:
 			throw new Error(`Unknown packet type ${packetType}`)
 	}
@@ -66,6 +77,8 @@ export function decodePacket(reader: BufReader): ClientPacket {
 export function encodePacket(pkt: ServerPacket, writer: BufWriter): void {
 	writer.writeUInt8(getPacketId(pkt.type))
 	switch (pkt.type) {
+		case 'Catchup':
+			return CatchupPacket.encode(pkt, writer)
 		case 'ChunkTile':
 			return ChunkTilePacket.encode(pkt, writer)
 		case 'EncryptionRequest':

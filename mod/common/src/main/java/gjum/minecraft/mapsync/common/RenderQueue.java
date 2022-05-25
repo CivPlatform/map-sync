@@ -2,15 +2,17 @@ package gjum.minecraft.mapsync.common;
 
 import gjum.minecraft.mapsync.common.data.ChunkTile;
 import gjum.minecraft.mapsync.common.integration.JourneyMapHelper;
+import gjum.minecraft.mapsync.common.integration.VoxelMapHelper;
+import gjum.minecraft.mapsync.common.net.packet.CCatchupRequest;
 import net.minecraft.client.Minecraft;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.Comparator;
 import java.util.concurrent.PriorityBlockingQueue;
 
+import static gjum.minecraft.mapsync.common.MapSyncMod.getMod;
+
 public class RenderQueue {
-	// should be how many chunks we can render in the time it takes for a round-trip region chunks request
-	public static int WATERMARK_REQUEST_MORE = 0;
 
 	private final DimensionState dimensionState;
 
@@ -43,6 +45,9 @@ public class RenderQueue {
 	}
 
 	private void renderLoop() {
+
+		final int WATERMARK_REQUEST_MORE = MapSyncMod.modConfig.getCatchupWatermark();
+
 		try {
 			while (true) {
 				var chunkTile = queue.poll();
@@ -62,15 +67,18 @@ public class RenderQueue {
 				}
 
 				boolean renderedJM = JourneyMapHelper.updateWithChunkTile(chunkTile);
+				boolean voxelRendered = VoxelMapHelper.updateWithChunkTile(chunkTile);
 
-				if (renderedJM) {
+				if (renderedJM || voxelRendered) {
 					dimensionState.setChunkTimestamp(chunkTile.chunkPos(), chunkTile.timestamp());
+					dimensionState.writeLastTimestamp(chunkTile.timestamp());
 				} // otherwise, update this chunk again when server sends it again
 
 				Thread.sleep(0); // allow stopping via thread.interrupt()
 
 				if (queue.size() < WATERMARK_REQUEST_MORE) {
-					// XXX request region from server if not already in-flight
+					// request as many CatchupChunks as possible below watermark
+					dimensionState.requestCatchupChunks(WATERMARK_REQUEST_MORE);
 				}
 			}
 		} catch (InterruptedException ignored) {

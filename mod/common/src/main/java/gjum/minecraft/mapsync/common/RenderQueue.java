@@ -46,6 +46,7 @@ public class RenderQueue {
 		final int WATERMARK_REQUEST_MORE = MapSyncMod.modConfig.getCatchupWatermark();
 
 		try {
+			long lastRequestMore = 0;
 			while (true) {
 				var chunkTile = queue.poll();
 				if (chunkTile == null) return;
@@ -73,7 +74,9 @@ public class RenderQueue {
 
 				Thread.sleep(0); // allow stopping via thread.interrupt()
 
-				if (queue.size() < WATERMARK_REQUEST_MORE) {
+				long now = System.currentTimeMillis();
+				if (lastRequestMore < now - 1000 && queue.size() < WATERMARK_REQUEST_MORE) {
+					lastRequestMore = now;
 					var chunksToRequest = dimensionState.pollCatchupChunks(WATERMARK_REQUEST_MORE);
 					getMod().requestCatchupData(chunksToRequest);
 				}

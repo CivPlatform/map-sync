@@ -78,8 +78,8 @@ export class PlayerChunkDB extends BaseEntity implements PlayerChunk {
 
 	static async getCatchupData(timestamp: number) {
 		let chunks = await PlayerChunkDB.createQueryBuilder()
-			.where('player_chunk.ts >= :timestamp', { timestamp: timestamp })
-			.orderBy('player_chunk.ts', 'DESC')
+			.where('ts > :timestamp', { timestamp: timestamp })
+			.orderBy('ts', 'DESC')
 			.getMany()
 
 		const seenChunks: Record<string, PlayerChunkDB> = {}

@@ -1,12 +1,18 @@
 package gjum.minecraft.mapsync.common;
 
+import gjum.minecraft.mapsync.common.data.CatchupChunk;
 import gjum.minecraft.mapsync.common.data.ChunkTile;
+import gjum.minecraft.mapsync.common.net.packet.CCatchupRequest;
+import gjum.minecraft.mapsync.common.net.packet.SCatchup;
 import net.minecraft.client.Minecraft;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.Level;
 
+import java.util.*;
+
 import static gjum.minecraft.mapsync.common.MapSyncMod.debugLog;
+import static gjum.minecraft.mapsync.common.MapSyncMod.getMod;
 
 /**
  * contains any background processes and data structures, to be able to easily tear down when leaving the dimension
@@ -19,6 +25,8 @@ public class DimensionState {
 
 	private final DimensionChunkMeta chunkMeta;
 	private final RenderQueue renderQueue;
+
+	private List<CatchupChunk> catchupChunks;
 
 	DimensionState(String mcServerName, ResourceKey<Level> dimension) {
 		this.dimension = dimension;
@@ -70,4 +78,33 @@ public class DimensionState {
 
 		renderQueue.renderLater(chunkTile);
 	}
+
+	public void setCatchupChunks(List<CatchupChunk> catchupChunks) {
+		this.catchupChunks = catchupChunks;
+	}
+
+	public void requestCatchupChunks(int amount){
+		// calculate Euclidean distance to a given chunk, request closest/newest chunks first.
+		PriorityQueue<CatchupChunk> queue = new PriorityQueue<>(amount, (o1, o2) -> {
+			// Hilariously, this makes it manhattan distance lol
+			return (int) o1.getDistanceTo(o2.chunkPos());
+		});
+
+		for (CatchupChunk chunk : catchupChunks) {
+			var current_timestamp = getChunkTimestamp(chunk.chunkPos());
+			if (current_timestamp < chunk.timestamp()) {
+				queue.add(chunk);
+			} else {
+				// no more need, since current timestamp is higher
+				catchupChunks.remove(chunk);
+			}
+		}
+
+		// Dump into list to move
+		List<CatchupChunk> chunksToRequest = new ArrayList<>();
+		queue.removeAll(chunksToRequest);
+		getMod().requestCatchupData(chunksToRequest);
+
+	}
+
 }

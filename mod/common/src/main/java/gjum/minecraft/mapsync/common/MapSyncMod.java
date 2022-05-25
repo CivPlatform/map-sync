@@ -3,7 +3,9 @@ package gjum.minecraft.mapsync.common;
 import com.mojang.blaze3d.platform.InputConstants;
 import gjum.minecraft.mapsync.common.config.ModConfig;
 import gjum.minecraft.mapsync.common.config.ServerConfig;
+import gjum.minecraft.mapsync.common.data.CatchupChunk;
 import gjum.minecraft.mapsync.common.data.ChunkTile;
+import gjum.minecraft.mapsync.common.net.packet.CCatchupRequest;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ServerData;
@@ -13,6 +15,8 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.jetbrains.annotations.Nullable;
 import org.lwjgl.glfw.GLFW;
+
+import java.util.List;
 
 import static gjum.minecraft.mapsync.common.Cartography.chunkTileFromLevel;
 
@@ -214,6 +218,28 @@ public abstract class MapSyncMod {
 		var dimensionState = getDimensionState();
 		if (dimensionState == null) return;
 		dimensionState.processSharedChunk(chunkTile);
+	}
+
+	/** This only gets run once after authentication secured */
+	public void handleCatchupData(List<CatchupChunk> catchupChunks){
+		var dimensionState = getDimensionState();
+		if (dimensionState == null) return;
+		dimensionState.setCatchupChunks(catchupChunks);
+	}
+
+	public void requestCatchupData(List<CatchupChunk> chunks){
+		if (chunks == null || chunks.size() == 0) return;
+		var syncClient = getSyncClient();
+		if (syncClient == null) {
+			// hopefully shouldn't happen, as we've received the catchup data.
+			return;
+		}
+
+		// Catchup chunks will be sent back via regular ChunkTilePackets
+		for(CatchupChunk chunk : chunks){
+			var request = new CCatchupRequest(chunk);
+			syncClient.send(request);
+		}
 	}
 
 	public static void debugLog(String msg) {

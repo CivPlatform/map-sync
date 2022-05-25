@@ -2,6 +2,7 @@ package gjum.minecraft.mapsync.common;
 
 import gjum.minecraft.mapsync.common.data.ChunkTile;
 import gjum.minecraft.mapsync.common.integration.JourneyMapHelper;
+import gjum.minecraft.mapsync.common.net.packet.CCatchupRequest;
 import net.minecraft.client.Minecraft;
 import org.jetbrains.annotations.NotNull;
 
@@ -67,7 +68,8 @@ public class RenderQueue {
 				Thread.sleep(0); // allow stopping via thread.interrupt()
 
 				if (queue.size() < WATERMARK_REQUEST_MORE) {
-					// XXX request region from server if not already in-flight
+					// request as many CatchupChunks as possible below watermark
+					dimensionState.requestCatchupChunks(WATERMARK_REQUEST_MORE - queue.size());
 				}
 			}
 		} catch (InterruptedException ignored) {

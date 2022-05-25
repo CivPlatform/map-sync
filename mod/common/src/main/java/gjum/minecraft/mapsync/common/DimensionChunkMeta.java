@@ -87,10 +87,11 @@ public class DimensionChunkMeta {
 		try {
 			Path path = getTsFilePath();
 			return Long.parseLong(Files.readString(path));
+		} catch (FileNotFoundException | NoSuchFileException ignored) {
 		} catch (IOException e) {
 			e.printStackTrace();
-			return 0;
 		}
+		return 0;
 	}
 
 	public synchronized void writeLastTimestamp(long current_time) {

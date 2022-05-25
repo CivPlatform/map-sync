@@ -3,6 +3,7 @@ import { PlayerChunk, PlayerChunkDB } from './MapChunk'
 import { ClientPacket, ProtocolClient, ProtocolHandler } from './protocol'
 import { ChunkTilePacket } from './protocol/ChunkTilePacket'
 import { TcpServer } from './server'
+import './cli'
 
 connectDB().then(() => new Main())
 

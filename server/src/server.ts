@@ -279,7 +279,11 @@ export class TcpClient implements ProtocolClient {
 
 		this.cryptoPromise.then(() => {
 			this.handler.handleClientAuthenticated(this)
-		})
+		}).catch(e => {
+			this.log("Error in a promise");
+			console.error(e);
+			this.kick(`Error in a package promise`);
+		});
 	}
 
 	debug(...args: any[]) {

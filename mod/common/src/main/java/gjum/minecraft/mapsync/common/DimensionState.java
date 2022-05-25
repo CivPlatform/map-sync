@@ -90,15 +90,14 @@ public class DimensionState {
 	}
 
 	public void requestCatchupChunks(int amount){
-		// calculate Euclidean distance to a given chunk, request closest/newest chunks first.
+		Player player = mc.player;
+		if (player == null) {
+			return;
+		}
+		ChunkPos currentPos = mc.player.chunkPosition();
 		PriorityQueue<CatchupChunk> queue = new PriorityQueue<>(amount, (o1, o2) -> {
-			Player player = mc.player;
-			try {
-				return (int) Math.abs(o2.getDistanceTo(player.chunkPosition()) - o1.getDistanceTo(player.chunkPosition()));
-			} catch(NullPointerException e) {
-				e.printStackTrace();
-				return Integer.MAX_VALUE;
-			}
+			// calculate Euclidean distance to a given chunk, request closest/newest chunks first.
+			return (int) Math.abs(o2.getDistanceTo(currentPos) - o1.getDistanceTo(currentPos));
 		});
 
 		for (CatchupChunk chunk : catchupChunks) {

@@ -13,8 +13,6 @@ import java.util.concurrent.PriorityBlockingQueue;
 import static gjum.minecraft.mapsync.common.MapSyncMod.getMod;
 
 public class RenderQueue {
-	// should be how many chunks we can render in the time it takes for a round-trip region chunks request
-	public static int WATERMARK_REQUEST_MORE = MapSyncMod.modConfig.getCatchupWatermark();
 
 	private final DimensionState dimensionState;
 
@@ -47,6 +45,8 @@ public class RenderQueue {
 	}
 
 	private void renderLoop() {
+
+		final int WATERMARK_REQUEST_MORE = MapSyncMod.modConfig.getCatchupWatermark();
 
 		try {
 			while (true) {

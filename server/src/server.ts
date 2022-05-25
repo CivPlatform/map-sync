@@ -125,7 +125,7 @@ export class TcpClient implements ProtocolClient {
 
 					try {
 						const packet = decodePacket(reader)
-						this.handlePacketReceived(packet)
+						await Promise.resolve(this.handlePacketReceived(packet));
 					} catch (err) {
 						this.warn(err)
 						return this.kick('Error in packet handler')
@@ -166,7 +166,7 @@ export class TcpClient implements ProtocolClient {
 			}
 			throw new Error(`Packet ${pkt.type} from unauth'd client ${this.id}`)
 		} else {
-			this.handler.handleClientPacketReceived(this, pkt)
+			return this.handler.handleClientPacketReceived(this, pkt)
 		}
 	}
 
@@ -207,7 +207,7 @@ export class TcpClient implements ProtocolClient {
 		this.socket.write(buf)
 	}
 
-	private handleHandshakePacket(packet: HandshakePacket) {
+	private async handleHandshakePacket(packet: HandshakePacket) {
 		if (this.cryptoPromise) throw new Error(`Already authenticated`)
 		if (this.verifyToken) throw new Error(`Encryption already started`)
 
@@ -216,14 +216,14 @@ export class TcpClient implements ProtocolClient {
 		this.claimedMojangName = packet.mojangName
 		this.verifyToken = crypto.randomBytes(4)
 
-		this.sendInternal({
+		await this.sendInternal({
 			type: 'EncryptionRequest',
 			publicKey: this.server.publicKeyBuffer,
 			verifyToken: this.verifyToken,
 		})
 	}
 
-	private handleEncryptionResponsePacket(pkt: EncryptionResponsePacket) {
+	private async handleEncryptionResponsePacket(pkt: EncryptionResponsePacket) {
 		if (this.cryptoPromise) throw new Error(`Already authenticated`)
 		if (!this.claimedMojangName)
 			throw new Error(`Encryption has not started: no mojangName`)
@@ -277,12 +277,8 @@ export class TcpClient implements ProtocolClient {
 			}
 		})
 
-		this.cryptoPromise.then(() => {
+		await this.cryptoPromise.then(() => {
 			this.handler.handleClientAuthenticated(this)
-		}).catch(e => {
-			this.log("Error in a promise");
-			console.error(e);
-			this.kick(`Error in a package promise`);
 		});
 	}
 

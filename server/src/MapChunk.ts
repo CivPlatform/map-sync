@@ -104,6 +104,22 @@ export class PlayerChunkDB extends BaseEntity implements PlayerChunk {
 
 		return buf.getBuffer();
 	}
+
+	static async getCatchupChunk(world: string, chunk_x: number, chunk_z: number){
+		let chunks = await PlayerChunkDB.findOne({
+			where: {
+				world: world,
+				chunk_x: chunk_x,
+				chunk_z: chunk_z
+			}, order: {
+				ts: "DESC",
+			}
+		})
+
+
+
+		return chunks
+	}
 }
 
 registerEntity(PlayerChunkDB)

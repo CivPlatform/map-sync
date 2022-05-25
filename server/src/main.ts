@@ -4,6 +4,7 @@ import { ClientPacket, ProtocolClient, ProtocolHandler } from './protocol'
 import { ChunkTilePacket } from './protocol/ChunkTilePacket'
 import { TcpServer } from './server'
 import {CatchupPacket} from "./protocol/CatchupPacket";
+import {CatchupRequestPacket} from "./protocol/CatchupRequestPacket";
 
 const MOD_VERSION = "1"
 
@@ -35,6 +36,8 @@ class Main implements ProtocolHandler {
 		switch (pkt.type) {
 			case 'ChunkTile':
 				return this.handleChunkTilePacket(client, pkt)
+			case 'CatchupRequest':
+				return this.handleCatchupRequest(client, pkt)
 			default:
 				throw new Error(
 					`Unknown packet '${(pkt as any).type}' from client ${client.id}`,
@@ -64,6 +67,26 @@ class Main implements ProtocolHandler {
 		}
 
 		// TODO queue render
+	}
+
+	async handleCatchupRequest(client: ProtocolClient, pkt: CatchupRequestPacket) {
+		if (!client.uuid) throw new Error(`${client.name} is not authenticated`)
+		let chunk = await PlayerChunkDB.getCatchupChunk(pkt.world, pkt.chunk_x, pkt.chunk_z)
+
+		// TODO: eliminate timestamp from request since it's not necessary
+
+		if (!chunk) throw new Error(`${client.name} requested unavailable chunks at ${pkt.world}, x${pkt.chunk_x}, z${pkt.chunk_z}`)
+		const chunkTile: ChunkTilePacket = {
+			type: 'ChunkTile',
+			world: pkt.world,
+			chunk_x: pkt.chunk_x,
+			chunk_z: pkt.chunk_z,
+			ts: chunk.ts,
+			data: chunk.data
+		}
+
+		client.send(chunkTile)
+
 	}
 
 }

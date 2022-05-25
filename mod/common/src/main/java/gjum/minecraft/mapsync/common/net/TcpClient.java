@@ -104,7 +104,8 @@ public class TcpClient {
 					channelFuture.channel().writeAndFlush(new CHandshake(
 							getMod().getVersion(),
 							Minecraft.getInstance().getUser().getName(),
-							gameAddress));
+							gameAddress,
+							Long.toString(getMod().getDimensionState().readLastTimestamp())));
 				} else {
 					handleDisconnect(future.cause());
 				}

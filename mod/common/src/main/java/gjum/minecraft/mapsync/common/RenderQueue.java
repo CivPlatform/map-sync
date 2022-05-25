@@ -61,6 +61,7 @@ public class RenderQueue {
 
 				if (renderedJM) {
 					dimensionState.setChunkTimestamp(chunkTile.chunkPos(), chunkTile.timestamp());
+					dimensionState.writeLastTimestamp(chunkTile.timestamp());
 				} // otherwise, update this chunk again when server sends it again
 
 				Thread.sleep(0); // allow stopping via thread.interrupt()

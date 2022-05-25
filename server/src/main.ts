@@ -14,13 +14,22 @@ class Main implements ProtocolHandler {
 
 	handleClientConnected(client: ProtocolClient) {}
 
-	handleClientAuthenticated(client: ProtocolClient) {
+	async handleClientAuthenticated(client: ProtocolClient) {
 		// TODO check version, mc server, user access
 
 		// TODO for above: config file for version, mc server, user access
 
 		// TODO send user the catchup tiles if possible
+		let chunks = await PlayerChunkDB.find({
+			order: {
+				ts: "DESC"
+			},
+			take: 1260
+		})
 
+		while(chunks.length > 0){
+
+		}
 	}
 
 	handleClientDisconnected(client: ProtocolClient) {}

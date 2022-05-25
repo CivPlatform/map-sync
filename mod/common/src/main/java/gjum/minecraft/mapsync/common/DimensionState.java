@@ -35,6 +35,14 @@ public class DimensionState {
 		chunkMeta.setTimestamp(chunkPos, timestamp);
 	}
 
+	public long readLastTimestamp(){
+		return chunkMeta.readLastTimestamp();
+	}
+
+	public void writeLastTimestamp(long timestamp){
+		chunkMeta.writeLastTimestamp(timestamp);
+	}
+
 	public synchronized void shutDown() {
 		if (hasShutDown) return;
 		hasShutDown = true;

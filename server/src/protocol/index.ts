@@ -14,6 +14,7 @@ export interface ProtocolClient {
 
 	readonly modVersion: string | undefined
 	readonly gameAddress: string | undefined
+	readonly lastTimestamp: number | undefined
 	/** if set, client has authenticated with Mojang */
 	readonly uuid: string | undefined
 
@@ -75,8 +76,6 @@ export function encodePacket(pkt: ServerPacket, writer: BufWriter): void {
 			return ChunkTilePacket.encode(pkt, writer)
 		case 'EncryptionRequest':
 			return EncryptionRequestPacket.encode(pkt, writer)
-		case 'Catchup':
-			return CatchupPacket.encode(pkt, writer)
 		default:
 			throw new Error(`Unknown packet type ${(pkt as any).type}`)
 	}

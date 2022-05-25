@@ -198,6 +198,8 @@ public abstract class MapSyncMod {
 	public void handleSyncServerEncryptionSuccess() {
 		debugLog("tcp encrypted");
 		// TODO start requesting missed chunks
+
+
 	}
 
 	public void handleSharedChunk(ChunkTile chunkTile) {

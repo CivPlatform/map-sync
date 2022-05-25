@@ -19,6 +19,18 @@ public class ModConfig extends JsonConfig {
 		saveLater();
 	}
 
+	@Expose
+	private int catchupWatermark = 9;
+
+	public int getCatchupWatermark() {
+		return catchupWatermark;
+	}
+
+	public void setCatchupWatermark(int value) {
+		catchupWatermark = value;
+		saveLater();
+	}
+
 	public static ModConfig load() {
 		final String mcRoot = Minecraft.getInstance().gameDirectory.getAbsolutePath();
 		var dir = Path.of(mcRoot, "MapSync").toFile();

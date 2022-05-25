@@ -1,6 +1,8 @@
 package gjum.minecraft.mapsync.common;
 
 import gjum.minecraft.mapsync.common.data.ChunkTile;
+import gjum.minecraft.mapsync.common.integration.JourneyMapHelper;
+import gjum.minecraft.mapsync.common.integration.VoxelMapHelper;
 import net.minecraft.client.Minecraft;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.level.ChunkPos;
@@ -61,5 +63,11 @@ public class DimensionState {
 		}
 
 		renderQueue.renderLater(chunkTile);
+
+		// voxelmap doesn't need a render queue
+		boolean voxelRendered = VoxelMapHelper.updateWithChunkTile(chunkTile);
+		if (voxelRendered && !JourneyMapHelper.isMapping()) {
+			setChunkTimestamp(chunkTile.chunkPos(), chunkTile.timestamp());
+		}
 	}
 }

@@ -48,6 +48,10 @@ public class RenderQueue {
 				var chunkTile = queue.poll();
 				if (chunkTile == null) return;
 
+				if (Minecraft.getInstance().level == null) {
+					continue;
+				}
+
 				if (chunkTile.dimension() != Minecraft.getInstance().level.dimension()) {
 					continue; // mod renderers would render this to the wrong dimension
 				}

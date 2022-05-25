@@ -6,7 +6,8 @@
 		"forceConsistentCasingInFileNames": true,
 		"isolatedModules": true,
 		"lib": [
-			"esnext"
+			"esnext",
+			"webworker"
 		],
 		"module": "CommonJS",
 		"moduleResolution": "node",

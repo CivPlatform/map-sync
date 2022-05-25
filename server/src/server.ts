@@ -12,6 +12,7 @@ import { BufReader } from './protocol/BufReader'
 import { BufWriter } from './protocol/BufWriter'
 import { EncryptionResponsePacket } from './protocol/EncryptionResponsePacket'
 import { HandshakePacket } from './protocol/HandshakePacket'
+import { config, whitelist_check, cache_uuid } from './metadata'
 
 const { PORT = '12312', HOST = '127.0.0.1' } = process.env
 
@@ -248,12 +249,24 @@ export class TcpClient implements ProtocolClient {
 		this.cryptoPromise = fetchHasJoined({
 			username: this.claimedMojangName,
 			shaHex,
-		}).then((mojangAuth) => {
+		}).then(async (mojangAuth) => {
 			if (!mojangAuth?.uuid) {
 				this.kick(`Mojang auth failed`)
 				throw new Error(`Mojang auth failed`)
 			}
-			this.log('Authenticated as', mojangAuth)
+
+			cache_uuid(this.claimedMojangName!, mojangAuth.uuid);
+			if (config.whitelist) {
+				if (whitelist_check(mojangAuth.uuid)) {
+					this.log('Authenticated as whitelisted user', mojangAuth)
+				} else {
+					this.log(`Rejected unwhitelisted user ${mojangAuth.name} (${mojangAuth.uuid})`);
+					this.kick(`Not whitelisted`);
+					throw new Error(`Not whitelisted`);
+				}
+			} else {
+				this.log('Authenticated as', mojangAuth)
+			}
 
 			this.uuid = mojangAuth.uuid
 			this.name += ':' + mojangAuth.name

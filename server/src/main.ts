@@ -6,10 +6,12 @@ import { TcpServer } from './server'
 
 connectDB().then(() => new Main())
 
+const authorizedClients = new WeakSet();
+
 class Main implements ProtocolHandler {
 	server = new TcpServer(this)
 
-	handleClientConnected(client: ProtocolClient) {}
+	async handleClientConnected(client: ProtocolClient) {}
 
 	handleClientAuthenticated(client: ProtocolClient) {
 		// TODO check version, mc server, user access

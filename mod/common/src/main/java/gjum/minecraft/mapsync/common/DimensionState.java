@@ -4,10 +4,9 @@ import gjum.minecraft.mapsync.common.data.CatchupChunk;
 import gjum.minecraft.mapsync.common.data.ChunkTile;
 import gjum.minecraft.mapsync.common.integration.JourneyMapHelper;
 import gjum.minecraft.mapsync.common.integration.VoxelMapHelper;
-import gjum.minecraft.mapsync.common.net.packet.CCatchupRequest;
-import gjum.minecraft.mapsync.common.net.packet.SCatchup;
 import net.minecraft.client.Minecraft;
 import net.minecraft.resources.ResourceKey;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.Level;
 
@@ -81,8 +80,7 @@ public class DimensionState {
 		renderQueue.renderLater(chunkTile);
 
 		// voxelmap doesn't need a render queue
-		boolean voxelRendered = VoxelMapHelper.updateWithChunkTile(chunkTile);
-		if (voxelRendered && !JourneyMapHelper.isMapping()) {
+		if (!VoxelMapHelper.isMapping() && !JourneyMapHelper.isMapping()) {
 			setChunkTimestamp(chunkTile.chunkPos(), chunkTile.timestamp());
 		}
 	}
@@ -94,8 +92,13 @@ public class DimensionState {
 	public void requestCatchupChunks(int amount){
 		// calculate Euclidean distance to a given chunk, request closest/newest chunks first.
 		PriorityQueue<CatchupChunk> queue = new PriorityQueue<>(amount, (o1, o2) -> {
-			// Hilariously, this makes it manhattan distance lol
-			return (int) o1.getDistanceTo(o2.chunkPos());
+			Player player = mc.player;
+			try {
+				return (int) Math.abs(o2.getDistanceTo(player.chunkPosition()) - o1.getDistanceTo(player.chunkPosition()));
+			} catch(NullPointerException e) {
+				e.printStackTrace();
+				return Integer.MAX_VALUE;
+			}
 		});
 
 		for (CatchupChunk chunk : catchupChunks) {
@@ -110,7 +113,10 @@ public class DimensionState {
 
 		// Dump into list to move
 		List<CatchupChunk> chunksToRequest = new ArrayList<>();
-		queue.removeAll(chunksToRequest);
+		while (!queue.isEmpty()){
+			chunksToRequest.add(queue.poll());
+		}
+
 		getMod().requestCatchupData(chunksToRequest);
 
 	}

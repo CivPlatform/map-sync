@@ -37,6 +37,10 @@ public class DimensionChunkMeta {
 		return Path.of(dimensionDirPath, "r%d,%d.chunkmeta".formatted(regionPos.x, regionPos.z));
 	}
 
+	private Path getTsFilePath() {
+		return Path.of(dimensionDirPath, "last_ts");
+	}
+
 	public synchronized long getTimestamp(ChunkPos chunkPos) {
 		final var regionPos = RegionPos.forChunkPos(chunkPos);
 		final long[] regionTimestamps = regionsTimestamps.computeIfAbsent(regionPos, this::readRegionTimestampsFile);
@@ -74,6 +78,26 @@ public class DimensionChunkMeta {
 			// include absent chunks (ts=0) because sync server may have a chunk there (i.e. newer than 0)
 			long oldestChunkTs = Arrays.stream(chunkTimestamps).min().orElseThrow();
 			Files.setLastModifiedTime(path, FileTime.fromMillis(oldestChunkTs));
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+	}
+
+	public long readLastTimestamp() {
+		try {
+			Path path = getTsFilePath();
+			return Long.parseLong(Files.readString(path));
+		} catch (FileNotFoundException | NoSuchFileException ignored) {
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		return 0;
+	}
+
+	public synchronized void writeLastTimestamp(long current_time) {
+		try {
+			Path path = getTsFilePath();
+			Files.writeString(path, Long.toString(current_time));
 		} catch (IOException e) {
 			e.printStackTrace();
 		}

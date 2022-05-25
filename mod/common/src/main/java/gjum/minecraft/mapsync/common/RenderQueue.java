@@ -2,16 +2,16 @@ package gjum.minecraft.mapsync.common;
 
 import gjum.minecraft.mapsync.common.data.ChunkTile;
 import gjum.minecraft.mapsync.common.integration.JourneyMapHelper;
+import gjum.minecraft.mapsync.common.integration.VoxelMapHelper;
 import net.minecraft.client.Minecraft;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.Comparator;
 import java.util.concurrent.PriorityBlockingQueue;
 
-public class RenderQueue {
-	// should be how many chunks we can render in the time it takes for a round-trip region chunks request
-	public static int WATERMARK_REQUEST_MORE = 0;
+import static gjum.minecraft.mapsync.common.MapSyncMod.getMod;
 
+public class RenderQueue {
 	private final DimensionState dimensionState;
 
 	private Thread thread;
@@ -43,7 +43,10 @@ public class RenderQueue {
 	}
 
 	private void renderLoop() {
+		final int WATERMARK_REQUEST_MORE = MapSyncMod.modConfig.getCatchupWatermark();
+
 		try {
+			long lastRequestMore = 0;
 			while (true) {
 				var chunkTile = queue.poll();
 				if (chunkTile == null) return;
@@ -61,16 +64,21 @@ public class RenderQueue {
 					continue; // don't overwrite newer data with older data
 				}
 
+				boolean voxelRendered = VoxelMapHelper.updateWithChunkTile(chunkTile);
 				boolean renderedJM = JourneyMapHelper.updateWithChunkTile(chunkTile);
 
-				if (renderedJM) {
+				if (renderedJM || voxelRendered) {
 					dimensionState.setChunkTimestamp(chunkTile.chunkPos(), chunkTile.timestamp());
+					dimensionState.writeLastTimestamp(chunkTile.timestamp());
 				} // otherwise, update this chunk again when server sends it again
 
 				Thread.sleep(0); // allow stopping via thread.interrupt()
 
-				if (queue.size() < WATERMARK_REQUEST_MORE) {
-					// XXX request region from server if not already in-flight
+				long now = System.currentTimeMillis();
+				if (lastRequestMore < now - 1000 && queue.size() < WATERMARK_REQUEST_MORE) {
+					lastRequestMore = now;
+					var chunksToRequest = dimensionState.pollCatchupChunks(WATERMARK_REQUEST_MORE);
+					getMod().requestCatchupData(chunksToRequest);
 				}
 			}
 		} catch (InterruptedException ignored) {

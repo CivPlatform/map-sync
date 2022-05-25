@@ -75,6 +75,38 @@ export class PlayerChunkDB extends BaseEntity implements PlayerChunk {
 		})
 		await PlayerChunkDB.upsert(map_chunk, PlayerChunkDB.primaryCols)
 	}
+
+	static async getCatchupData(timestamp: number) {
+		let chunks = await PlayerChunkDB.createQueryBuilder()
+			.where('ts > :timestamp', { timestamp: timestamp })
+			.orderBy('ts', 'DESC')
+			.getMany()
+
+		const seenChunks: Record<string, PlayerChunkDB> = {}
+		for (const chunk of chunks) {
+			const chunkPos = `${chunk.chunk_x},${chunk.chunk_z}`
+			if (seenChunks[chunkPos]) continue
+			seenChunks[chunkPos] = chunk
+		}
+		return Object.values(seenChunks)
+	}
+
+	/** latest chunk at that location */
+	static async getChunkWithData(chunk: {
+		world: string
+		chunk_x: number
+		chunk_z: number
+	}) {
+		return await PlayerChunkDB.findOne({
+			where: {
+				world: chunk.world,
+				chunk_x: chunk.chunk_x,
+				chunk_z: chunk.chunk_z,
+			},
+			relations: ['data'], // include chunk data stored in other table
+			order: { ts: 'DESC' }, // get latest among all players that sent this chunk
+		})
+	}
 }
 
 registerEntity(PlayerChunkDB)

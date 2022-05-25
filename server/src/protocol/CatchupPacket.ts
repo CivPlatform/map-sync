@@ -1,20 +1,19 @@
-import { BufReader } from './BufReader'
+import { CatchupChunk } from '../Catchup'
 import { BufWriter } from './BufWriter'
 
 export interface CatchupPacket {
-    type: 'Catchup'
-    lastTimestamps: Buffer;
+	type: 'Catchup'
+	chunks: CatchupChunk[]
 }
 
 export namespace CatchupPacket {
-    export function decode(reader: BufReader): CatchupPacket {
-        return {
-            type: 'Catchup',
-            lastTimestamps: reader.readBufWithLen()
-        }
-    }
-
-    export function encode(pkt: CatchupPacket, writer: BufWriter) {
-        writer.writeBufRaw(pkt.lastTimestamps)
-    }
+	export function encode(pkt: CatchupPacket, writer: BufWriter) {
+		writer.writeString(pkt.chunks[0].world)
+		writer.writeUInt32(pkt.chunks.length)
+		for (const row of pkt.chunks) {
+			writer.writeInt32(row.chunk_x)
+			writer.writeInt32(row.chunk_z)
+			writer.writeUInt64(row.ts)
+		}
+	}
 }

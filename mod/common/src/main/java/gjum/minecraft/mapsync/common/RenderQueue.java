@@ -52,7 +52,7 @@ public class RenderQueue {
 				if (chunkTile == null) return;
 
 				if (Minecraft.getInstance().level == null) {
-					continue;
+					return; // world closed; all queued chunks can't be rendered
 				}
 
 				if (chunkTile.dimension() != Minecraft.getInstance().level.dimension()) {
@@ -76,9 +76,15 @@ public class RenderQueue {
 
 				long now = System.currentTimeMillis();
 				if (lastRequestMore < now - 1000 && queue.size() < WATERMARK_REQUEST_MORE) {
-					lastRequestMore = now;
-					var chunksToRequest = dimensionState.pollCatchupChunks(WATERMARK_REQUEST_MORE);
-					getMod().requestCatchupData(chunksToRequest);
+					if (!JourneyMapHelper.isJourneyMapNotAvailable && !JourneyMapHelper.isMapping()) {
+						// wait til ready
+					} else if (!VoxelMapHelper.isVoxelMapNotAvailable && !VoxelMapHelper.isMapping()) {
+						// wait til ready
+					} else {
+						lastRequestMore = now;
+						var chunksToRequest = dimensionState.pollCatchupChunks(WATERMARK_REQUEST_MORE);
+						getMod().requestCatchupData(chunksToRequest);
+					}
 				}
 			}
 		} catch (InterruptedException ignored) {

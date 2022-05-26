@@ -48,7 +48,7 @@ public class CatchupLogic {
 		maybeRequestMoreCatchup();
 	}
 
-	public void handleSharedChunkReceived(@NotNull ChunkTile chunkTile) {
+	public synchronized void handleSharedChunkReceived(@NotNull ChunkTile chunkTile) {
 		if (chunkTile.timestamp() < beginLiveTs) {
 			// assume received chunk is catchup chunk
 			// wait a bit to allow more catchup chunks to come in before requesting more
@@ -56,7 +56,7 @@ public class CatchupLogic {
 		}
 	}
 
-	void maybeRequestMoreCatchup() {
+	synchronized void maybeRequestMoreCatchup() {
 		int WATERMARK_REQUEST_MORE = MapSyncMod.modConfig.getCatchupWatermark();
 		long now = System.currentTimeMillis();
 		if (tsRequestMore > now) return;

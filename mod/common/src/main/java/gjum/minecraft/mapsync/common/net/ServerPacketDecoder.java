@@ -1,8 +1,6 @@
 package gjum.minecraft.mapsync.common.net;
 
-import gjum.minecraft.mapsync.common.net.packet.ChunkTilePacket;
-import gjum.minecraft.mapsync.common.net.packet.SCatchup;
-import gjum.minecraft.mapsync.common.net.packet.SEncryptionRequest;
+import gjum.minecraft.mapsync.common.net.packet.*;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.ReplayingDecoder;
@@ -20,14 +18,18 @@ public class ServerPacketDecoder extends ReplayingDecoder<Void> {
 
 	@Override
 	protected void decode(ChannelHandlerContext ctx, ByteBuf buf, List<Object> out) {
-		byte id = buf.readByte();
-		final Packet packet = constructServerPacket(id, buf);
-		if (packet == null) {
-			SyncClient.logger.error("[ServerPacketDecoder] " +
-					"Unknown server packet id " + id + " 0x" + Integer.toHexString(id));
-			ctx.close();
-			return;
+		try {
+			byte id = buf.readByte();
+			final Packet packet = constructServerPacket(id, buf);
+			if (packet == null) {
+				SyncClient.logger.error("[ServerPacketDecoder] " +
+						"Unknown server packet id " + id + " 0x" + Integer.toHexString(id));
+				ctx.close();
+				return;
+			}
+			out.add(packet);
+		} catch (Throwable err) {
+			err.printStackTrace();
 		}
-		out.add(packet);
 	}
 }

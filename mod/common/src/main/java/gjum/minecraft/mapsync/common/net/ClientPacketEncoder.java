@@ -1,9 +1,6 @@
 package gjum.minecraft.mapsync.common.net;
 
-import gjum.minecraft.mapsync.common.net.packet.CCatchupRequest;
-import gjum.minecraft.mapsync.common.net.packet.CEncryptionResponse;
-import gjum.minecraft.mapsync.common.net.packet.CHandshake;
-import gjum.minecraft.mapsync.common.net.packet.ChunkTilePacket;
+import gjum.minecraft.mapsync.common.net.packet.*;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.MessageToByteEncoder;
@@ -19,7 +16,11 @@ public class ClientPacketEncoder extends MessageToByteEncoder<Packet> {
 
 	@Override
 	protected void encode(ChannelHandlerContext ctx, Packet packet, ByteBuf out) {
-		out.writeByte(getClientPacketId(packet));
-		packet.write(out);
+		try {
+			out.writeByte(getClientPacketId(packet));
+			packet.write(out);
+		} catch (Throwable err) {
+			err.printStackTrace();
+		}
 	}
 }

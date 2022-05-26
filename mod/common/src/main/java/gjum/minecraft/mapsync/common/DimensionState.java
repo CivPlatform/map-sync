@@ -77,12 +77,13 @@ public class DimensionState {
 			return; // don't render tile to the wrong dimension
 		}
 
+		catchup.handleSharedChunkReceived(chunkTile);
+
 		if (mc.level.getChunkSource().hasChunk(chunkTile.x(), chunkTile.z())) {
 			debugLog("Dropping chunk tile: loaded in world");
 			return; // don't update loaded chunks
 		}
 
-		catchup.handleSharedChunkReceived(chunkTile);
 		renderQueue.renderLater(chunkTile);
 	}
 

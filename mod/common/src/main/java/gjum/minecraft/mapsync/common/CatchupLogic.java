@@ -57,10 +57,11 @@ public class CatchupLogic {
 	}
 
 	void maybeRequestMoreCatchup() {
-		int queueSize = dimensionState.getRenderQueueSize();
 		int WATERMARK_REQUEST_MORE = MapSyncMod.modConfig.getCatchupWatermark();
 		long now = System.currentTimeMillis();
-		if (queueSize < WATERMARK_REQUEST_MORE && tsRequestMore < now) {
+		if (tsRequestMore > now) return;
+		int queueSize = dimensionState.getRenderQueueSize();
+		if (queueSize < WATERMARK_REQUEST_MORE) {
 			// before requesting more, wait for a catchup chunk to be received (see renderLater());
 			// if none get received within a second (all outdated etc.) then request more anyway
 			tsRequestMore = now + 5000;

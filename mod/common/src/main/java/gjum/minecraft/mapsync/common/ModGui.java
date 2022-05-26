@@ -24,6 +24,7 @@ public class ModGui extends Screen {
 	int top;
 
 	EditBox syncServerAddressField;
+	Button syncServerConnectBtn;
 
 	protected ModGui(Screen parentScreen) {
 		super(new TextComponent("Map-Sync"));
@@ -61,7 +62,7 @@ public class ModGui extends Screen {
 			syncServerAddressField.setValue(String.join(" ",
 					serverConfig.getSyncServerAddresses()));
 
-			addRenderableWidget(new Button(
+			addRenderableWidget(syncServerConnectBtn = new Button(
 					right - 100,
 					top + 40,
 					100, 20,
@@ -84,6 +85,32 @@ public class ModGui extends Screen {
 		renderBackground(poseStack);
 		drawCenteredString(poseStack, font, title, width / 2, top, 0xFFFFFF);
 		syncServerAddressField.render(poseStack, i, j, f);
+
+		int numConnected = 0;
+		int msgY = top + 60;
+		var syncClients = getMod().getSyncClients();
+		for (var client : syncClients) {
+			int statusColor;
+			String statusText;
+			if (client.isEncrypted()) {
+				numConnected++;
+				statusColor = 0x008800;
+				statusText = "Connected";
+			} else if (client.getError() != null) {
+				statusColor = 0xff8888;
+				statusText = client.getError();
+			} else {
+				statusColor = 0xffffff;
+				statusText = "Connecting...";
+			}
+			statusText = client.address + "  " + statusText;
+			drawString(poseStack, font, statusText, left, msgY, statusColor);
+			msgY += 10;
+		}
+		if (numConnected == syncClients.size() && syncServerConnectBtn != null) {
+			syncServerConnectBtn.setMessage(new TextComponent("All connected"));
+		}
+
 		super.render(poseStack, i, j, f);
 	}
 }

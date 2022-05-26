@@ -9,21 +9,21 @@ import org.jetbrains.annotations.NotNull;
 import java.util.Comparator;
 import java.util.concurrent.PriorityBlockingQueue;
 
-import static gjum.minecraft.mapsync.common.MapSyncMod.getMod;
-
 public class RenderQueue {
 	private final DimensionState dimensionState;
 
-	private final long beginLiveTs = System.currentTimeMillis();
-	private long tsRequestMore = 0;
 	private Thread thread;
 
-	private PriorityBlockingQueue<ChunkTile> queue = new PriorityBlockingQueue<>(18,
+	private final PriorityBlockingQueue<ChunkTile> queue = new PriorityBlockingQueue<>(18,
 			// newest chunks first
 			Comparator.comparingLong(ChunkTile::timestamp).reversed());
 
 	public RenderQueue(DimensionState dimensionState) {
 		this.dimensionState = dimensionState;
+	}
+
+	public int getQueueSize() {
+		return queue.size();
 	}
 
 	/**
@@ -35,11 +35,6 @@ public class RenderQueue {
 			thread = new Thread(this::renderLoop);
 			thread.start();
 		}
-		if (chunkTile.timestamp() < beginLiveTs) {
-			// assume received chunk is catchup chunk
-			// wait a bit to allow more catchup chunks to come in before requesting more
-			tsRequestMore = System.currentTimeMillis() + 100;
-		}
 	}
 
 	public synchronized void shutDown() {
@@ -50,10 +45,9 @@ public class RenderQueue {
 	}
 
 	private void renderLoop() {
-		final int WATERMARK_REQUEST_MORE = MapSyncMod.modConfig.getCatchupWatermark();
-
 		try {
 			while (true) {
+				Thread.sleep(0); // allow stopping via thread.interrupt()
 
 				if (Minecraft.getInstance().level == null) {
 					return; // world closed; all queued chunks can't be rendered
@@ -86,16 +80,7 @@ public class RenderQueue {
 					dimensionState.writeLastTimestamp(chunkTile.timestamp());
 				} // otherwise, update this chunk again when server sends it again
 
-				Thread.sleep(0); // allow stopping via thread.interrupt()
-
-				long now = System.currentTimeMillis();
-				if (queue.size() == 0 || queue.size() < WATERMARK_REQUEST_MORE && tsRequestMore < now) {
-					// before requesting more, wait for a catchup chunk to be received (see renderLater());
-					// if none get received within a second (all outdated etc.) then request more anyway
-					tsRequestMore = now + 1000;
-					var chunksToRequest = dimensionState.pollCatchupChunks(WATERMARK_REQUEST_MORE);
-					getMod().requestCatchupData(chunksToRequest);
-				}
+				dimensionState.onChunkRenderDone(chunkTile);
 			}
 		} catch (InterruptedException ignored) {
 			// exit silently

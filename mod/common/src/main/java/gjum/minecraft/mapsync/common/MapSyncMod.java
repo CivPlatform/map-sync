@@ -83,6 +83,9 @@ public abstract class MapSyncMod {
 		while (openGuiKey.consumeClick()) {
 			mc.setScreen(new ModGui(mc.screen));
 		}
+
+		var dimensionState = getDimensionState();
+		if (dimensionState != null) dimensionState.onTick();
 	}
 
 	public void handleConnectedToServer(ClientboundLoginPacket packet) {
@@ -225,10 +228,7 @@ public abstract class MapSyncMod {
 	public void handleCatchupData(SCatchup packet) {
 		var dimensionState = getDimensionState();
 		if (dimensionState == null) return;
-		dimensionState.setCatchupChunks(packet.chunks);
-
-		var chunksToRequest = dimensionState.pollCatchupChunks(modConfig.getCatchupWatermark());
-		requestCatchupData(chunksToRequest);
+		dimensionState.addCatchupChunks(packet.chunks);
 	}
 
 	public void requestCatchupData(List<CatchupChunk> chunks) {

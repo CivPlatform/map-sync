@@ -1,0 +1,16 @@
+name: Build+Test Server
+
+on: [ push, pull_request ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    - name: Use Node.js 17.x
+      uses: actions/setup-node@v1
+      with:
+        node-version: 17.x
+    - run: cd server && yarn
+    - run: cd server && yarn build
+    - run: cd server && yarn test

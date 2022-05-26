@@ -21,6 +21,7 @@ public class ClientPacketEncoder extends MessageToByteEncoder<Packet> {
 			packet.write(out);
 		} catch (Throwable err) {
 			err.printStackTrace();
+			ctx.close();
 		}
 	}
 }

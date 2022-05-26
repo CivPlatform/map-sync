@@ -30,6 +30,7 @@ public class ServerPacketDecoder extends ReplayingDecoder<Void> {
 			out.add(packet);
 		} catch (Throwable err) {
 			err.printStackTrace();
+			ctx.close();
 		}
 	}
 }

@@ -65,6 +65,8 @@ export function whitelist_save(): Promise<void> {
 	});
 	return whitelist_operations;
 }
+//Load whitelist on startup
+whitelist_load();
 
 /** Checks if the given uuid is in the whitelist */
 export function whitelist_check(uuid: string): boolean { return whitelist.has(uuid); }

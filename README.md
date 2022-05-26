@@ -20,3 +20,25 @@ Every time any of your friends load a chunk with Map-Sync installed (even if the
 Map-Sync tracks a timestamp per chunk, so old data will never overwrite newer data.
 
 You can control who has access to a Sync Server by editing its `allowed-users.txt`. If someone connects who is not allowed access yet, their name and UUID gets written to `denied-users.txt`, from where you can just cut+paste it into `allowed-users.txt` and restart the server to grant access.
+
+## Running a server
+
+- install recent nodejs (~17)
+- clone code, `cd server`
+- `npm install`
+- `npm run build` -- this has to be run after every time the code is edited
+- `npm run start`
+- to stop, press Ctrl+C twice
+
+### Server commands
+
+Run these inside the command-line interface after starting the server.
+
+```
+whitelist_load
+whitelist_save
+whitelist_add_ign <name> -- requires the player to have connected in the past
+whitelist_remove_ign <name> -- requires the player to have connected in the past
+whitelist_add <uuid>
+whitelist_remove <uuid>
+```

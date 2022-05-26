@@ -52,7 +52,7 @@ public class VoxelMapHelperReal {
 		}
 	}
 
-	public static boolean isMapping() {
+	static boolean isMapping() {
 		if (worldField == null) return false;
 		try {
 			var vm = AbstractVoxelMap.getInstance();
@@ -66,7 +66,7 @@ public class VoxelMapHelperReal {
 
 	// TODO update multiple chunks in one region at once
 	// TODO which thread should this run on?
-	public static boolean updateWithChunkTile(ChunkTile chunkTile) {
+	static boolean updateWithChunkTile(ChunkTile chunkTile) {
 		try {
 			if (!isMapping()) return false;
 

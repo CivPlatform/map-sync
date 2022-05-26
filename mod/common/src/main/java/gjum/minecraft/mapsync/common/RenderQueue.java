@@ -14,6 +14,8 @@ import static gjum.minecraft.mapsync.common.MapSyncMod.getMod;
 public class RenderQueue {
 	private final DimensionState dimensionState;
 
+	private final long beginLiveTs = System.currentTimeMillis();
+	private long tsRequestMore = 0;
 	private Thread thread;
 
 	private PriorityBlockingQueue<ChunkTile> queue = new PriorityBlockingQueue<>(18,
@@ -33,6 +35,11 @@ public class RenderQueue {
 			thread = new Thread(this::renderLoop);
 			thread.start();
 		}
+		if (chunkTile.timestamp() < beginLiveTs) {
+			// assume received chunk is catchup chunk
+			// wait a bit to allow more catchup chunks to come in before requesting more
+			tsRequestMore = System.currentTimeMillis() + 100;
+		}
 	}
 
 	public synchronized void shutDown() {
@@ -46,14 +53,21 @@ public class RenderQueue {
 		final int WATERMARK_REQUEST_MORE = MapSyncMod.modConfig.getCatchupWatermark();
 
 		try {
-			long lastRequestMore = 0;
 			while (true) {
-				var chunkTile = queue.poll();
-				if (chunkTile == null) return;
 
 				if (Minecraft.getInstance().level == null) {
 					return; // world closed; all queued chunks can't be rendered
 				}
+
+				if (!JourneyMapHelper.isJourneyMapNotAvailable && !JourneyMapHelper.isMapping()
+						|| !VoxelMapHelper.isVoxelMapNotAvailable && !VoxelMapHelper.isMapping()
+				) {
+					Thread.sleep(1000);
+					continue;
+				}
+
+				var chunkTile = queue.poll();
+				if (chunkTile == null) return;
 
 				if (chunkTile.dimension() != Minecraft.getInstance().level.dimension()) {
 					continue; // mod renderers would render this to the wrong dimension
@@ -75,16 +89,12 @@ public class RenderQueue {
 				Thread.sleep(0); // allow stopping via thread.interrupt()
 
 				long now = System.currentTimeMillis();
-				if (lastRequestMore < now - 1000 && queue.size() < WATERMARK_REQUEST_MORE) {
-					if (!JourneyMapHelper.isJourneyMapNotAvailable && !JourneyMapHelper.isMapping()) {
-						// wait til ready
-					} else if (!VoxelMapHelper.isVoxelMapNotAvailable && !VoxelMapHelper.isMapping()) {
-						// wait til ready
-					} else {
-						lastRequestMore = now;
-						var chunksToRequest = dimensionState.pollCatchupChunks(WATERMARK_REQUEST_MORE);
-						getMod().requestCatchupData(chunksToRequest);
-					}
+				if (queue.size() == 0 || queue.size() < WATERMARK_REQUEST_MORE && tsRequestMore < now) {
+					// before requesting more, wait for a catchup chunk to be received (see renderLater());
+					// if none get received within a second (all outdated etc.) then request more anyway
+					tsRequestMore = now + 1000;
+					var chunksToRequest = dimensionState.pollCatchupChunks(WATERMARK_REQUEST_MORE);
+					getMod().requestCatchupData(chunksToRequest);
 				}
 			}
 		} catch (InterruptedException ignored) {

@@ -9,6 +9,8 @@ import org.jetbrains.annotations.NotNull;
 import java.util.Comparator;
 import java.util.concurrent.PriorityBlockingQueue;
 
+import static gjum.minecraft.mapsync.common.MapSyncMod.debugLog;
+
 public class RenderQueue {
 	private final DimensionState dimensionState;
 
@@ -56,6 +58,7 @@ public class RenderQueue {
 				if (!JourneyMapHelper.isJourneyMapNotAvailable && !JourneyMapHelper.isMapping()
 						|| !VoxelMapHelper.isVoxelMapNotAvailable && !VoxelMapHelper.isMapping()
 				) {
+					debugLog("render is waiting til map mod is ready");
 					Thread.sleep(1000);
 					continue;
 				}
@@ -64,16 +67,20 @@ public class RenderQueue {
 				if (chunkTile == null) return;
 
 				if (chunkTile.dimension() != Minecraft.getInstance().level.dimension()) {
+					debugLog("skipping render wrong dim " + chunkTile.chunkPos());
 					continue; // mod renderers would render this to the wrong dimension
 				}
 
 				// chunks from sync server (live, region) will always be older than mc, so mc will take priority
 				if (chunkTile.timestamp() < dimensionState.getChunkTimestamp(chunkTile.chunkPos())) {
+					debugLog("skipping render outdated " + chunkTile.chunkPos());
 					continue; // don't overwrite newer data with older data
 				}
 
 				boolean voxelRendered = VoxelMapHelper.updateWithChunkTile(chunkTile);
 				boolean renderedJM = JourneyMapHelper.updateWithChunkTile(chunkTile);
+
+				debugLog("rendered " + chunkTile.chunkPos() + " queue=" + queue.size());
 
 				if (renderedJM || voxelRendered) {
 					dimensionState.setChunkTimestamp(chunkTile.chunkPos(), chunkTile.timestamp());

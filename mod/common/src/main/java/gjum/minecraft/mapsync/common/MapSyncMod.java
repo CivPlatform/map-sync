@@ -224,6 +224,9 @@ public abstract class MapSyncMod {
 		var dimensionState = getDimensionState();
 		if (dimensionState == null) return;
 		dimensionState.setCatchupChunks(packet.chunks);
+
+		var chunksToRequest = dimensionState.pollCatchupChunks(modConfig.getCatchupWatermark());
+		requestCatchupData(chunksToRequest);
 	}
 
 	public void requestCatchupData(List<CatchupChunk> chunks) {

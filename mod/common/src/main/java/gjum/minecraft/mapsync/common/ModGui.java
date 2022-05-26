@@ -86,8 +86,20 @@ public class ModGui extends Screen {
 		drawCenteredString(poseStack, font, title, width / 2, top, 0xFFFFFF);
 		syncServerAddressField.render(poseStack, i, j, f);
 
+		var dimensionState = getMod().getDimensionState();
+		if (dimensionState != null) {
+			String counterText = String.format(
+					"In dimension %s, received %d chunks, rendered %d, rendering %d",
+					dimensionState.dimension.location(),
+					dimensionState.getNumChunksReceived(),
+					dimensionState.getNumChunksRendered(),
+					dimensionState.getRenderQueueSize()
+			);
+			drawString(poseStack, font, counterText, left, top + 60, 0x888888);
+		}
+
 		int numConnected = 0;
-		int msgY = top + 60;
+		int msgY = top + 70;
 		var syncClients = getMod().getSyncClients();
 		for (var client : syncClients) {
 			int statusColor;

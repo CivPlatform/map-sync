@@ -73,20 +73,21 @@ public class RenderQueue {
 
 				// chunks from sync server (live, region) will always be older than mc, so mc will take priority
 				if (chunkTile.timestamp() < dimensionState.getChunkTimestamp(chunkTile.chunkPos())) {
+					// don't overwrite newer data with older data
 					debugLog("skipping render outdated " + chunkTile.chunkPos());
-					continue; // don't overwrite newer data with older data
+				} else {
+					boolean voxelRendered = VoxelMapHelper.updateWithChunkTile(chunkTile);
+					boolean renderedJM = JourneyMapHelper.updateWithChunkTile(chunkTile);
+
+					debugLog("rendered " + chunkTile.chunkPos() + " queue=" + queue.size());
+
+					if (renderedJM || voxelRendered) {
+						dimensionState.setChunkTimestamp(chunkTile.chunkPos(), chunkTile.timestamp());
+						dimensionState.writeLastTimestamp(chunkTile.timestamp());
+					} // otherwise, update this chunk again when server sends it again
 				}
 
-				boolean voxelRendered = VoxelMapHelper.updateWithChunkTile(chunkTile);
-				boolean renderedJM = JourneyMapHelper.updateWithChunkTile(chunkTile);
-
-				debugLog("rendered " + chunkTile.chunkPos() + " queue=" + queue.size());
-
-				if (renderedJM || voxelRendered) {
-					dimensionState.setChunkTimestamp(chunkTile.chunkPos(), chunkTile.timestamp());
-					dimensionState.writeLastTimestamp(chunkTile.timestamp());
-				} // otherwise, update this chunk again when server sends it again
-
+				// count skipped(outdated) chunks too so DimensionState's "received" vs "rendered" count matches up
 				dimensionState.onChunkRenderDone(chunkTile);
 			}
 		} catch (InterruptedException ignored) {

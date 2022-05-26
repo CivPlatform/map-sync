@@ -24,11 +24,19 @@ public class JourneyMapHelper {
 
 	public static boolean isMapping() {
 		if (isJourneyMapNotAvailable) return false;
+		return isMappingReal();
+	}
+
+	private static boolean isMappingReal() {
 		return JourneymapClient.getInstance().isMapping();
 	}
 
 	public static boolean updateWithChunkTile(ChunkTile chunkTile) {
 		if (isJourneyMapNotAvailable) return false;
+		return updateWithChunkTileReal(chunkTile);
+	}
+
+	private static boolean updateWithChunkTileReal(ChunkTile chunkTile) {
 		if (!JourneymapClient.getInstance().isMapping()) return false; // BaseMapTask does this
 
 		var renderController = JourneymapClient.getInstance().getChunkRenderController();

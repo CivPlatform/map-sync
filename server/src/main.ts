@@ -38,8 +38,7 @@ export class Main {
 			throw new Error(`${client.name} has not set a lastTimestamp`)
 
 		const chunks = await PlayerChunkDB.getCatchupData(client.lastTimestamp)
-		const catchup: CatchupPacket = { type: 'Catchup', chunks }
-		client.send(catchup)
+		if (chunks.length) client.send({ type: 'Catchup', chunks })
 	}
 
 	handleClientDisconnected(client: ProtocolClient) {}

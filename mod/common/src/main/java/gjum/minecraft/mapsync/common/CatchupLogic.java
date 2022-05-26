@@ -9,10 +9,11 @@ import org.jetbrains.annotations.NotNull;
 
 import java.util.*;
 
-import static gjum.minecraft.mapsync.common.MapSyncMod.getMod;
-import static gjum.minecraft.mapsync.common.MapSyncMod.logger;
+import static gjum.minecraft.mapsync.common.MapSyncMod.*;
 
 public class CatchupLogic {
+	int nearbyDistance = 20; // chunk distance from player to prioritize in requests
+
 	private final DimensionState dimensionState;
 
 	/**
@@ -42,6 +43,7 @@ public class CatchupLogic {
 					this.catchupChunks.add(chunk);
 				}
 			}
+			debugLog("now have " + this.catchupChunks.size() + " catchup chunks");
 		}
 		maybeRequestMoreCatchup();
 	}
@@ -61,7 +63,7 @@ public class CatchupLogic {
 		if (queueSize < WATERMARK_REQUEST_MORE && tsRequestMore < now) {
 			// before requesting more, wait for a catchup chunk to be received (see renderLater());
 			// if none get received within a second (all outdated etc.) then request more anyway
-			tsRequestMore = now + 1000;
+			tsRequestMore = now + 5000;
 			var chunksToRequest = pollCatchupChunks(WATERMARK_REQUEST_MORE);
 			getMod().requestCatchupData(chunksToRequest);
 		}
@@ -77,12 +79,13 @@ public class CatchupLogic {
 		ChunkPos playerPos = player.chunkPosition();
 
 		synchronized (catchupChunks) {
+			if (catchupChunks.isEmpty()) return Collections.emptyList();
 			// remove outdated chunks,
 			// prioritise nearby chunks
 			// by filtering into two lists and dropping outdated chunks, we can just use the two lists below to replace catchupChunks
 			final List<CatchupChunk> nearbyChunks = new ArrayList<>();
 			final List<CatchupChunk> farChunks = new ArrayList<>();
-			int nearbySq = 32 * 32;
+			int nearbySq = nearbyDistance * nearbyDistance;
 			for (CatchupChunk chunk : catchupChunks) {
 				var current_timestamp = dimensionState.getChunkTimestamp(chunk.chunkPos());
 				if (chunk.timestamp() < current_timestamp) continue; // outdated

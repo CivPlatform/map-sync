@@ -191,6 +191,8 @@ public abstract class MapSyncMod {
 		var dimensionState = getDimensionState();
 		if (dimensionState == null) return;
 
+		debugLog("received mc chunk: " + cx + "," + cz);
+
 		var chunkTile = chunkTileFromLevel(mc.level, cx, cz);
 
 		// TODO handle journeymap skipping chunks due to rate limiting - probably need mixin on render function
@@ -216,6 +218,7 @@ public abstract class MapSyncMod {
 	}
 
 	public void handleSharedChunk(ChunkTile chunkTile) {
+		debugLog("received shared chunk: " + chunkTile.chunkPos());
 		for (SyncClient syncClient : getSyncClients()) {
 			syncClient.setServerKnownChunkHash(chunkTile.chunkPos(), chunkTile.dataHash());
 		}
@@ -228,16 +231,26 @@ public abstract class MapSyncMod {
 	public void handleCatchupData(SCatchup packet) {
 		var dimensionState = getDimensionState();
 		if (dimensionState == null) return;
+		debugLog("received catchup: " + packet.chunks.size() + " " + packet.chunks.get(0).syncClient.address);
 		dimensionState.addCatchupChunks(packet.chunks);
 	}
 
 	public void requestCatchupData(List<CatchupChunk> chunks) {
 		if (chunks == null || chunks.isEmpty()) {
+			debugLog("not requesting more catchup: null/empty");
 			return;
 		}
 
-		// Catchup chunks will be sent back via regular ChunkTilePackets
-		chunks.get(0).syncClient.send(new CCatchupRequest(chunks));
+		debugLog("requesting more catchup: " + chunks.size());
+		var byServer = new HashMap<String, List<CatchupChunk>>();
+		for (CatchupChunk chunk : chunks) {
+			var list = byServer.computeIfAbsent(chunk.syncClient.address, (a) -> new ArrayList<>());
+			list.add(chunk);
+		}
+		for (List<CatchupChunk> chunksForServer : byServer.values()) {
+			SyncClient client = chunksForServer.get(0).syncClient;
+			client.send(new CCatchupRequest(chunksForServer));
+		}
 	}
 
 	public static void debugLog(String msg) {

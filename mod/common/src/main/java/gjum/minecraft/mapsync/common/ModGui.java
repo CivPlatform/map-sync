@@ -9,7 +9,7 @@ import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.TextComponent;
 import org.jetbrains.annotations.NotNull;
 
-import java.util.Optional;
+import java.util.List;
 
 import static gjum.minecraft.mapsync.common.MapSyncMod.getMod;
 
@@ -58,8 +58,8 @@ public class ModGui extends Screen {
 					innerWidth - 110, 20,
 					new TextComponent("Sync Server Address")));
 			syncServerAddressField.setMaxLength(256);
-			syncServerAddressField.setValue(Optional.ofNullable(
-					serverConfig.getSyncServerAddress()).orElse(""));
+			syncServerAddressField.setValue(String.join(" ",
+					serverConfig.getSyncServerAddresses()));
 
 			addRenderableWidget(new Button(
 					right - 100,
@@ -71,12 +71,12 @@ public class ModGui extends Screen {
 	}
 
 	public void connectClicked(Button btn) {
-		serverConfig.setSyncServerAddress(
-				syncServerAddressField.getValue());
-		getMod().shutDownSyncClient();
-		getMod().getSyncClient();
+		var addresses = List.of(syncServerAddressField.getValue().split("[^-_.:A-Za-z0-9]+"));
+		serverConfig.setSyncServerAddresses(addresses);
+		getMod().shutDownSyncClients();
+		getMod().getSyncClients();
 		btn.active = false;
-		btn.setMessage(new TextComponent("Connecting..."));
+		btn.setMessage(new TextComponent("Connecting to " + addresses.size() + " ..."));
 	}
 
 	@Override

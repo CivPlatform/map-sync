@@ -1,6 +1,7 @@
 package gjum.minecraft.mapsync.common.net;
 
 import com.mojang.authlib.exceptions.AuthenticationException;
+import gjum.minecraft.mapsync.common.data.ChunkTile;
 import gjum.minecraft.mapsync.common.net.encryption.EncryptionDecoder;
 import gjum.minecraft.mapsync.common.net.encryption.EncryptionEncoder;
 import gjum.minecraft.mapsync.common.net.packet.*;
@@ -13,6 +14,7 @@ import io.netty.handler.codec.LengthFieldBasedFrameDecoder;
 import io.netty.handler.codec.LengthFieldPrepender;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.User;
+import net.minecraft.world.level.ChunkPos;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.jetbrains.annotations.NotNull;
@@ -21,19 +23,44 @@ import org.jetbrains.annotations.Nullable;
 import javax.crypto.*;
 import javax.crypto.spec.SecretKeySpec;
 import java.security.*;
-import java.util.ArrayList;
-import java.util.HexFormat;
+import java.util.*;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
+import static gjum.minecraft.mapsync.common.MapSyncMod.debugLog;
 import static gjum.minecraft.mapsync.common.MapSyncMod.getMod;
 
 /**
  * handles reconnection, authentication, encryption
  */
-public class TcpClient {
-	public static final Logger logger = LogManager.getLogger(TcpClient.class);
+public class SyncClient {
+	private final HashMap<ChunkPos, byte[]> serverKnownChunkHashes = new HashMap<>();
+
+	public synchronized void sendChunkTile(ChunkTile chunkTile) {
+		var serverKnownHash = getServerKnownChunkHash(chunkTile.chunkPos());
+		if (Arrays.equals(chunkTile.dataHash(), serverKnownHash)) {
+			debugLog("server already has chunk (hash) " + chunkTile.chunkPos());
+			return; // server already has this chunk
+		}
+
+		send(new ChunkTilePacket(chunkTile));
+
+		// assume packet will reach server eventually
+		setServerKnownChunkHash(chunkTile.chunkPos(), chunkTile.dataHash());
+	}
+
+	public synchronized byte[] getServerKnownChunkHash(ChunkPos chunkPos) {
+		return serverKnownChunkHashes.get(chunkPos);
+	}
+
+	public synchronized void setServerKnownChunkHash(ChunkPos chunkPos, byte[] hash) {
+		serverKnownChunkHashes.put(chunkPos, hash);
+	}
+
+	// XXX end of hotfix
+
+	public static final Logger logger = LogManager.getLogger(SyncClient.class);
 
 	public int retrySec = 5;
 
@@ -58,7 +85,7 @@ public class TcpClient {
 	private @Nullable Channel channel;
 	private static @Nullable NioEventLoopGroup workerGroup;
 
-	public TcpClient(@NotNull String address, @NotNull String gameAddress) {
+	public SyncClient(@NotNull String address, @NotNull String gameAddress) {
 		if (address.trim().isEmpty() || !address.contains(":")) {
 			throw new Error("Invalid address: '" + address + "'");
 		}
@@ -89,7 +116,7 @@ public class TcpClient {
 							new LengthFieldBasedFrameDecoder(1 << 24, 0, 4, 0, 4),
 							new ServerPacketDecoder(),
 							new ClientPacketEncoder(),
-							new ClientHandler(TcpClient.this));
+							new ClientHandler(SyncClient.this));
 				}
 			});
 
@@ -243,7 +270,7 @@ public class TcpClient {
 
 			handleEncryptionSuccess();
 		} catch (AuthenticationException e) {
-			TcpClient.logger.warn("Auth error: " + e.getMessage(), e);
+			SyncClient.logger.warn("Auth error: " + e.getMessage(), e);
 		}
 	}
 

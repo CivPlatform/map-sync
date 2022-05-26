@@ -4,11 +4,14 @@ import com.google.gson.Gson;
 import com.google.gson.JsonObject;
 import com.google.gson.annotations.Expose;
 import net.minecraft.client.Minecraft;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.io.File;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
+import java.util.*;
+import java.util.stream.Collectors;
 
 import static gjum.minecraft.mapsync.common.MapSyncMod.getMod;
 
@@ -16,21 +19,25 @@ public class ServerConfig extends JsonConfig {
 	public String gameAddress;
 
 	@Expose
-	private @Nullable String syncServerAddress = null;
+	private @Nullable String syncServerAddress = null; // XXX compatibility
 
-	public @Nullable String getSyncServerAddress() {
-		return syncServerAddress;
+	@Expose
+	private @NotNull List<String> syncServerAddresses = new ArrayList<>();
+
+	public @NotNull List<String> getSyncServerAddresses() {
+		return syncServerAddresses;
 	}
 
-	public void setSyncServerAddress(@Nullable String address) {
-		if (address != null) {
-			address = address.trim();
-			if (address.isEmpty()) address = null;
-		}
-		syncServerAddress = address;
+	public void setSyncServerAddresses(@NotNull List<String> addresses) {
+		syncServerAddresses = addresses.stream()
+				.filter(Objects::nonNull)
+				.map(String::trim)
+				.filter(address -> !address.isEmpty())
+				.collect(Collectors.toCollection(ArrayList::new));
+
 		saveLater();
 
-		getMod().getSyncClient(); // trigger dis/connection if address changed
+		getMod().getSyncClients(); // trigger dis/connection if address changed
 	}
 
 	public static ServerConfig load(String gameAddress) {
@@ -41,6 +48,12 @@ public class ServerConfig extends JsonConfig {
 		conf.gameAddress = gameAddress;
 
 		loadDefaults(conf);
+
+		conf.syncServerAddresses = conf.syncServerAddresses.stream()
+				.filter(Objects::nonNull)
+				.map(String::trim)
+				.filter(address -> !address.isEmpty())
+				.collect(Collectors.toCollection(ArrayList::new));
 
 		return conf;
 	}
@@ -60,8 +73,8 @@ public class ServerConfig extends JsonConfig {
 			e.printStackTrace();
 			return;
 		}
-		if (conf.syncServerAddress == null) {
-			conf.syncServerAddress = defaults.syncServerAddress;
+		if (conf.syncServerAddresses.isEmpty() && defaults.syncServerAddresses != null) {
+			conf.syncServerAddresses = defaults.syncServerAddresses;
 		}
 	}
 }

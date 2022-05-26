@@ -23,7 +23,7 @@ public class ServerPacketDecoder extends ReplayingDecoder<Void> {
 		byte id = buf.readByte();
 		final Packet packet = constructServerPacket(id, buf);
 		if (packet == null) {
-			TcpClient.logger.error("[ServerPacketDecoder] " +
+			SyncClient.logger.error("[ServerPacketDecoder] " +
 					"Unknown server packet id " + id + " 0x" + Integer.toHexString(id));
 			ctx.close();
 			return;

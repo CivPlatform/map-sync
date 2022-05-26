@@ -5,6 +5,7 @@ import gjum.minecraft.mapsync.common.config.ModConfig;
 import gjum.minecraft.mapsync.common.config.ServerConfig;
 import gjum.minecraft.mapsync.common.data.CatchupChunk;
 import gjum.minecraft.mapsync.common.data.ChunkTile;
+import gjum.minecraft.mapsync.common.net.SyncClient;
 import gjum.minecraft.mapsync.common.net.packet.CCatchupRequest;
 import gjum.minecraft.mapsync.common.net.packet.SCatchup;
 import net.minecraft.client.KeyMapping;
@@ -14,10 +15,12 @@ import net.minecraft.network.protocol.game.ClientboundLoginPacket;
 import net.minecraft.network.protocol.game.ClientboundRespawnPacket;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.lwjgl.glfw.GLFW;
 
-import java.util.List;
+import java.util.*;
+import java.util.stream.Collectors;
 
 import static gjum.minecraft.mapsync.common.Cartography.chunkTileFromLevel;
 
@@ -43,7 +46,7 @@ public abstract class MapSyncMod {
 			"category.map-sync"
 	);
 
-	private @Nullable SyncClient syncClient;
+	private @NotNull List<SyncClient> syncClients = new ArrayList<>();
 
 	/**
 	 * Tracks state and render thread for current mc dimension.
@@ -83,7 +86,7 @@ public abstract class MapSyncMod {
 	}
 
 	public void handleConnectedToServer(ClientboundLoginPacket packet) {
-		getSyncClient();
+		getSyncClients();
 	}
 
 	public void handleRespawn(ClientboundRespawnPacket packet) {
@@ -109,43 +112,46 @@ public abstract class MapSyncMod {
 		return serverConfig;
 	}
 
-	/**
-	 * makes sure it's connected/connecting to the right address
-	 */
-	public @Nullable SyncClient getSyncClient() {
+	public @NotNull List<SyncClient> getSyncClients() {
 		var serverConfig = getServerConfig();
-		if (serverConfig == null) return shutDownSyncClient();
+		if (serverConfig == null) return shutDownSyncClients();
 
-		String syncServerAddress = serverConfig.getSyncServerAddress();
-		if (syncServerAddress == null) return shutDownSyncClient();
+		var syncServerAddresses = serverConfig.getSyncServerAddresses();
+		if (syncServerAddresses.isEmpty()) return shutDownSyncClients();
 
-		if (syncClient != null && syncClient.isShutDown) syncClient = null;
+		// will be filled with clients that are still wanted (address) and are still connected
+		var existingClients = new HashMap<String, SyncClient>();
 
-		if (syncClient != null) {
+		for (SyncClient client : syncClients) {
+			if (client.isShutDown) continue;
 			// avoid reconnecting to same sync server, to keep shared state (expensive to resync)
-			if (!syncClient.gameAddress.equals(serverConfig.gameAddress)) {
+			if (!client.gameAddress.equals(serverConfig.gameAddress)) {
 				debugLog("Disconnecting sync client; different game server");
-				shutDownSyncClient();
-			} else if (!syncClient.address.equals(syncServerAddress)) {
+				client.shutDown();
+			} else if (!syncServerAddresses.contains(client.address)) {
 				debugLog("Disconnecting sync client; different sync address");
-				shutDownSyncClient();
+				client.shutDown();
+			} else {
+				existingClients.put(client.address, client);
 			}
 		}
 
-		if (syncClient == null || syncClient.isShutDown) {
-			syncClient = new SyncClient(syncServerAddress, serverConfig.gameAddress);
-		}
+		syncClients = syncServerAddresses.stream().map(address -> {
+			var client = existingClients.get(address);
+			if (client == null) client = new SyncClient(address, serverConfig.gameAddress);
+			client.autoReconnect = true;
+			return client;
+		}).collect(Collectors.toList());
 
-		syncClient.autoReconnect = true;
-		return syncClient;
+		return syncClients;
 	}
 
-	public SyncClient shutDownSyncClient() {
-		if (syncClient != null) {
-			syncClient.shutDown();
-			syncClient = null;
+	public List<SyncClient> shutDownSyncClients() {
+		for (SyncClient client : syncClients) {
+			client.shutDown();
 		}
-		return null;
+		syncClients.clear();
+		return Collections.emptyList();
 	}
 
 	/**
@@ -188,9 +194,9 @@ public abstract class MapSyncMod {
 		if (RenderQueue.areAllMapModsMapping()) {
 			dimensionState.setChunkTimestamp(chunkTile.chunkPos(), chunkTile.timestamp());
 		}
-		var syncClient = getSyncClient();
-		if (syncClient == null) return;
-		syncClient.sendChunkTile(chunkTile);
+		for (SyncClient client : getSyncClients()) {
+			client.sendChunkTile(chunkTile);
+		}
 	}
 
 	/**
@@ -207,13 +213,9 @@ public abstract class MapSyncMod {
 	}
 
 	public void handleSharedChunk(ChunkTile chunkTile) {
-		var syncClient = getSyncClient();
-		if (syncClient == null) {
-			// should not happen: we just received this packet from the sync client.
-			// it would indicate a race condition with changing mc server or sync address.
-			return;
+		for (SyncClient syncClient : getSyncClients()) {
+			syncClient.setServerKnownChunkHash(chunkTile.chunkPos(), chunkTile.dataHash());
 		}
-		syncClient.setServerKnownChunkHash(chunkTile.chunkPos(), chunkTile.dataHash());
 
 		var dimensionState = getDimensionState();
 		if (dimensionState == null) return;
@@ -230,16 +232,12 @@ public abstract class MapSyncMod {
 	}
 
 	public void requestCatchupData(List<CatchupChunk> chunks) {
-		if (chunks == null || chunks.isEmpty()) return;
-		var syncClient = getSyncClient();
-		if (syncClient == null) {
-			logger.warn("Not connected. Dropping " + chunks.size() + " catchup chunk requests");
-			// hopefully shouldn't happen, as we've received the catchup data.
+		if (chunks == null || chunks.isEmpty()) {
 			return;
 		}
 
 		// Catchup chunks will be sent back via regular ChunkTilePackets
-		syncClient.send(new CCatchupRequest(chunks));
+		chunks.get(0).syncClient.send(new CCatchupRequest(chunks));
 	}
 
 	public static void debugLog(String msg) {

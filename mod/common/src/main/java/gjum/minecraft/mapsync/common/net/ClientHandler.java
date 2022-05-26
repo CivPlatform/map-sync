@@ -1,8 +1,7 @@
 package gjum.minecraft.mapsync.common.net;
 
-import gjum.minecraft.mapsync.common.net.packet.ChunkTilePacket;
-import gjum.minecraft.mapsync.common.net.packet.SCatchup;
-import gjum.minecraft.mapsync.common.net.packet.SEncryptionRequest;
+import gjum.minecraft.mapsync.common.data.CatchupChunk;
+import gjum.minecraft.mapsync.common.net.packet.*;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 
@@ -12,12 +11,12 @@ import java.net.ConnectException;
 import static gjum.minecraft.mapsync.common.MapSyncMod.getMod;
 
 /**
- * tightly coupled to {@link TcpClient}
+ * tightly coupled to {@link SyncClient}
  */
 public class ClientHandler extends ChannelInboundHandlerAdapter {
-	private final TcpClient client;
+	private final SyncClient client;
 
-	public ClientHandler(TcpClient client) {
+	public ClientHandler(SyncClient client) {
 		this.client = client;
 	}
 
@@ -30,11 +29,12 @@ public class ClientHandler extends ChannelInboundHandlerAdapter {
 				} else throw new Error("Expected encryption request, got " + packet);
 			} else if (packet instanceof ChunkTilePacket) {
 				getMod().handleSharedChunk(((ChunkTilePacket) packet).chunkTile);
-			} else if (packet instanceof SCatchup){
+			} else if (packet instanceof SCatchup) {
+				for (CatchupChunk chunk : ((SCatchup) packet).chunks) {
+					chunk.syncClient = this.client;
+				}
 				getMod().handleCatchupData((SCatchup) packet);
-			}
-
-			else throw new Error("Expected packet, got " + packet);
+			} else throw new Error("Expected packet, got " + packet);
 		} catch (Throwable err) {
 			err.printStackTrace();
 			ctx.close();
@@ -46,7 +46,7 @@ public class ClientHandler extends ChannelInboundHandlerAdapter {
 		if (err instanceof IOException && "Connection reset by peer".equals(err.getMessage())) return;
 		if (err instanceof ConnectException && err.getMessage().startsWith("Connection refused: ")) return;
 
-		TcpClient.logger.info("[map-sync] Network Error: " + err);
+		SyncClient.logger.info("[map-sync] Network Error: " + err);
 		err.printStackTrace();
 		ctx.close();
 		super.exceptionCaught(ctx, err);

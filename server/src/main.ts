@@ -1,22 +1,37 @@
 import './cli'
 import { connectDB } from './db'
 import { PlayerChunk, PlayerChunkDB } from './MapChunk'
-import { ClientPacket, ProtocolClient, ProtocolHandler } from './protocol'
+import { cache_uuid, config, whitelist_check } from './metadata'
+import { ClientPacket } from './protocol'
 import { CatchupPacket } from './protocol/CatchupPacket'
 import { CatchupRequestPacket } from './protocol/CatchupRequestPacket'
 import { ChunkTilePacket } from './protocol/ChunkTilePacket'
-import { TcpServer } from './server'
+import { TcpClient, TcpServer } from './server'
 
 connectDB().then(() => new Main())
 
-const authorizedClients = new WeakSet();
+type ProtocolClient = TcpClient // TODO cleanup
 
-class Main implements ProtocolHandler {
+export class Main {
 	server = new TcpServer(this)
 
 	async handleClientConnected(client: ProtocolClient) {}
 
 	async handleClientAuthenticated(client: ProtocolClient) {
+		if (!client.uuid) throw new Error('Client not authenticated')
+
+		cache_uuid(client.mcName!, client.uuid)
+
+		if (config.whitelist) {
+			if (!whitelist_check(client.uuid)) {
+				client.log(
+					`Rejected unwhitelisted user ${client.mcName} (${client.uuid})`,
+				)
+				client.kick(`Not whitelisted`)
+				throw new Error(`Not whitelisted`)
+			}
+		}
+
 		// TODO check version, mc server, user access
 
 		if (!client.lastTimestamp)

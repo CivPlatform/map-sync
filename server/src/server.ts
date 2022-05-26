@@ -1,20 +1,17 @@
 import crypto from 'crypto'
 import net from 'net'
 import fetch from 'node-fetch'
-import type {
-	ClientPacket,
-	ProtocolClient,
-	ProtocolHandler,
-	ServerPacket,
-} from './protocol'
+import { Main } from './main'
+import type { ClientPacket, ServerPacket } from './protocol'
 import { decodePacket, encodePacket } from './protocol'
 import { BufReader } from './protocol/BufReader'
 import { BufWriter } from './protocol/BufWriter'
 import { EncryptionResponsePacket } from './protocol/EncryptionResponsePacket'
 import { HandshakePacket } from './protocol/HandshakePacket'
-import { config, whitelist_check, cache_uuid } from './metadata'
 
 const { PORT = '12312', HOST = '127.0.0.1' } = process.env
+
+type ProtocolHandler = Main // TODO cleanup
 
 export class TcpServer {
 	server: net.Server
@@ -58,8 +55,9 @@ export class TcpServer {
 
 let nextClientId = 1
 
-/** Prefixes packets with their length (UInt32BE) */
-export class TcpClient implements ProtocolClient {
+/** Prefixes packets with their length (UInt32BE);
+ * handles Mojang authentication */
+export class TcpClient {
 	readonly id = nextClientId++
 	/** contains mojang name once logged in */
 	name = 'Client' + this.id
@@ -67,6 +65,7 @@ export class TcpClient implements ProtocolClient {
 	modVersion: string | undefined
 	gameAddress: string | undefined
 	uuid: string | undefined
+	mcName: string | undefined
 	lastTimestamp: number | undefined
 
 	/** prevent Out of Memory when client sends a large packet */
@@ -126,7 +125,7 @@ export class TcpClient implements ProtocolClient {
 
 					try {
 						const packet = decodePacket(reader)
-						await Promise.resolve(this.handlePacketReceived(packet));
+						await this.handlePacketReceived(packet)
 					} catch (err) {
 						this.warn(err)
 						return this.kick('Error in packet handler')
@@ -156,18 +155,18 @@ export class TcpClient implements ProtocolClient {
 		})
 	}
 
-	private handlePacketReceived(pkt: ClientPacket) {
+	private async handlePacketReceived(pkt: ClientPacket) {
 		if (!this.uuid) {
 			// not authenticated yet
 			switch (pkt.type) {
 				case 'Handshake':
-					return this.handleHandshakePacket(pkt)
+					return await this.handleHandshakePacket(pkt)
 				case 'EncryptionResponse':
-					return this.handleEncryptionResponsePacket(pkt)
+					return await this.handleEncryptionResponsePacket(pkt)
 			}
 			throw new Error(`Packet ${pkt.type} from unauth'd client ${this.id}`)
 		} else {
-			return this.handler.handleClientPacketReceived(this, pkt)
+			return await this.handler.handleClientPacketReceived(this, pkt)
 		}
 	}
 
@@ -185,7 +184,7 @@ export class TcpClient implements ProtocolClient {
 			this.debug('Not authenticated, dropping packet', pkt.type)
 			return
 		}
-		this.sendInternal(pkt, true)
+		await this.sendInternal(pkt, true)
 	}
 
 	private async sendInternal(pkt: ServerPacket, doCrypto = false) {
@@ -217,6 +216,8 @@ export class TcpClient implements ProtocolClient {
 		this.claimedMojangName = packet.mojangName
 		this.lastTimestamp = packet.lastTimeStamp
 		this.verifyToken = crypto.randomBytes(4)
+
+		if (this.lastTimestamp === 0) this.lastTimestamp = 1 // allow boolean coercion check
 
 		await this.sendInternal({
 			type: 'EncryptionRequest',
@@ -257,20 +258,10 @@ export class TcpClient implements ProtocolClient {
 				throw new Error(`Mojang auth failed`)
 			}
 
-			cache_uuid(this.claimedMojangName!, mojangAuth.uuid);
-			if (config.whitelist) {
-				if (whitelist_check(mojangAuth.uuid)) {
-					this.log('Authenticated as whitelisted user', mojangAuth)
-				} else {
-					this.log(`Rejected unwhitelisted user ${mojangAuth.name} (${mojangAuth.uuid})`);
-					this.kick(`Not whitelisted`);
-					throw new Error(`Not whitelisted`);
-				}
-			} else {
-				this.log('Authenticated as', mojangAuth)
-			}
+			this.log('Authenticated as', mojangAuth)
 
 			this.uuid = mojangAuth.uuid
+			this.mcName = mojangAuth.name
 			this.name += ':' + mojangAuth.name
 
 			return {
@@ -281,7 +272,7 @@ export class TcpClient implements ProtocolClient {
 
 		await this.cryptoPromise.then(() => {
 			this.handler.handleClientAuthenticated(this)
-		});
+		})
 	}
 
 	debug(...args: any[]) {

@@ -7,30 +7,6 @@ import { HandshakePacket } from './HandshakePacket'
 import {CatchupPacket} from "./CatchupPacket";
 import {CatchupRequestPacket} from "./CatchupRequestPacket";
 
-export interface ProtocolClient {
-	/** unique among all clients */
-	readonly id: number
-	/** human-friendly, for logging */
-	readonly name: string
-
-	readonly modVersion: string | undefined
-	readonly gameAddress: string | undefined
-	readonly lastTimestamp: number | undefined
-	/** if set, client has authenticated with Mojang */
-	readonly uuid: string | undefined
-
-	send(packet: ServerPacket): void
-
-	kick(internalReason: string): void
-}
-
-export interface ProtocolHandler {
-	handleClientConnected(client: ProtocolClient): void
-	handleClientAuthenticated(client: ProtocolClient): void
-	handleClientDisconnected(client: ProtocolClient): void
-	handleClientPacketReceived(client: ProtocolClient, packet: ClientPacket): void
-}
-
 export type ClientPacket =
 	| ChunkTilePacket
 	| EncryptionResponsePacket

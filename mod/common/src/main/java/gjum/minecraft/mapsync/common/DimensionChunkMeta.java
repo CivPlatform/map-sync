@@ -1,5 +1,7 @@
 package gjum.minecraft.mapsync.common;
 
+import gjum.minecraft.mapsync.common.data.RegionPos;
+import java.util.Objects;
 import net.minecraft.client.Minecraft;
 import net.minecraft.world.level.ChunkPos;
 
@@ -34,11 +36,19 @@ public class DimensionChunkMeta {
 	}
 
 	private Path getRegionFilePath(RegionPos regionPos) {
-		return Path.of(dimensionDirPath, "r%d,%d.chunkmeta".formatted(regionPos.x, regionPos.z));
+		return Path.of(dimensionDirPath, "r%d,%d.chunkmeta".formatted(regionPos.x(), regionPos.z()));
 	}
 
-	private Path getTsFilePath() {
-		return Path.of(dimensionDirPath, "last_ts");
+	public synchronized boolean requiresChunksFrom(RegionPos regionPos, long latestUpdateTimestamp) {
+		long[] chunkTimestamps = regionsTimestamps.computeIfAbsent(regionPos, this::readRegionTimestampsFile);
+		long newestChunkUpdate = 0;
+		for (long chunkTimestamp : chunkTimestamps) {
+			if (chunkTimestamp > newestChunkUpdate) {
+				newestChunkUpdate = chunkTimestamp;
+			}
+		}
+		System.out.println("LATEST FROM " + regionPos + "IS " + newestChunkUpdate + " VS " + latestUpdateTimestamp + " REQUIRES? " + (latestUpdateTimestamp > newestChunkUpdate));
+		return latestUpdateTimestamp > newestChunkUpdate;
 	}
 
 	public synchronized long getTimestamp(ChunkPos chunkPos) {
@@ -83,42 +93,4 @@ public class DimensionChunkMeta {
 		}
 	}
 
-	public long readLastTimestamp() {
-		try {
-			Path path = getTsFilePath();
-			return Long.parseLong(Files.readString(path));
-		} catch (FileNotFoundException | NoSuchFileException ignored) {
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
-		return 0;
-	}
-
-	public synchronized void writeLastTimestamp(long current_time) {
-		try {
-			Path path = getTsFilePath();
-			Files.writeString(path, Long.toString(current_time));
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
-	}
-
-	/**
-	 * Reuse hash etc. Note that most helper methods are useless because of the different physical scale.
-	 */
-	private static class RegionPos extends ChunkPos {
-		static final int CHUNKS_IN_REGION = 32 * 32;
-
-		public RegionPos(int x, int z) {
-			super(x, z);
-		}
-
-		public static RegionPos forChunkPos(ChunkPos pos) {
-			return new RegionPos(pos.x >> 5, pos.z >> 5);
-		}
-
-		public static int chunkIndex(ChunkPos pos) {
-			return (pos.x & 0b11111) + 32 * (pos.z & 0b11111);
-		}
-	}
 }

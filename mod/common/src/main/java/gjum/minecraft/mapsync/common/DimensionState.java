@@ -2,6 +2,7 @@ package gjum.minecraft.mapsync.common;
 
 import gjum.minecraft.mapsync.common.data.CatchupChunk;
 import gjum.minecraft.mapsync.common.data.ChunkTile;
+import gjum.minecraft.mapsync.common.data.RegionPos;
 import net.minecraft.client.Minecraft;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.level.ChunkPos;
@@ -38,20 +39,16 @@ public class DimensionState {
 		renderQueue.shutDown();
 	}
 
+	public boolean requiresChunksFrom(RegionPos regionPos, long latestUpdateTimestamp) {
+		return chunkMeta.requiresChunksFrom(regionPos, latestUpdateTimestamp);
+	}
+
 	public long getChunkTimestamp(ChunkPos chunkPos) {
 		return chunkMeta.getTimestamp(chunkPos);
 	}
 
 	public void setChunkTimestamp(ChunkPos chunkPos, long timestamp) {
 		chunkMeta.setTimestamp(chunkPos, timestamp);
-	}
-
-	public long readLastTimestamp() {
-		return chunkMeta.readLastTimestamp();
-	}
-
-	public void writeLastTimestamp(long timestamp) {
-		chunkMeta.writeLastTimestamp(timestamp);
 	}
 
 	public int getRenderQueueSize() {

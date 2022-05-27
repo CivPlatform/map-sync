@@ -186,6 +186,8 @@ public abstract class MapSyncMod {
 	 * send it to the map data server right away.
 	 */
 	public void handleMcFullChunk(int cx, int cz) {
+		// TODO batch this up and send multiple chunks at once
+
 		if (mc.level == null) return;
 		// TODO disable in nether (no meaningful "surface layer")
 		var dimensionState = getDimensionState();

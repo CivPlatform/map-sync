@@ -132,7 +132,7 @@ public class SyncClient {
 							getMod().getVersion(),
 							Minecraft.getInstance().getUser().getName(),
 							gameAddress,
-							Long.toString(getMod().getDimensionState().readLastTimestamp())));
+							getMod().getDimensionState().dimension.location().toString()));
 				} else {
 					handleDisconnect(future.cause());
 				}

@@ -39,6 +39,7 @@ public class CatchupLogic {
 			for (CatchupChunk chunk : catchupChunks) {
 				// only include catchup chunks that are newer than the corresponding chunk we have locally
 				var current_timestamp = dimensionState.getChunkTimestamp(chunk.chunkPos());
+				debugLog("COMPARING " + current_timestamp + " WITH " + chunk.timestamp());
 				if (current_timestamp < chunk.timestamp()) {
 					this.catchupChunks.add(chunk);
 				}

@@ -20,7 +20,7 @@ public class ModConfig extends JsonConfig {
 	}
 
 	@Expose
-	private int catchupWatermark = 9;
+	private int catchupWatermark = 100;
 
 	public int getCatchupWatermark() {
 		return catchupWatermark;

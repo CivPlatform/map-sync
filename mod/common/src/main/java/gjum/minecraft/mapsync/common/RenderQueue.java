@@ -80,7 +80,7 @@ public class RenderQueue {
 				boolean voxelRendered = VoxelMapHelper.updateWithChunkTile(chunkTile);
 				boolean renderedJM = JourneyMapHelper.updateWithChunkTile(chunkTile);
 
-				debugLog("rendered " + chunkTile.chunkPos() + " queue=" + queue.size());
+				debugLog("rendered? " + (voxelRendered||renderedJM) + " " + chunkTile.chunkPos() + " queue=" + queue.size());
 
 				if (renderedJM || voxelRendered) {
 					dimensionState.setChunkTimestamp(chunkTile.chunkPos(), chunkTile.timestamp());

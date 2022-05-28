@@ -30,26 +30,13 @@ public class SRegionTimestamps extends Packet {
 
     short totalRegions = buf.readShort();
     RegionTimestamp[] timestamps = new RegionTimestamp[totalRegions];
-    short count = 0;
     // row = x
-    while (totalRegions > 0) {
+    for (short i = 0; i < totalRegions; i++) {
       short regionX = buf.readShort();
       short regionZ = buf.readShort();
-      short regionColumns = buf.readShort();
-      totalRegions -= regionColumns;
-      if (regionColumns == 0) {
-        throw new IllegalStateException("Region columns 0 at (" + regionX + " " + regionZ + ")");
-      }
-      if (totalRegions < 0) {
-        throw new IllegalStateException("Malformed data from server! Total regions " + totalRegions + " from region row (" + regionX + ", " + regionZ + ") with " + regionColumns + " regions");
-      }
 
-      for (short column = 0; column < regionColumns; column++) {
-        short realRegionX = (short) (regionX + column);
-
-        long timestamp = buf.readLong();
-        timestamps[count++] = new RegionTimestamp(realRegionX, regionZ, timestamp);
-      }
+      long timestamp = buf.readLong();
+      timestamps[i] = new RegionTimestamp(regionX, regionZ, timestamp);
     }
 
     return new SRegionTimestamps(dimension, timestamps);

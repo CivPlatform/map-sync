@@ -4,6 +4,7 @@ import com.mamiyaotaru.voxelmap.interfaces.AbstractVoxelMap;
 import com.mamiyaotaru.voxelmap.persistent.*;
 import gjum.minecraft.mapsync.common.data.BlockInfo;
 import gjum.minecraft.mapsync.common.data.ChunkTile;
+import java.util.concurrent.locks.ReentrantLock;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.world.level.block.Blocks;
 import org.jetbrains.annotations.NotNull;
@@ -28,6 +29,8 @@ public class VoxelMapHelperReal {
 	private static Field regionLoadedField;
 	private static Method regionLoadMethod;
 
+	private static Field threadLockField;
+
 	static {
 		try {
 			cachedRegionsField = PersistentMap.class.getDeclaredField("cachedRegions");
@@ -47,6 +50,9 @@ public class VoxelMapHelperReal {
 			regionLoadedField.setAccessible(true);
 			regionLoadMethod = CachedRegion.class.getDeclaredMethod("load");
 			regionLoadMethod.setAccessible(true);
+
+			threadLockField = CachedRegion.class.getDeclaredField("threadLock");
+			threadLockField.setAccessible(true);
 		} catch (Throwable e) {
 			e.printStackTrace();
 		}
@@ -74,35 +80,41 @@ public class VoxelMapHelperReal {
 			int rz = chunkTile.z() >> 4;
 			var region = getRegion(rx, rz);
 
-			var mapData = (CompressibleMapData) regionDataField.get(region);
+			var lock = (ReentrantLock) threadLockField.get(region);
+			lock.lock();
+			try {
+				var mapData = (CompressibleMapData) regionDataField.get(region);
 
-			int x0 = (chunkTile.x() * 16) & 0xff;
-			int z0 = (chunkTile.z() * 16) & 0xff;
+				int x0 = (chunkTile.x() * 16) & 0xff;
+				int z0 = (chunkTile.z() * 16) & 0xff;
 
-			var biomeReg = getBiomeRegistry();
+				var biomeReg = getBiomeRegistry();
 
-			int i = 0;
-			for (int z = z0; z < z0 + 16; ++z) {
-				for (int x = x0; x < x0 + 16; ++x) {
-					var col = chunkTile.columns()[i++];
+				int i = 0;
+				for (int z = z0; z < z0 + 16; ++z) {
+					for (int x = x0; x < x0 + 16; ++x) {
+						var col = chunkTile.columns()[i++];
 
-					mapData.setBiomeID(x, z, biomeReg.getId(col.biome()));
+						mapData.setBiomeID(x, z, biomeReg.getId(col.biome()));
 
-					int light = 0xf0 | col.light();
-					mapData.setTransparentLight(x, z, light);
-					mapData.setFoliageLight(x, z, light);
-					mapData.setLight(x, z, light);
-					mapData.setOceanFloorLight(x, z, light);
+						int light = 0xf0 | col.light();
+						mapData.setTransparentLight(x, z, light);
+						mapData.setFoliageLight(x, z, light);
+						mapData.setLight(x, z, light);
+						mapData.setOceanFloorLight(x, z, light);
 
-					setLayerStates(mapData, x, z, col.layers());
+						setLayerStates(mapData, x, z, col.layers());
+					}
 				}
+
+				liveChunksUpdatedField.set(region, true);
+				dataUpdatedField.set(region, true);
+
+				// render imagery
+				region.refresh(false);
+			} finally {
+				lock.unlock();
 			}
-
-			liveChunksUpdatedField.set(region, true);
-			dataUpdatedField.set(region, true);
-
-			// render imagery
-			region.refresh(false);
 
 			return true;
 		} catch (Throwable e) {

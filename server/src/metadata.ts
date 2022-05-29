@@ -1,8 +1,19 @@
 import lib_fs from "fs";
+import lib_path from "path";
 
-export const CONFIG_FILE = "config.json";
-export const WHITELIST_FILE = "whitelist.json";
-export const UUID_CACHE_FILE = "uuid_cache.json";
+export const DATA_FOLDER = process.env["MAPSYNC_DATA_DIR"] ?? "./mapsync";
+export const PATH_SEPARATOR = lib_path.sep;
+try {
+	lib_fs.mkdirSync(DATA_FOLDER, { recursive: true });
+} catch(e: any) {
+	//UNIX for EEXISTS:
+	const is_expected = typeof e === "object" && e.code === -17;
+	if (!is_expected) throw e;
+}
+
+export const CONFIG_FILE = `${DATA_FOLDER}${PATH_SEPARATOR}config.json`;
+export const WHITELIST_FILE = `${DATA_FOLDER}${PATH_SEPARATOR}whitelist.json`;
+export const UUID_CACHE_FILE = `${DATA_FOLDER}${PATH_SEPARATOR}uuid_cache.json`;
 
 /** The config.json file */
 export interface Config {

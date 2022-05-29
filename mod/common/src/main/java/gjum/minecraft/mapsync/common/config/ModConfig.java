@@ -8,7 +8,7 @@ import java.nio.file.Path;
 
 public class ModConfig extends JsonConfig {
 	@Expose
-	private boolean showDebugLog = true; // XXX false on release
+	private boolean showDebugLog = false;
 
 	public boolean isShowDebugLog() {
 		return showDebugLog;

@@ -24,6 +24,8 @@ public class DimensionState {
 	private final DimensionChunkMeta chunkMeta;
 	private final RenderQueue renderQueue;
 	private final CatchupLogic catchup;
+	private int numChunksReceived = 0;
+	private int numChunksRendered = 0;
 
 	DimensionState(String mcServerName, ResourceKey<Level> dimension) {
 		this.dimension = dimension;
@@ -51,6 +53,14 @@ public class DimensionState {
 		chunkMeta.setTimestamp(chunkPos, timestamp);
 	}
 
+	public int getNumChunksReceived() {
+		return numChunksReceived;
+	}
+
+	public int getNumChunksRendered() {
+		return numChunksRendered;
+	}
+
 	public int getRenderQueueSize() {
 		return renderQueue.getQueueSize();
 	}
@@ -74,11 +84,15 @@ public class DimensionState {
 			return; // don't render tile to the wrong dimension
 		}
 
+		++numChunksReceived;
+
 		catchup.handleSharedChunkReceived(chunkTile);
 
 		if (mc.level.getChunkSource().hasChunk(chunkTile.x(), chunkTile.z())) {
+			// don't update loaded chunks
 			debugLog("Dropping chunk tile: loaded in world");
-			return; // don't update loaded chunks
+			++numChunksRendered; // count skipped(loaded) chunks too so the "received" vs "rendered" count matches up
+			return;
 		}
 
 		renderQueue.renderLater(chunkTile);
@@ -86,6 +100,7 @@ public class DimensionState {
 
 	public void onChunkRenderDone(ChunkTile chunkTile) {
 		catchup.maybeRequestMoreCatchup();
+		++numChunksRendered;
 	}
 
 	public void onTick() {

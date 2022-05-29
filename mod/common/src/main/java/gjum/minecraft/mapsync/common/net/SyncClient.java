@@ -78,6 +78,7 @@ public class SyncClient {
 	 */
 	public boolean isShutDown = false;
 	private boolean isEncrypted = false;
+	private @Nullable String lastError;
 	/**
 	 * limited (on insert) to 199 entries
 	 */
@@ -148,7 +149,8 @@ public class SyncClient {
 		if (Minecraft.getInstance().level == null) shutDown();
 
 		String errMsg = err.getMessage();
-		if (errMsg == null) errMsg = "";
+		if (errMsg == null) errMsg = err.toString();
+		lastError = errMsg;
 		if (isShutDown) {
 			logger.warn("[map-sync] Got disconnected from '" + address + "'." +
 					" Won't retry (has shut down)");
@@ -175,6 +177,7 @@ public class SyncClient {
 	public synchronized void handleEncryptionSuccess() {
 		if (channel == null) return;
 
+		lastError = null;
 		isEncrypted = true;
 		getMod().handleSyncServerEncryptionSuccess();
 
@@ -185,8 +188,12 @@ public class SyncClient {
 		channel.flush();
 	}
 
-	boolean isEncrypted() {
+	public boolean isEncrypted() {
 		return isEncrypted;
+	}
+
+	public String getError() {
+		return lastError;
 	}
 
 	/**

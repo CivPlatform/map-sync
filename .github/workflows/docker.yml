@@ -45,6 +45,8 @@ jobs:
             type=ref,event=branch
             type=ref,event=pr
             type=sha
+            # set latest tag for stable releases
+            type=raw,value=latest,enable=${{ github.event.release.prerelease == false }}
 
       - name: Build and push Docker images
         id: build-and-push

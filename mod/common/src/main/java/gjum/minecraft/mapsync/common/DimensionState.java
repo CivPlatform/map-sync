@@ -1,8 +1,6 @@
 package gjum.minecraft.mapsync.common;
 
-import gjum.minecraft.mapsync.common.data.CatchupChunk;
-import gjum.minecraft.mapsync.common.data.ChunkTile;
-import gjum.minecraft.mapsync.common.data.RegionPos;
+import gjum.minecraft.mapsync.common.data.*;
 import net.minecraft.client.Minecraft;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.level.ChunkPos;
@@ -41,8 +39,8 @@ public class DimensionState {
 		renderQueue.shutDown();
 	}
 
-	public boolean requiresChunksFrom(RegionPos regionPos, long latestUpdateTimestamp) {
-		return chunkMeta.requiresChunksFrom(regionPos, latestUpdateTimestamp);
+	public long getOldestChunkTsInRegion(RegionPos regionPos) {
+		return chunkMeta.getOldestChunkTsInRegion(regionPos);
 	}
 
 	public long getChunkTimestamp(ChunkPos chunkPos) {

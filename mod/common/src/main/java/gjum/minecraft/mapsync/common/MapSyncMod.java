@@ -227,7 +227,15 @@ public abstract class MapSyncMod {
 		RegionTimestamp[] regions = packet.getTimestamps();
 		ShortArrayList list = new ShortArrayList();
 		for (RegionTimestamp region : regions) {
-			boolean requiresUpdate = dimension.requiresChunksFrom(new RegionPos(region.x(), region.z()), region.timestamp());
+			RegionPos regionPos = new RegionPos(region.x(), region.z());
+			long oldestChunkTs = dimension.getOldestChunkTsInRegion(regionPos);
+			boolean requiresUpdate = region.timestamp() > oldestChunkTs;
+
+			debugLog("region " + regionPos
+					+ (requiresUpdate ? " requires update." : " is up to date.")
+					+ " oldest client chunk ts: " + oldestChunkTs
+					+ ", newest server chunk ts: " + region.timestamp());
+
 			if (requiresUpdate) {
 				list.add(region.x());
 				list.add(region.z());

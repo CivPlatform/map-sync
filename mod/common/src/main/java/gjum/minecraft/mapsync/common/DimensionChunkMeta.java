@@ -1,7 +1,6 @@
 package gjum.minecraft.mapsync.common;
 
 import gjum.minecraft.mapsync.common.data.RegionPos;
-import java.util.Objects;
 import net.minecraft.client.Minecraft;
 import net.minecraft.world.level.ChunkPos;
 
@@ -39,16 +38,9 @@ public class DimensionChunkMeta {
 		return Path.of(dimensionDirPath, "r%d,%d.chunkmeta".formatted(regionPos.x(), regionPos.z()));
 	}
 
-	public synchronized boolean requiresChunksFrom(RegionPos regionPos, long latestUpdateTimestamp) {
+	public synchronized long getOldestChunkTsInRegion(RegionPos regionPos) {
 		long[] chunkTimestamps = regionsTimestamps.computeIfAbsent(regionPos, this::readRegionTimestampsFile);
-		long newestChunkUpdate = 0;
-		for (long chunkTimestamp : chunkTimestamps) {
-			if (chunkTimestamp > newestChunkUpdate) {
-				newestChunkUpdate = chunkTimestamp;
-			}
-		}
-		System.out.println("LATEST FROM " + regionPos + "IS " + newestChunkUpdate + " VS " + latestUpdateTimestamp + " REQUIRES? " + (latestUpdateTimestamp > newestChunkUpdate));
-		return latestUpdateTimestamp > newestChunkUpdate;
+		return Arrays.stream(chunkTimestamps).min().orElse(0);
 	}
 
 	public synchronized long getTimestamp(ChunkPos chunkPos) {
@@ -92,5 +84,4 @@ public class DimensionChunkMeta {
 			e.printStackTrace();
 		}
 	}
-
 }

@@ -6,7 +6,6 @@ import gjum.minecraft.mapsync.common.config.ServerConfig;
 import gjum.minecraft.mapsync.common.data.*;
 import gjum.minecraft.mapsync.common.net.SyncClient;
 import gjum.minecraft.mapsync.common.net.packet.*;
-import it.unimi.dsi.fastutil.shorts.ShortArrayList;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ServerData;
@@ -224,25 +223,23 @@ public abstract class MapSyncMod {
 		if (!dimension.dimension.location().toString().equals(packet.getDimension())) {
 			return;
 		}
-		RegionTimestamp[] regions = packet.getTimestamps();
-		ShortArrayList list = new ShortArrayList();
-		for (RegionTimestamp region : regions) {
-			RegionPos regionPos = new RegionPos(region.x(), region.z());
+		var outdatedRegions = new ArrayList<RegionPos>();
+		for (var regionTs : packet.getTimestamps()) {
+			var regionPos = new RegionPos(regionTs.x(), regionTs.z());
 			long oldestChunkTs = dimension.getOldestChunkTsInRegion(regionPos);
-			boolean requiresUpdate = region.timestamp() > oldestChunkTs;
+			boolean requiresUpdate = regionTs.timestamp() > oldestChunkTs;
 
 			debugLog("region " + regionPos
 					+ (requiresUpdate ? " requires update." : " is up to date.")
 					+ " oldest client chunk ts: " + oldestChunkTs
-					+ ", newest server chunk ts: " + region.timestamp());
+					+ ", newest server chunk ts: " + regionTs.timestamp());
 
 			if (requiresUpdate) {
-				list.add(region.x());
-				list.add(region.z());
+				outdatedRegions.add(regionPos);
 			}
 		}
 
-		client.send(new CRegionCatchup(packet.getDimension(), list.toShortArray()));
+		client.send(new CRegionCatchup(packet.getDimension(), outdatedRegions));
 	}
 
 	public void handleSharedChunk(ChunkTile chunkTile) {

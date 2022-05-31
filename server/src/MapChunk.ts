@@ -77,8 +77,21 @@ export class PlayerChunkDB extends BaseEntity implements PlayerChunk {
 	}
 
 	static async getRegionTimestamps() {
-		return await PlayerChunkDB.query("WITH region_real AS (SELECT chunk_x / 32.0 AS region_x_real, chunk_z / 32.0 AS region_z_real, ts FROM player_chunk) SELECT cast (region_x_real as int) - (region_x_real < cast (region_x_real as int)) AS region_x, cast (region_z_real as int) - (region_z_real < cast (region_z_real as int)) AS region_z, MAX(ts) AS ts FROM region_real GROUP BY region_x, region_z ORDER BY region_x DESC")
-/*
+		// computing region coordinates in SQL requires truncating, not rounding
+		return await PlayerChunkDB.query(`
+			WITH region_real AS (SELECT
+				chunk_x / 32.0 AS region_x_real,
+				chunk_z / 32.0 AS region_z_real,
+				ts
+				FROM player_chunk
+			) SELECT
+				cast (region_x_real as int) - (region_x_real < cast (region_x_real as int)) AS region_x,
+				cast (region_z_real as int) - (region_z_real < cast (region_z_real as int)) AS region_z,
+				MAX(ts) AS ts
+			FROM region_real
+			GROUP BY region_x, region_z
+			ORDER BY region_x DESC`)
+		/*
 		return await PlayerChunkDB.createQueryBuilder()
 				.select("chunk_x / 32", "region_x")
 				.addSelect("chunk_z / 32", "region_z")
@@ -91,24 +104,40 @@ export class PlayerChunkDB extends BaseEntity implements PlayerChunk {
 	}
 
 	static async getCatchupData(world: string, regions: number[]) {
-		let regionsAsString: string[] = [];
-		let list: string = "";
+		// TODO use TypeORM's API instead of building our own query string
+		let regionsAsString: string[] = []
+		let list: string = ''
 		for (let i = 0; i < regions.length; i += 2) {
-			regionsAsString.push("" + regions[i] + "_" + regions[i+1] + "");
+			regionsAsString.push('' + regions[i] + '_' + regions[i + 1] + '')
 			if (i > 0) {
-				list += ","
+				list += ','
 			}
-			list += "?";
+			list += '?'
 		}
-
-		console.log("REGIONS REQUESTED " + [...regionsAsString, world])
 
 		/*let chunks = await PlayerChunkDB.query("WITH region_real AS (SELECT chunk_x, chunk_z, world, uuid, ts, hash, chunk_x / 32.0 AS region_x_real, chunk_z / 32.0 AS region_z_real FROM player_chunk) " +
 				"SELECT chunk_x, chunk_z, world, uuid, ts, hash AS data FROM region_real WHERE (cast (region_x_real as int) - (region_x_real < cast (region_x_real as int))) || \"_\" || (cast (region_z_real as int) - (region_z_real < cast (region_z_real as int))) IN (?) " +
 				"AND world = ? ORDER BY ts DESC",
 				[regionsAsString.join(","), world]);*/
-		let chunks = await PlayerChunkDB.query(`WITH region_real AS (SELECT chunk_x, chunk_z, world, uuid, ts, hash, chunk_x / 32.0 AS region_x_real, chunk_z / 32.0 AS region_z_real FROM player_chunk) SELECT (cast (region_x_real as int) - (region_x_real < cast (region_x_real as int))) || "_" || (cast (region_z_real as int) - (region_z_real < cast (region_z_real as int))) AS region, chunk_x, chunk_z, world, uuid, ts, hash AS data FROM region_real WHERE region IN (${list}) AND world = ? ORDER BY ts DESC`,
-				[...regionsAsString, world]);
+		let chunks = await PlayerChunkDB.query(
+			`WITH region_real AS (SELECT
+				chunk_x, chunk_z, world, uuid, ts, hash,
+				chunk_x / 32.0 AS region_x_real,
+				chunk_z / 32.0 AS region_z_real
+				FROM player_chunk
+			) SELECT
+				(
+					cast (region_x_real as int) - (region_x_real < cast (region_x_real as int))
+				) || "_" || (
+					cast (region_z_real as int) - (region_z_real < cast (region_z_real as int))
+				) AS region,
+				chunk_x, chunk_z, world, uuid, ts,
+				hash AS data
+			FROM region_real
+			WHERE region IN (${list}) AND world = ?
+			ORDER BY ts DESC`,
+			[...regionsAsString, world],
+		)
 		/*let chunks = await PlayerChunkDB.createQueryBuilder()
 			.where('(chunk_x/32) || "_" || (chunk_z/32) IN (:...regions)', { regions: regionsAsString })
 			.andWhere("world = :world", { world: world })

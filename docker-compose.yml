@@ -1,0 +1,12 @@
+version: "3.8"
+
+services:
+  map-sync:
+    image: ghcr.io/CivPlatform/map-sync
+    stdin_open: true
+    tty: true
+    init: true
+    ports:
+      - 12312:12312
+    # volumes:
+    #   - path/here/to/stuff:/other/stuff

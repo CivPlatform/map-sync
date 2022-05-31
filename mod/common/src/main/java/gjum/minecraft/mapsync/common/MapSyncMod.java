@@ -3,11 +3,10 @@ package gjum.minecraft.mapsync.common;
 import com.mojang.blaze3d.platform.InputConstants;
 import gjum.minecraft.mapsync.common.config.ModConfig;
 import gjum.minecraft.mapsync.common.config.ServerConfig;
-import gjum.minecraft.mapsync.common.data.CatchupChunk;
-import gjum.minecraft.mapsync.common.data.ChunkTile;
+import gjum.minecraft.mapsync.common.data.*;
 import gjum.minecraft.mapsync.common.net.SyncClient;
-import gjum.minecraft.mapsync.common.net.packet.CCatchupRequest;
-import gjum.minecraft.mapsync.common.net.packet.SCatchup;
+import gjum.minecraft.mapsync.common.net.packet.*;
+import it.unimi.dsi.fastutil.shorts.ShortArrayList;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ServerData;
@@ -217,6 +216,25 @@ public abstract class MapSyncMod {
 	public void handleSyncServerEncryptionSuccess() {
 		debugLog("tcp encrypted");
 		// TODO tell server our current dimension
+	}
+
+	public void handleRegionTimestamps(SRegionTimestamps packet, SyncClient client) {
+		DimensionState dimension = getDimensionState();
+		if (dimension == null) return;
+		if (!dimension.dimension.location().toString().equals(packet.getDimension())) {
+			return;
+		}
+		RegionTimestamp[] regions = packet.getTimestamps();
+		ShortArrayList list = new ShortArrayList();
+		for (RegionTimestamp region : regions) {
+			boolean requiresUpdate = dimension.requiresChunksFrom(new RegionPos(region.x(), region.z()), region.timestamp());
+			if (requiresUpdate) {
+				list.add(region.x());
+				list.add(region.z());
+			}
+		}
+
+		client.send(new CRegionCatchup(packet.getDimension(), list.toShortArray()));
 	}
 
 	public void handleSharedChunk(ChunkTile chunkTile) {

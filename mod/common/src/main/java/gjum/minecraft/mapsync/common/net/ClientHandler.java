@@ -1,14 +1,10 @@
 package gjum.minecraft.mapsync.common.net;
 
-import gjum.minecraft.mapsync.common.DimensionState;
 import gjum.minecraft.mapsync.common.data.CatchupChunk;
-import gjum.minecraft.mapsync.common.data.RegionPos;
-import gjum.minecraft.mapsync.common.data.RegionTimestamp;
 import gjum.minecraft.mapsync.common.net.packet.*;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 
-import it.unimi.dsi.fastutil.shorts.ShortArrayList;
 import java.io.IOException;
 import java.net.ConnectException;
 
@@ -28,29 +24,15 @@ public class ClientHandler extends ChannelInboundHandlerAdapter {
 	public void channelRead(ChannelHandlerContext ctx, Object packet) {
 		try {
 			if (!client.isEncrypted()) {
-				if (packet instanceof SEncryptionRequest) {
-					client.setUpEncryption(ctx, (SEncryptionRequest) packet);
+				if (packet instanceof SEncryptionRequest pktEncryptionRequest) {
+					client.setUpEncryption(ctx, pktEncryptionRequest);
 				} else throw new Error("Expected encryption request, got " + packet);
-			} else if (packet instanceof ChunkTilePacket) {
-				getMod().handleSharedChunk(((ChunkTilePacket) packet).chunkTile);
-			} else if (packet instanceof SRegionTimestamps timestamps) {
-				DimensionState dimension = getMod().getDimensionState();
-				if (dimension == null || !dimension.dimension.location().toString().equals(timestamps.getDimension())) {
-					return;
-				}
-				RegionTimestamp[] regions = timestamps.getTimestamps();
-				ShortArrayList list = new ShortArrayList();
-				for (RegionTimestamp region : regions) {
-					boolean requiresUpdate = dimension.requiresChunksFrom(new RegionPos(region.x(), region.z()), region.timestamp());
-					if (requiresUpdate) {
-						list.add(region.x());
-						list.add(region.z());
-					}
-				}
-
-				client.send(new CRegionCatchup(timestamps.getDimension(), list.toShortArray()));
-			} else if (packet instanceof SCatchup) {
-				for (CatchupChunk chunk : ((SCatchup) packet).chunks) {
+			} else if (packet instanceof ChunkTilePacket pktChunkTile) {
+				getMod().handleSharedChunk(pktChunkTile.chunkTile);
+			} else if (packet instanceof SRegionTimestamps pktRegionTimestamps) {
+				getMod().handleRegionTimestamps(pktRegionTimestamps, client);
+			} else if (packet instanceof SCatchup pktCatchup) {
+				for (CatchupChunk chunk : pktCatchup.chunks) {
 					chunk.syncClient = this.client;
 				}
 				getMod().handleCatchupData((SCatchup) packet);

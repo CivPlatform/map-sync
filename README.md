@@ -23,12 +23,27 @@ You can control who has access to a Sync Server by editing its `allowed-users.tx
 
 ## Running a server
 
+<details open>
+<summary>Docker Install (recommended)</summary>
+<br />
+
+- [Install docker](https://docs.docker.com/get-docker/)
+- clone code
+- Run: `docker compose up -d`
+- To stop: `docker compose down`
+</details>
+
+<details>
+<summary>System Install</summary>
+<br />
+
 - install recent nodejs (~17)
 - clone code, `cd server`
 - `npm install`
 - `npm run build` -- this has to be run after every time the code is edited
 - `npm run start`
 - to stop, press Ctrl+C twice
+</details>
 
 ### Server commands
 
@@ -54,8 +69,8 @@ the Free Software Foundation, either version 3 of the License, or
 
 This program is distributed in the hope that it will be useful,
 but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License
-along with this program.  If not, see <http://www.gnu.org/licenses/>.
+along with this program. If not, see <http://www.gnu.org/licenses/>.

@@ -2,11 +2,20 @@ version: "3.8"
 
 services:
   map-sync:
-    image: ghcr.io/CivPlatform/map-sync
+    # FIXME: image repository cannot have capital letters
+    #image: ghcr.io/CivPlatform/map-sync
+    build: .
     stdin_open: true
     tty: true
     init: true
     ports:
       - 12312:12312
-    # volumes:
-    #   - path/here/to/stuff:/other/stuff
+    volumes:
+      # Put the relative or absolute location to your mapsync_data directory here.
+      # In this example, the relative location of the mapsync_data folder is "../mapsync_data":
+      #
+      - ../mapsync_data:/mapsync_data
+      # 
+      # The directory can also be an absolute path:
+      #
+      # - /srv/minecraft/mapsync_data:/mapsync_data

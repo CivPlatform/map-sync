@@ -1,26 +1,38 @@
 name: Build Mod
 
-on: [ push, pull_request ]
+on: [push, pull_request]
 
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v2
-    - name: Set up JDK 17
-      uses: actions/setup-java@v2
-      with:
-        java-version: '17'
-        distribution: 'adopt'
-    - run: cd mod && ./gradlew build
+      - uses: actions/checkout@v2
+      - name: Set up JDK 17
+        uses: actions/setup-java@v2
+        with:
+          java-version: "17"
+          distribution: "adopt"
+      - run: cd mod && ./gradlew build
 
-    - name: Release Tag
-      if: startsWith(github.ref, 'refs/tags/v')
-      uses: softprops/action-gh-release@v1
-      with:
-        prerelease: true
-        fail_on_unmatched_files: true
-        files: |
-          mod/dist/*.jar
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Upload Forge Build
+        uses: actions/upload-artifact@v3
+        with:
+          name: Forge
+          path: mod/dist/*-forge.jar
+
+      - name: Upload Fabric Build
+        uses: actions/upload-artifact@v3
+        with:
+          name: Fabric
+          path: mod/dist/*-fabric.jar
+
+      - name: Release Tag
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v1
+        with:
+          prerelease: true
+          fail_on_unmatched_files: true
+          files: |
+            mod/dist/*.jar
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

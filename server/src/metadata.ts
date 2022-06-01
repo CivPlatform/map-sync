@@ -1,8 +1,32 @@
 import lib_fs from "fs";
+import lib_path from "path";
 
-export const CONFIG_FILE = "config.json";
-export const WHITELIST_FILE = "whitelist.json";
-export const UUID_CACHE_FILE = "uuid_cache.json";
+export const ENOENT = -2;
+export const EEXIST = -17;
+export enum OsError {
+	FileExists,
+	FileNotFound,
+	UNKNOWN
+}
+export function get_os_error(e: any): OsError {
+	if (typeof e !== "object") return OsError.UNKNOWN;
+	if (e.errno === ENOENT) return OsError.FileNotFound;
+	if (e.errno === EEXIST) return OsError.FileExists;
+	return OsError.UNKNOWN;
+}
+
+export const DATA_FOLDER = process.env["MAPSYNC_DATA_DIR"] ?? "./mapsync";
+try {
+	lib_fs.mkdirSync(DATA_FOLDER, { recursive: true });
+	console.log(`Created data folder "${DATA_FOLDER}"`);
+} catch(e: any) {
+	if (get_os_error(e) !== OsError.FileExists) throw e;
+	console.log(`Using data folder "${DATA_FOLDER}"`);
+}
+
+export const CONFIG_FILE = `${DATA_FOLDER}/config.json`;
+export const WHITELIST_FILE = `${DATA_FOLDER}/whitelist.json`;
+export const UUID_CACHE_FILE = `${DATA_FOLDER}/uuid_cache.json`;
 
 /** The config.json file */
 export interface Config {
@@ -15,18 +39,28 @@ const default_config: Config = {
 	whitelist: true,
 };
 
-//TODO: add config reloading?
-export let config: Config;
+//Force initialize
+export let config: Config = null as unknown as Config;
 try {
-	config = JSON.parse(lib_fs.readFileSync("config.json").toString());
+	config = JSON.parse(lib_fs.readFileSync(CONFIG_FILE).toString());
 	if (typeof config !== "object") throw new Error("Config file is not an object");
 	if (typeof config.whitelist !== "boolean") throw new Error("config.whitelist isn't a boolean");
 } catch (e) {
-	console.error("[Config] An error occured when attempting to read `config.json`");
-	console.error(e);
-	console.error("[Config] The default configuration file will be used");
-
-	config = default_config;
+	if (get_os_error(e) === OsError.FileNotFound) {
+		console.error("[Config] Config file not found. Creating with default config...");
+		try {
+			config = default_config;
+			lib_fs.writeFileSync(CONFIG_FILE, JSON.stringify(config));
+		} catch (e) {
+			console.error("[Config] An error occured when attempting to write `config.json`");
+			console.error(e);
+			throw e;
+		}
+	} else {
+		console.error("[Config] An error occured when attempting to read `config.json`");
+		console.error(e);
+		throw e;
+	}
 }
 Object.freeze(config);
 
@@ -46,11 +80,17 @@ export function whitelist_load(): Promise<void> {
 		});
 
 		whitelist = new Set(whitelist_file);
+		console.log("[Whitelist] Loaded whitelist");
 	})
 	.catch(e => {
-		console.error("[Whitelist] Error occured while loading the whitelist from disk");
-		console.error(e);
-		console.error("[Whitelist] The whitelist will be loaded as empty");
+		if (get_os_error(e) === OsError.FileNotFound) {
+			console.error("[Whitelist] No whitelist file was found. An empty one will be created shortly.");
+			whitelist_save(); //Don't await, will cause deadlock
+		} else {
+			console.error("[Whitelist] Error occured while loading the whitelist from disk");
+			console.error(e);
+			console.error("[Whitelist] The whitelist will be loaded as empty");
+		}
 	});
 	return whitelist_operations;
 }
@@ -58,6 +98,7 @@ export function whitelist_load(): Promise<void> {
 export function whitelist_save(): Promise<void> {
 	whitelist_operations = whitelist_operations.then(async () => {
 		await lib_fs.promises.writeFile(WHITELIST_FILE, JSON.stringify(Array.from(whitelist)));
+		console.log("[Whitelist] Saved whitelist");
 	})
 	.catch(e => {
 		console.error("[Whitelist] Error occured while saving the whitelist to the disk");
@@ -79,9 +120,10 @@ export function whitelist_add(uuid: string): Promise<void> {
 	//Use a partial operation here to propogate errors to the caller
 	const partial_operation = whitelist_operations.then(async () => {
 		whitelist.add(uuid);
+		console.log(`[Whitelist] Added user "${uuid}" to the whitelist`);
 	});
 	whitelist_operations = partial_operation.catch(e => {
-		console.error(`[Whitelist] Error occured adding user "{uuid}" to the whitelist`);
+		console.error(`[Whitelist] Error occured adding user "${uuid}" to the whitelist`);
 		console.error(e);
 	});
 	return partial_operation;
@@ -91,6 +133,7 @@ export function whitelist_remove(uuid: string): Promise<void> {
 	//Use a partial operation here to propogate errors to the caller
 	const partial_operation = whitelist_operations.then(async () => {
 		whitelist.delete(uuid);
+		console.log(`[Whitelist] Removed user "${uuid}" from the whitelist`);
 	});
 	whitelist_operations = partial_operation.catch(e => {
 		console.error(`[Whitelist] Error occured removing user "{uuid}" to the whitelist`);
@@ -102,34 +145,15 @@ export function whitelist_remove(uuid: string): Promise<void> {
 let uuid_cache_operations: Promise<void> = Promise.resolve();
 /** A cache storing uuids by player IGN */
 export let uuid_cache = new Map<string, string>();
-try {
-	const cache_file = JSON.parse(lib_fs.readFileSync(UUID_CACHE_FILE).toString());
-	if (!Array.isArray(cache_file)) throw new Error("Cache file wasn't an array");
-	uuid_cache = new Map(cache_file);
-} catch (e) {
-	console.error("[UUID Cache] An error occured when attempting to read `uuid_cache.json`");
-	console.error(e);
-	console.error("[UUID Cache] A new uuid cache will be created");
-}
-
-/** Caches a player IGN with their UUID */
-export function cache_uuid(ign: string, uuid: string) {
-	if (uuid == null || ign == null) return;
-	uuid_cache.set(ign, uuid);	
-	uuid_cache_save();
-}
-/** Looks up a UUID from an IGN */
-export function lookup_uuid(ign: string): string | null {
-	return uuid_cache.get(ign) ?? null;
-}
-
 //A save operation pending execution. If one is pending, then no need to queue more.
 let save_operation: Promise<void> | null = null;
+
 /** Saves the UUID cache to uuid_cache.json */
 export function uuid_cache_save(): Promise<void> {
 	if (save_operation != null) return save_operation;
 	save_operation = uuid_cache_operations.then(async () => {
 		await lib_fs.promises.writeFile(UUID_CACHE_FILE, JSON.stringify(Array.from(uuid_cache)));		
+		console.log("[UUID Cache] Saved UUID cache");
 	})
 	.catch(e => {
 		console.error("[UUID Cache] Error occured while saving the whitelist to the disk");
@@ -138,3 +162,32 @@ export function uuid_cache_save(): Promise<void> {
 	uuid_cache_operations = save_operation;
 	return save_operation;
 }
+
+try {
+	const cache_file = JSON.parse(lib_fs.readFileSync(UUID_CACHE_FILE).toString());
+	if (!Array.isArray(cache_file)) throw new Error("Cache file wasn't an array");
+	uuid_cache = new Map(cache_file);
+	console.log("[UUID Cache] Loaded UUID cache");
+} catch (e) {
+	if (get_os_error(e) === OsError.FileNotFound) {
+		console.error("[UUID Cache] No uuid cache file was found. A new one will be created shortly.");
+		uuid_cache_save(); //Don't await, will cause deadlock
+	} else {
+		console.error("[UUID Cache] An error occured when attempting to read `uuid_cache.json`");
+		console.error(e);
+		console.error("[UUID Cache] A new uuid cache will be created");
+	}
+}
+
+/** Caches a player IGN with their UUID */
+export function uuid_cache_store(ign: string, uuid: string) {
+	if (uuid == null || ign == null) return;
+	uuid_cache.set(ign, uuid);	
+	console.log(`[UUID Cache] cached "${ign}" as UUID "${uuid}"`);
+	uuid_cache_save();
+}
+/** Looks up a UUID from an IGN */
+export function uuid_cache_lookup(ign: string): string | null {
+	return uuid_cache.get(ign) ?? null;
+}
+

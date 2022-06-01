@@ -1,7 +1,9 @@
 import 'reflect-metadata'
 import { BaseEntity, Connection, createConnection } from 'typeorm'
 
-const { SQLITE_PATH = 'db.sqlite' } = process.env
+import { DATA_FOLDER } from "./metadata"
+
+const SQLITE_PATH = process.env["SQLITE_PATH"] ?? `${DATA_FOLDER}/db.sqlite`
 
 let _dbp: Promise<Connection> | null = null
 

@@ -1,7 +1,7 @@
 import './cli'
 import { connectDB } from './db'
 import { PlayerChunk, PlayerChunkDB } from './MapChunk'
-import { cache_uuid, config, whitelist_check } from './metadata'
+import { uuid_cache_store, config, whitelist_check } from './metadata'
 import { ClientPacket } from './protocol'
 import { CatchupPacket } from './protocol/CatchupPacket'
 import { CatchupRequestPacket } from './protocol/CatchupRequestPacket'
@@ -20,7 +20,7 @@ export class Main {
 	async handleClientAuthenticated(client: ProtocolClient) {
 		if (!client.uuid) throw new Error('Client not authenticated')
 
-		cache_uuid(client.mcName!, client.uuid)
+		uuid_cache_store(client.mcName!, client.uuid)
 
 		if (config.whitelist) {
 			if (!whitelist_check(client.uuid)) {

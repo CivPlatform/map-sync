@@ -269,8 +269,8 @@ export class TcpClient {
 			}
 		})
 
-		await this.cryptoPromise.then(() => {
-			this.handler.handleClientAuthenticated(this)
+		await this.cryptoPromise.then(async () => {
+			await this.handler.handleClientAuthenticated(this)
 		})
 	}
 

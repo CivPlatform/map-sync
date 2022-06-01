@@ -11,7 +11,7 @@
 		"homepage": "https://github.com/Gjum/map-sync",
 		"sources": "https://github.com/Gjum/map-sync"
 	},
-	"license": "All Rights Reserved",
+	"license": "GPL-3.0-only",
 	"icon": "assets/map-sync/icon.png",
 	"environment": "client",
 	"entrypoints": {

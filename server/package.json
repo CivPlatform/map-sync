@@ -3,7 +3,7 @@
 	"version": "0.1.0",
 	"private": true,
 	"author": "Gjum",
-	"license": "All Rights Reserved",
+	"license": "GPL-3.0-only",
 	"scripts": {
 		"build": "tsc",
 		"test": "true",

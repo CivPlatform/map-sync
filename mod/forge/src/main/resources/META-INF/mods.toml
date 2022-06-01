@@ -1,7 +1,7 @@
 modLoader = "javafml"
 loaderVersion = "[40,)"
-#issueTrackerURL = ""
-license = "All Rights Reserved"
+issueTrackerURL = "https://github.com/CivPlatform/map-sync/issues"
+license = "GPL-3.0-only"
 
 [[mods]]
 modId = "mapsync"

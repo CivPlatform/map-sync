@@ -6,7 +6,7 @@ export interface ChunkTilePacket {
 	world: string
 	chunk_x: number
 	chunk_z: number
-	ts: number
+	ts: bigint // timestamp in milliseconds
 	data: { version: number; hash: Buffer; data: Buffer }
 }
 

@@ -14,7 +14,7 @@ services:
       # Put the relative or absolute location to your mapsync_data directory here.
       # In this example, the relative location of the mapsync_data folder is "../mapsync_data":
       #
-      - ../mapsync_data:/mapsync_data
+      - ./mapsync_data:/mapsync_data
       # 
       # The directory can also be an absolute path:
       #

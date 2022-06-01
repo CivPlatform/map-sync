@@ -13,6 +13,7 @@ public class ServerPacketDecoder extends ReplayingDecoder<Void> {
 		if (id == ChunkTilePacket.PACKET_ID) return ChunkTilePacket.read(buf);
 		if (id == SEncryptionRequest.PACKET_ID) return SEncryptionRequest.read(buf);
 		if (id == SCatchup.PACKET_ID) return SCatchup.read(buf);
+		if (id == SRegionTimestamps.PACKET_ID) return SRegionTimestamps.read(buf);
 		return null;
 	}
 

@@ -24,13 +24,15 @@ public class ClientHandler extends ChannelInboundHandlerAdapter {
 	public void channelRead(ChannelHandlerContext ctx, Object packet) {
 		try {
 			if (!client.isEncrypted()) {
-				if (packet instanceof SEncryptionRequest) {
-					client.setUpEncryption(ctx, (SEncryptionRequest) packet);
+				if (packet instanceof SEncryptionRequest pktEncryptionRequest) {
+					client.setUpEncryption(ctx, pktEncryptionRequest);
 				} else throw new Error("Expected encryption request, got " + packet);
-			} else if (packet instanceof ChunkTilePacket) {
-				getMod().handleSharedChunk(((ChunkTilePacket) packet).chunkTile);
-			} else if (packet instanceof SCatchup) {
-				for (CatchupChunk chunk : ((SCatchup) packet).chunks) {
+			} else if (packet instanceof ChunkTilePacket pktChunkTile) {
+				getMod().handleSharedChunk(pktChunkTile.chunkTile);
+			} else if (packet instanceof SRegionTimestamps pktRegionTimestamps) {
+				getMod().handleRegionTimestamps(pktRegionTimestamps, client);
+			} else if (packet instanceof SCatchup pktCatchup) {
+				for (CatchupChunk chunk : pktCatchup.chunks) {
 					chunk.syncClient = this.client;
 				}
 				getMod().handleCatchupData((SCatchup) packet);

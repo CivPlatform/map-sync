@@ -66,7 +66,7 @@ export class TcpClient {
 	gameAddress: string | undefined
 	uuid: string | undefined
 	mcName: string | undefined
-	lastTimestamp: number | undefined
+	world: string | undefined
 
 	/** prevent Out of Memory when client sends a large packet */
 	maxFrameSize = 2 ** 24
@@ -184,6 +184,7 @@ export class TcpClient {
 			this.debug('Not authenticated, dropping packet', pkt.type)
 			return
 		}
+		this.debug(this.mcName + " -> " + pkt.type);
 		await this.sendInternal(pkt, true)
 	}
 
@@ -214,10 +215,8 @@ export class TcpClient {
 		this.modVersion = packet.modVersion
 		this.gameAddress = packet.gameAddress
 		this.claimedMojangName = packet.mojangName
-		this.lastTimestamp = packet.lastTimeStamp
+		this.world = packet.world
 		this.verifyToken = crypto.randomBytes(4)
-
-		if (this.lastTimestamp === 0) this.lastTimestamp = 1 // allow boolean coercion check
 
 		await this.sendInternal({
 			type: 'EncryptionRequest',

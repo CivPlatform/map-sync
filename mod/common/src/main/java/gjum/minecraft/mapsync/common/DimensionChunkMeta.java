@@ -1,5 +1,6 @@
 package gjum.minecraft.mapsync.common;
 
+import gjum.minecraft.mapsync.common.data.RegionPos;
 import net.minecraft.client.Minecraft;
 import net.minecraft.world.level.ChunkPos;
 
@@ -34,11 +35,12 @@ public class DimensionChunkMeta {
 	}
 
 	private Path getRegionFilePath(RegionPos regionPos) {
-		return Path.of(dimensionDirPath, "r%d,%d.chunkmeta".formatted(regionPos.x, regionPos.z));
+		return Path.of(dimensionDirPath, "r%d,%d.chunkmeta".formatted(regionPos.x(), regionPos.z()));
 	}
 
-	private Path getTsFilePath() {
-		return Path.of(dimensionDirPath, "last_ts");
+	public synchronized long getOldestChunkTsInRegion(RegionPos regionPos) {
+		long[] chunkTimestamps = regionsTimestamps.computeIfAbsent(regionPos, this::readRegionTimestampsFile);
+		return Arrays.stream(chunkTimestamps).min().orElse(0);
 	}
 
 	public synchronized long getTimestamp(ChunkPos chunkPos) {
@@ -80,45 +82,6 @@ public class DimensionChunkMeta {
 			Files.setLastModifiedTime(path, FileTime.fromMillis(oldestChunkTs));
 		} catch (IOException e) {
 			e.printStackTrace();
-		}
-	}
-
-	public long readLastTimestamp() {
-		try {
-			Path path = getTsFilePath();
-			return Long.parseLong(Files.readString(path));
-		} catch (FileNotFoundException | NoSuchFileException ignored) {
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
-		return 0;
-	}
-
-	public synchronized void writeLastTimestamp(long current_time) {
-		try {
-			Path path = getTsFilePath();
-			Files.writeString(path, Long.toString(current_time));
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
-	}
-
-	/**
-	 * Reuse hash etc. Note that most helper methods are useless because of the different physical scale.
-	 */
-	private static class RegionPos extends ChunkPos {
-		static final int CHUNKS_IN_REGION = 32 * 32;
-
-		public RegionPos(int x, int z) {
-			super(x, z);
-		}
-
-		public static RegionPos forChunkPos(ChunkPos pos) {
-			return new RegionPos(pos.x >> 5, pos.z >> 5);
-		}
-
-		public static int chunkIndex(ChunkPos pos) {
-			return (pos.x & 0b11111) + 32 * (pos.z & 0b11111);
 		}
 	}
 }

@@ -6,17 +6,21 @@ import { EncryptionResponsePacket } from './EncryptionResponsePacket'
 import { HandshakePacket } from './HandshakePacket'
 import {CatchupPacket} from "./CatchupPacket";
 import {CatchupRequestPacket} from "./CatchupRequestPacket";
+import {RegionTimestampsPacket} from "./RegionTimestampsPacket";
+import {RegionCatchupPacket} from "./RegionCatchupPacket";
 
 export type ClientPacket =
 	| ChunkTilePacket
 	| EncryptionResponsePacket
 	| HandshakePacket
 	| CatchupRequestPacket
+  | RegionCatchupPacket
 
 export type ServerPacket =
 	| ChunkTilePacket
 	| EncryptionRequestPacket
 	| CatchupPacket
+  | RegionTimestampsPacket
 
 export const packetIds = [
 	'ERROR:pkt0',
@@ -25,7 +29,9 @@ export const packetIds = [
 	'EncryptionResponse',
 	'ChunkTile',
 	'Catchup',
-	'CatchupRequest'
+	'CatchupRequest',
+	'RegionTimestamps',
+	'RegionCatchup'
 ]
 
 export function getPacketId(type: ServerPacket['type']) {
@@ -45,6 +51,8 @@ export function decodePacket(reader: BufReader): ClientPacket {
 			return EncryptionResponsePacket.decode(reader)
 		case 'CatchupRequest':
 			return CatchupRequestPacket.decode(reader)
+		case 'RegionCatchup':
+			return RegionCatchupPacket.decode(reader)
 		default:
 			throw new Error(`Unknown packet type ${packetType}`)
 	}
@@ -59,6 +67,8 @@ export function encodePacket(pkt: ServerPacket, writer: BufWriter): void {
 			return CatchupPacket.encode(pkt, writer)
 		case 'EncryptionRequest':
 			return EncryptionRequestPacket.encode(pkt, writer)
+		case 'RegionTimestamps':
+			return RegionTimestampsPacket.encode(pkt, writer)
 		default:
 			throw new Error(`Unknown packet type ${(pkt as any).type}`)
 	}

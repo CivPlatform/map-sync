@@ -3,11 +3,9 @@ package gjum.minecraft.mapsync.common;
 import com.mojang.blaze3d.platform.InputConstants;
 import gjum.minecraft.mapsync.common.config.ModConfig;
 import gjum.minecraft.mapsync.common.config.ServerConfig;
-import gjum.minecraft.mapsync.common.data.CatchupChunk;
-import gjum.minecraft.mapsync.common.data.ChunkTile;
+import gjum.minecraft.mapsync.common.data.*;
 import gjum.minecraft.mapsync.common.net.SyncClient;
-import gjum.minecraft.mapsync.common.net.packet.CCatchupRequest;
-import gjum.minecraft.mapsync.common.net.packet.SCatchup;
+import gjum.minecraft.mapsync.common.net.packet.*;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ServerData;
@@ -25,7 +23,7 @@ import java.util.stream.Collectors;
 import static gjum.minecraft.mapsync.common.Cartography.chunkTileFromLevel;
 
 public abstract class MapSyncMod {
-	public static final String VERSION = "1.0.0";
+	public static final String VERSION = "${version}";
 
 	private static final Minecraft mc = Minecraft.getInstance();
 
@@ -186,6 +184,8 @@ public abstract class MapSyncMod {
 	 * send it to the map data server right away.
 	 */
 	public void handleMcFullChunk(int cx, int cz) {
+		// TODO batch this up and send multiple chunks at once
+
 		if (mc.level == null) return;
 		// TODO disable in nether (no meaningful "surface layer")
 		var dimensionState = getDimensionState();
@@ -215,6 +215,31 @@ public abstract class MapSyncMod {
 	public void handleSyncServerEncryptionSuccess() {
 		debugLog("tcp encrypted");
 		// TODO tell server our current dimension
+	}
+
+	public void handleRegionTimestamps(SRegionTimestamps packet, SyncClient client) {
+		DimensionState dimension = getDimensionState();
+		if (dimension == null) return;
+		if (!dimension.dimension.location().toString().equals(packet.getDimension())) {
+			return;
+		}
+		var outdatedRegions = new ArrayList<RegionPos>();
+		for (var regionTs : packet.getTimestamps()) {
+			var regionPos = new RegionPos(regionTs.x(), regionTs.z());
+			long oldestChunkTs = dimension.getOldestChunkTsInRegion(regionPos);
+			boolean requiresUpdate = regionTs.timestamp() > oldestChunkTs;
+
+			debugLog("region " + regionPos
+					+ (requiresUpdate ? " requires update." : " is up to date.")
+					+ " oldest client chunk ts: " + oldestChunkTs
+					+ ", newest server chunk ts: " + regionTs.timestamp());
+
+			if (requiresUpdate) {
+				outdatedRegions.add(regionPos);
+			}
+		}
+
+		client.send(new CRegionCatchup(packet.getDimension(), outdatedRegions));
 	}
 
 	public void handleSharedChunk(ChunkTile chunkTile) {

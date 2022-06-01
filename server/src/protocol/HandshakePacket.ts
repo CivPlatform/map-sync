@@ -6,7 +6,7 @@ export interface HandshakePacket {
 	modVersion: string
 	mojangName: string
 	gameAddress: string
-	lastTimeStamp: number
+	world: string
 }
 
 export namespace HandshakePacket {
@@ -16,14 +16,7 @@ export namespace HandshakePacket {
 			modVersion: reader.readString(),
 			mojangName: reader.readString(),
 			gameAddress: reader.readString(),
-			lastTimeStamp: parseInt(reader.readString())
+			world: reader.readString()
 		}
-	}
-
-	export function encode(pkt: HandshakePacket, writer: BufWriter) {
-		writer.writeString(pkt.modVersion)
-		writer.writeString(pkt.mojangName)
-		writer.writeString(pkt.gameAddress)
-		writer.writeString(pkt.lastTimeStamp.toString())
 	}
 }

@@ -11,6 +11,7 @@ public class ClientPacketEncoder extends MessageToByteEncoder<Packet> {
 		if (packet instanceof CHandshake) return CHandshake.PACKET_ID;
 		if (packet instanceof CEncryptionResponse) return CEncryptionResponse.PACKET_ID;
 		if (packet instanceof CCatchupRequest) return CCatchupRequest.PACKET_ID;
+		if (packet instanceof CRegionCatchup) return CRegionCatchup.PACKET_ID;
 		throw new IllegalArgumentException("Unknown client packet class " + packet);
 	}
 

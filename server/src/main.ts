@@ -7,6 +7,7 @@ import { CatchupPacket } from './protocol/CatchupPacket'
 import { CatchupRequestPacket } from './protocol/CatchupRequestPacket'
 import { ChunkTilePacket } from './protocol/ChunkTilePacket'
 import { TcpClient, TcpServer } from './server'
+import {RegionCatchupPacket} from "./protocol/RegionCatchupPacket";
 
 connectDB().then(() => new Main())
 
@@ -34,21 +35,21 @@ export class Main {
 
 		// TODO check version, mc server, user access
 
-		if (!client.lastTimestamp)
-			throw new Error(`${client.name} has not set a lastTimestamp`)
-
-		const chunks = await PlayerChunkDB.getCatchupData(client.lastTimestamp)
-		if (chunks.length) client.send({ type: 'Catchup', chunks })
+		const timestamps = await PlayerChunkDB.getRegionTimestamps();
+		client.send({ type: 'RegionTimestamps', world: client.world!, regions: timestamps });
 	}
 
 	handleClientDisconnected(client: ProtocolClient) {}
 
 	handleClientPacketReceived(client: ProtocolClient, pkt: ClientPacket) {
+		client.debug(client.mcName + " <- " + pkt.type);
 		switch (pkt.type) {
 			case 'ChunkTile':
 				return this.handleChunkTilePacket(client, pkt)
 			case 'CatchupRequest':
 				return this.handleCatchupRequest(client, pkt)
+			case 'RegionCatchup':
+				return this.handleRegionCatchupPacket(client, pkt);
 			default:
 				throw new Error(
 					`Unknown packet '${(pkt as any).type}' from client ${client.id}`,
@@ -104,5 +105,12 @@ export class Main {
 
 			client.send({ type: 'ChunkTile', ...chunk })
 		}
+	}
+
+	async handleRegionCatchupPacket(client: ProtocolClient, pkt: RegionCatchupPacket) {
+		if (!client.uuid) throw new Error(`${client.name} is not authenticated`)
+
+		const chunks = await PlayerChunkDB.getCatchupData(pkt.world, pkt.regions)
+		if (chunks.length) client.send({ type: 'Catchup', chunks })
 	}
 }

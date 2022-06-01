@@ -39,6 +39,7 @@ public class CatchupLogic {
 			for (CatchupChunk chunk : catchupChunks) {
 				// only include catchup chunks that are newer than the corresponding chunk we have locally
 				var current_timestamp = dimensionState.getChunkTimestamp(chunk.chunkPos());
+				debugLog("COMPARING " + (current_timestamp < chunk.timestamp()) + " for " + chunk.chunk_x() + " " + chunk.chunk_z());
 				if (current_timestamp < chunk.timestamp()) {
 					this.catchupChunks.add(chunk);
 				}
@@ -64,7 +65,7 @@ public class CatchupLogic {
 		if (queueSize < WATERMARK_REQUEST_MORE) {
 			// before requesting more, wait for a catchup chunk to be received (see renderLater());
 			// if none get received within a second (all outdated etc.) then request more anyway
-			tsRequestMore = now + 5000;
+			tsRequestMore = now + 1000;
 			var chunksToRequest = pollCatchupChunks(WATERMARK_REQUEST_MORE);
 			getMod().requestCatchupData(chunksToRequest);
 		}

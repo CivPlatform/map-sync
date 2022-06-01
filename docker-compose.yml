@@ -2,9 +2,7 @@ version: "3.8"
 
 services:
   map-sync:
-    # FIXME: image repository cannot have capital letters
-    #image: ghcr.io/CivPlatform/map-sync
-    build: .
+    image: ghcr.io/civplatform/map-sync
     stdin_open: true
     tty: true
     init: true

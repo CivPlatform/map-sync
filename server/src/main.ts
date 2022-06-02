@@ -21,6 +21,10 @@ export class Main {
 	async handleClientAuthenticated(client: ProtocolClient) {
 		if (!client.uuid) throw new Error('Client not authenticated')
 
+		const { GAME_ADDRESS } = process.env
+		if (GAME_ADDRESS && client.gameAddress !== GAME_ADDRESS)
+			throw new Error(`Client on wrong mc server ${client.gameAddress}`)
+
 		uuid_cache_store(client.mcName!, client.uuid)
 
 		if ((await getConfig()).whitelist) {

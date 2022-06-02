@@ -87,9 +87,7 @@ public class SyncClient {
 	private static @Nullable NioEventLoopGroup workerGroup;
 
 	public SyncClient(@NotNull String address, @NotNull String gameAddress) {
-		if (address.trim().isEmpty() || !address.contains(":")) {
-			throw new Error("Invalid address: '" + address + "'");
-		}
+		if (!address.contains(":")) address = address + ":12312";
 		this.address = address;
 		this.gameAddress = gameAddress;
 		connect();
@@ -139,6 +137,7 @@ public class SyncClient {
 				}
 			});
 		} catch (Throwable e) {
+			e.printStackTrace();
 			handleDisconnect(e);
 		}
 	}

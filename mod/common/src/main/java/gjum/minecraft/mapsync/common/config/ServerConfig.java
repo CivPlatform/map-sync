@@ -5,7 +5,6 @@ import com.google.gson.JsonObject;
 import com.google.gson.annotations.Expose;
 import net.minecraft.client.Minecraft;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 
 import java.io.File;
 import java.nio.charset.StandardCharsets;
@@ -19,9 +18,6 @@ public class ServerConfig extends JsonConfig {
 	public String gameAddress;
 
 	@Expose
-	private @Nullable String syncServerAddress = null; // XXX compatibility
-
-	@Expose
 	private @NotNull List<String> syncServerAddresses = new ArrayList<>();
 
 	public @NotNull List<String> getSyncServerAddresses() {
@@ -33,6 +29,7 @@ public class ServerConfig extends JsonConfig {
 				.filter(Objects::nonNull)
 				.map(String::trim)
 				.filter(address -> !address.isEmpty())
+				.map(address -> address.contains(":") ? address : (address + ":12312"))
 				.collect(Collectors.toCollection(ArrayList::new));
 
 		saveLater();
@@ -74,7 +71,7 @@ public class ServerConfig extends JsonConfig {
 			return;
 		}
 		if (conf.syncServerAddresses.isEmpty() && defaults.syncServerAddresses != null) {
-			conf.syncServerAddresses = defaults.syncServerAddresses;
+			conf.setSyncServerAddresses(defaults.syncServerAddresses);
 		}
 	}
 }

@@ -28,8 +28,8 @@ ENV NODE_ENV=production
 ENV HOST=0.0.0.0
 
 #Mount your FS or volume or whatnot to this folder
-RUN mkdir /mapsync_data
-ENV MAPSYNC_DATA_DIR=/mapsync_data
+RUN mkdir /data
+ENV MAPSYNC_DATA_DIR=/data
 
 EXPOSE 12312/tcp
 

@@ -82,6 +82,10 @@ public class ModGui extends Screen {
 
 	@Override
 	public void render(@NotNull PoseStack poseStack, int i, int j, float f) {
+		// wait for init() to finish
+		if (syncServerAddressField == null) return;
+		if (syncServerConnectBtn == null) return;
+
 		renderBackground(poseStack);
 		drawCenteredString(poseStack, font, title, width / 2, top, 0xFFFFFF);
 		syncServerAddressField.render(poseStack, i, j, f);

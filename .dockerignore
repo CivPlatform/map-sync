@@ -4,3 +4,4 @@
 **/*.sqlite
 /mod
 /notes
+/data

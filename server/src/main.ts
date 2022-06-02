@@ -37,6 +37,8 @@ export class Main {
 			}
 		}
 
+		client.whitelisted = true
+
 		// TODO check version, mc server, user access
 
 		const timestamps = await PlayerChunkDB.getRegionTimestamps();
@@ -46,6 +48,7 @@ export class Main {
 	handleClientDisconnected(client: ProtocolClient) {}
 
 	handleClientPacketReceived(client: ProtocolClient, pkt: ClientPacket) {
+		if (!client.whitelisted) return
 		client.debug(client.mcName + " <- " + pkt.type);
 		switch (pkt.type) {
 			case 'ChunkTile':
@@ -62,6 +65,7 @@ export class Main {
 	}
 
 	async handleChunkTilePacket(client: ProtocolClient, pkt: ChunkTilePacket) {
+		if (!client.whitelisted) return
 		if (!client.uuid) throw new Error(`${client.name} is not authenticated`)
 
 		// TODO ignore if same chunk hash exists in db
@@ -89,6 +93,7 @@ export class Main {
 		client: ProtocolClient,
 		pkt: CatchupRequestPacket,
 	) {
+		if (!client.whitelisted) return
 		if (!client.uuid) throw new Error(`${client.name} is not authenticated`)
 
 		for (const req of pkt.chunks) {
@@ -112,6 +117,7 @@ export class Main {
 	}
 
 	async handleRegionCatchupPacket(client: ProtocolClient, pkt: RegionCatchupPacket) {
+		if (!client.whitelisted) return
 		if (!client.uuid) throw new Error(`${client.name} is not authenticated`)
 
 		const chunks = await PlayerChunkDB.getCatchupData(pkt.world, pkt.regions)

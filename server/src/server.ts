@@ -68,6 +68,8 @@ export class TcpClient {
 	mcName: string | undefined
 	world: string | undefined
 
+	whitelisted: boolean | undefined
+
 	/** prevent Out of Memory when client sends a large packet */
 	maxFrameSize = 2 ** 24
 

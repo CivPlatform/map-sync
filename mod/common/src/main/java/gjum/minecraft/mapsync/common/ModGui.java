@@ -122,9 +122,6 @@ public class ModGui extends Screen {
 			drawString(poseStack, font, statusText, left, msgY, statusColor);
 			msgY += 10;
 		}
-		if (numConnected == syncClients.size() && syncServerConnectBtn != null) {
-			syncServerConnectBtn.setMessage(new TextComponent("All connected"));
-		}
 
 		super.render(poseStack, i, j, f);
 	}

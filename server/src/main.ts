@@ -1,7 +1,7 @@
 import './cli'
 import { connectDB } from './db'
 import { PlayerChunk, PlayerChunkDB } from './MapChunk'
-import { uuid_cache_store, config, whitelist_check } from './metadata'
+import { uuid_cache_store, getConfig, whitelist_check } from './metadata'
 import { ClientPacket } from './protocol'
 import { CatchupPacket } from './protocol/CatchupPacket'
 import { CatchupRequestPacket } from './protocol/CatchupRequestPacket'
@@ -24,7 +24,7 @@ export class Main {
 
 		uuid_cache_store(client.mcName!, client.uuid)
 
-		if (config.whitelist) {
+		if ((await getConfig()).whitelist) {
 			if (!whitelist_check(client.uuid)) {
 				client.log(
 					`Rejected unwhitelisted user ${client.mcName} (${client.uuid})`,

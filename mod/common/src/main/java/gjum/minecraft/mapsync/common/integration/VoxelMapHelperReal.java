@@ -4,15 +4,16 @@ import com.mamiyaotaru.voxelmap.interfaces.AbstractVoxelMap;
 import com.mamiyaotaru.voxelmap.persistent.*;
 import gjum.minecraft.mapsync.common.data.BlockInfo;
 import gjum.minecraft.mapsync.common.data.ChunkTile;
-import java.util.concurrent.locks.ReentrantLock;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.material.Material;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.lang.reflect.*;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.locks.ReentrantLock;
 
 import static gjum.minecraft.mapsync.common.Utils.getBiomeRegistry;
 
@@ -134,6 +135,10 @@ public class VoxelMapHelperReal {
 		// XXX
 		if (layers.size() > 1) transparent = layers.get(0);
 		surface = layers.get(layers.size() - 1);
+		// trees hack
+		if (layers.get(0).state().getMaterial() == Material.LEAVES) {
+			surface = layers.get(0);
+		}
 
 		mapData.setTransparentHeight(x, z, transparent.y());
 		mapData.setTransparentBlockstate(x, z, transparent.state());

@@ -30,11 +30,9 @@ You can control who has access to a Sync Server by editing its `allowed-users.tx
 1. [Install the Docker Engine](https://docs.docker.com/engine/install/), if you haven't already
 2. [Install Docker Compose](https://docs.docker.com/compose/install/) (We're using Docker Compose V2, so update if you haven't already done so.)
 3. Clone our code
-4. ~~Build the container: `docker-compose build map-sync`~~ Docker Compose V2's `run` and `up` will build it for you! Proceed to step 6.
-5. ~~Wait~~
-6. To run the server with interactive prompt: `docker compose run --rm -p 12312:12312 map-sync`
+4. To run the server with interactive prompt: `docker compose run --rm -p 12312:12312 map-sync`
     - To stop the interactive prompt: hit ctrl-c twice
-7. To run the server headless: `docker compose up map-sync -d`
+5. To run the server headless: `docker compose up map-sync -d`
     - To stop the headless server: `docker compose down map-sync`
 </details>
 

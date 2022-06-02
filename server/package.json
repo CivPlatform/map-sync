@@ -1,6 +1,6 @@
 {
 	"name": "civmap-server",
-	"version": "2.0.0-snapshot",
+	"version": "2.0.0",
 	"private": true,
 	"author": "Gjum",
 	"license": "GPL-3.0-only",

@@ -77,7 +77,6 @@ public class ModGui extends Screen {
 		getMod().shutDownSyncClients();
 		getMod().getSyncClients();
 		btn.active = false;
-		btn.setMessage(new TextComponent("Connecting to " + addresses.size() + " ..."));
 	}
 
 	@Override
@@ -99,11 +98,11 @@ public class ModGui extends Screen {
 					dimensionState.getNumChunksRendered(),
 					dimensionState.getRenderQueueSize()
 			);
-			drawString(poseStack, font, counterText, left, top + 60, 0x888888);
+			drawString(poseStack, font, counterText, left, top + 70, 0x888888);
 		}
 
 		int numConnected = 0;
-		int msgY = top + 70;
+		int msgY = top + 90;
 		var syncClients = getMod().getSyncClients();
 		for (var client : syncClients) {
 			int statusColor;

@@ -92,7 +92,7 @@ public class JourneyMapHelperReal {
 				}
 				if (layer.y() < pos.getY()) {
 					// top of layer is below pos, so pos is inside prevLayer
-					if (prevLayer == null) return null; // first layer is already below pos
+					if (prevLayer == null) return Blocks.AIR.defaultBlockState(); // first layer is already below pos
 					return prevLayer.state();
 				}
 				prevLayer = layer;

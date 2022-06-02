@@ -1,124 +1,100 @@
 /** Each read advances the internal offset into the buffer. */
 export class BufReader {
+	private off = 0
+	private offStack: number[] = []
 
-	private offset = 0;
-	private offStack: number[] = [];
-
-	constructor(private buffer: Buffer) {
-
-	}
+	constructor(private buf: Buffer) {}
 
 	saveOffset() {
-		this.offStack.push(this.offset);
+		this.offStack.push(this.off)
 	}
 
 	restoreOffset() {
-		const off = this.offStack.pop();
-		if (off === undefined) {
-			throw new Error('Offset stack is empty');
-		}
-		this.offset = off;
+		const off = this.offStack.pop()
+		if (off === undefined) throw new Error('Offset stack is empty')
+		this.off = off
 	}
 
-	readUInt8(): number {
-		try {
-			return this.buffer.readUInt8(this.offset);
-		}
-		finally {
-			this.offset += 1;
-		}
+	readUInt8() {
+		const val = this.buf.readUInt8(this.off)
+		this.off += 1
+		return val
 	}
 
-	readInt8(): number {
-		try {
-			return this.buffer.readInt8(this.offset);
-		}
-		finally {
-			this.offset += 1;
-		}
+	readInt8() {
+		const val = this.buf.readInt8(this.off)
+		this.off += 1
+		return val
 	}
 
-	readUInt16(): number {
-		try {
-			return this.buffer.readUInt16BE(this.offset);
-		}
-		finally {
-			this.offset += 2;
-		}
+	readUInt16() {
+		const val = this.buf.readUInt16BE(this.off)
+		this.off += 2
+		return val
 	}
 
-	readInt16(): number {
-		try {
-			return this.buffer.readInt16BE(this.offset);
-		}
-		finally {
-			this.offset += 2;
-		}
+	readInt16() {
+		const val = this.buf.readInt16BE(this.off)
+		this.off += 2
+		return val
 	}
 
-	readUInt32(): number {
-		try {
-			return this.buffer.readUInt32BE(this.offset);
-		}
-		finally {
-			this.offset += 4;
-		}
+	readUInt32() {
+		const val = this.buf.readUInt32BE(this.off)
+		this.off += 4
+		return val
 	}
 
-	readInt32(): number {
-		try {
-			return this.buffer.readInt32BE(this.offset);
-		}
-		finally {
-			this.offset += 4;
-		}
+	readInt32() {
+		const val = this.buf.readInt32BE(this.off)
+		this.off += 4
+		return val
 	}
 
-	readUInt64(): bigint {
-		try {
-			return this.buffer.readBigUInt64BE(this.offset);
+	readUInt64() {
+		const valBig = this.buf.readBigUInt64BE(this.off)
+		if (valBig > Number.MAX_SAFE_INTEGER) {
+			throw new Error(`64-bit number too big: ${valBig}`)
 		}
-		finally {
-			this.offset += 8;
-		}
+		this.off += 8
+		return Number(valBig)
 	}
 
-	readInt64(): bigint {
-		try {
-			return this.buffer.readBigInt64BE(this.offset);
+	readInt64() {
+		const valBig = this.buf.readBigInt64BE(this.off)
+		if (valBig > Number.MAX_SAFE_INTEGER) {
+			throw new Error(`64-bit number too big: ${valBig}`)
 		}
-		finally {
-			this.offset += 8;
+		if (valBig < Number.MIN_SAFE_INTEGER) {
+			throw new Error(`64-bit number too small: ${valBig}`)
 		}
+		this.off += 8
+		return Number(valBig)
 	}
 
 	/** length-prefixed (32 bits), UTF-8 encoded */
-	readString(): string {
-		const length = this.readUInt32();
-		try {
-			return this.buffer.toString('utf8', this.offset, this.offset + length);
-		}
-		finally {
-			this.offset += length;
-		}
+	readString() {
+		const len = this.readUInt32()
+		const str = this.buf.toString('utf8', this.off, this.off + len)
+		this.off += len
+		return str
 	}
 
-	readBufWithLen(): Buffer {
-		const length = this.readUInt32();
-		return this.readBufLen(length);
+	readBufWithLen() {
+		const len = this.readUInt32()
+		return this.readBufLen(len)
 	}
 
-	readBufLen(length: number): Buffer {
-		// simply returning a slice() would retain the entire buffer in memory
-		const buffer: Buffer = Buffer.allocUnsafe(length);
-		this.buffer.copy(buffer, 0, this.offset, this.offset + length);
-		this.offset += length;
-		return buffer;
+	readBufLen(length: number) {
+		// simply returning a slice() would retain the entire buf in memory
+		const buf = Buffer.allocUnsafe(length)
+		this.buf.copy(buf, 0, this.off, this.off + length)
+		this.off += length
+		return buf
 	}
 
 	/** any reads after this will fail */
-	readRemainder(): Buffer {
-		return this.readBufLen(this.buffer.length - this.offset);
+	readRemainder() {
+		return this.readBufLen(this.buf.length - this.off)
 	}
-
 }

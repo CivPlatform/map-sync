@@ -13,7 +13,7 @@ export interface PlayerChunk {
 	chunk_x: number
 	chunk_z: number
 	uuid: string
-	ts: bigint // timestamp in milliseconds
+	ts: number
 	data: ChunkData
 }
 
@@ -61,7 +61,7 @@ export class PlayerChunkDB extends BaseEntity implements PlayerChunk {
 	uuid!: string
 
 	@Column({ type: 'bigint' })
-	ts!: bigint
+	ts!: number
 
 	@ManyToOne(() => ChunkDataDB)
 	@JoinColumn({ name: 'hash' })

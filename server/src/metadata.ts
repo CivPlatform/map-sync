@@ -1,5 +1,6 @@
 import lib_fs from "fs";
 import { Mutex } from "async-mutex";
+import fetch from 'node-fetch'
 import { loadOrSaveDefaultStringFile } from "./utilities";
 
 export const ENOENT = -2;
@@ -73,22 +74,35 @@ export const whitelist = new Set<string>();
 
 /** Loads the whitelist from whitelist.json */
 export async function whitelist_load() {
-	WHITELIST_MUTEX
+
+	// get url from env vars
+	const url = process.env["WHITELIST_URL"]
+
+	// check if it was provided to the server
+	if (url !== undefined) {
+		const res = await fetch(url)
+		const json = await res.json()
+
+		whitelist_verify(json);
+
+		whitelist.clear();
+		for (const entry of json as string[]) {
+			whitelist.add(entry);
+		}
+		console.log("[Whitelist] Loaded whitelist from url");
+	} else {
+		
+		WHITELIST_MUTEX
 		.runExclusive(async () => {
 			const json: any = JSON.parse(await loadOrSaveDefaultStringFile(WHITELIST_FILE, "[]"));
-			if (!Array.isArray(json)) {
-				throw new Error("Whitelist file wasn't an array");
-			}
-			for (const entry of json as any[]) {
-				if (typeof entry !== "string") {
-					throw new Error(`Entry "${entry}" is not a string`);
-				}
-			}
+			
+			whitelist_verify(json);
+
 			whitelist.clear();
 			for (const entry of json as string[]) {
 				whitelist.add(entry);
 			}
-			console.log("[Whitelist] Loaded whitelist");
+			console.log("[Whitelist] Loaded whitelist from file");
 		})
 		.catch((e) => {
 			if (get_os_error(e) === OsError.FileNotFound) {
@@ -101,6 +115,24 @@ export async function whitelist_load() {
 				console.error("[Whitelist] The whitelist will be loaded as empty");
 			}
 		});
+	}
+
+	
+}
+
+/**
+ * Checks that the provided data is actually in the proper json format
+ * @param json 
+ */
+export function whitelist_verify(json: any) {
+	if (!Array.isArray(json)) {
+		throw new Error("Whitelist file wasn't an array");
+	}
+	for (const entry of json as any[]) {
+		if (typeof entry !== "string") {
+			throw new Error(`Entry "${entry}" is not a string`);
+		}
+	}
 }
 
 /** Saves the whitelist to whitelist.json */

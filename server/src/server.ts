@@ -186,7 +186,7 @@ export class TcpClient {
 			this.debug('Not authenticated, dropping packet', pkt.type)
 			return
 		}
-		this.debug(this.mcName + " -> " + pkt.type);
+		if (pkt.type !== 'Catchup') this.debug(this.mcName + " -> " + pkt.type);
 		await this.sendInternal(pkt, true)
 	}
 

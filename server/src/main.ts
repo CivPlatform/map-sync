@@ -49,7 +49,6 @@ export class Main {
 
 	handleClientPacketReceived(client: ProtocolClient, pkt: ClientPacket) {
 		if (!client.whitelisted) return
-		client.debug(client.mcName + " <- " + pkt.type);
 		switch (pkt.type) {
 			case 'ChunkTile':
 				return this.handleChunkTilePacket(client, pkt)
@@ -93,6 +92,7 @@ export class Main {
 		client: ProtocolClient,
 		pkt: CatchupRequestPacket,
 	) {
+		client.debug(client.mcName + " <- " + pkt.type);
 		if (!client.whitelisted) return
 		if (!client.uuid) throw new Error(`${client.name} is not authenticated`)
 
@@ -117,6 +117,7 @@ export class Main {
 	}
 
 	async handleRegionCatchupPacket(client: ProtocolClient, pkt: RegionCatchupPacket) {
+		client.debug(client.mcName + " <- " + pkt.type);
 		if (!client.whitelisted) return
 		if (!client.uuid) throw new Error(`${client.name} is not authenticated`)
 

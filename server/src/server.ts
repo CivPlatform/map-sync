@@ -174,7 +174,7 @@ export class TcpClient {
 
 	kick(internalReason: string) {
 		this.log(`Kicking:`, internalReason)
-		this.socket.end()
+		this.socket.destroy()
 	}
 
 	async send(pkt: ServerPacket) {

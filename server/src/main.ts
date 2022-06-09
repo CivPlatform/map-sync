@@ -29,7 +29,7 @@ export class Main {
 					`Rejected unwhitelisted user ${client.mcName} (${client.uuid})`,
 				)
 				client.kick(`Not whitelisted`)
-				throw new Error(`Not whitelisted`)
+				return;
 			}
 		}
 

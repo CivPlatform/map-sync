@@ -25,7 +25,7 @@ export class Main {
 		if (GAME_ADDRESS && client.gameAddress !== GAME_ADDRESS)
 			throw new Error(`Client on wrong mc server ${client.gameAddress}`)
 
-		uuid_cache_store(client.mcName!, client.uuid)
+		await uuid_cache_store(client.mcName!, client.uuid);
 
 		if ((await getConfig()).whitelist) {
 			if (!whitelist_check(client.uuid)) {

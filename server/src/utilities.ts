@@ -1,6 +1,16 @@
 import { promises as fs_promises } from "fs";
 
 /**
+ * Determines whether a given thing "exists", which in this case means having a value (not undefined) which is not null.
+ *
+ * @param thing The thing to test.
+ * @return Returns true if the given thing exists.
+ */
+export function doesExist(thing: any) {
+    return thing !== undefined && thing !== null;
+}
+
+/**
  * Attempts to load a text-file from the given path. If the file does not exist then the given fallback text is saved
  * into a new text-file at the given path.
  *

@@ -54,7 +54,8 @@ async function handle_input(input: string): Promise<void> {
 	const command = (command_end_i > -1 ? input.substring(0, command_end_i) : input).toLowerCase();
 	const extras = command_end_i > -1 ? input.substring(command_end_i + 1) : "";
 
-	if (command === "ping") console.log("pong");
+	if (command === "") { }
+	else if (command === "ping") console.log("pong");
 	else if (command === "help") {
 		console.log("ping - Prints \"pong\" for my sanity. -SirAlador");
 		console.log("help - Prints info about commands, including the help command.");

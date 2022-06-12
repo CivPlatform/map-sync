@@ -57,6 +57,10 @@ impl BlockColumn {
         })
     }
 
+    pub fn top_layer(&self) -> &BlockInfo {
+        self.layers.first().unwrap_or(&BlockInfo { y: -64, id: 0 })
+    }
+
     pub fn ground_layer(&self) -> &BlockInfo {
         self.layers.last().unwrap_or(&BlockInfo { y: -64, id: 0 })
     }

@@ -23,11 +23,9 @@ lazy_static! {
         let file = File::open("blocks.json").expect("reading blocks.json");
         let reader = BufReader::new(file);
         let json: Vec<BlockJson> = serde_json::from_reader(reader).expect("parsing blocks.json");
-        let mut colors = Vec::new();
+        let last_block = json.last().expect("getting last blocks.json entry");
+        let mut colors = vec![0_u32; last_block.maxStateId + 1];
         for o in json {
-            while colors.len() <= o.maxStateId {
-                colors.push(0);
-            }
             for bsid in o.minStateId..=o.maxStateId {
                 colors[bsid] = BLOCK_COLORS[o.id];
             }

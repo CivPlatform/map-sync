@@ -15,6 +15,10 @@ architectury {
 	common()
 }
 
+processResources {
+	inputs.property "version", project.version
+}
+
 publishing {
 	publications {
 		mavenCommon(MavenPublication) {

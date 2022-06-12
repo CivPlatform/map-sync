@@ -1,7 +1,9 @@
 import lib_fs from "fs";
 import { Mutex } from "async-mutex";
 import fetch from 'node-fetch'
-import { loadOrSaveDefaultStringFile } from "./utilities";
+import { doesExist, loadOrSaveDefaultStringFile } from "./utilities";
+import { z, ZodError, ZodIssue } from "zod";
+import * as util from "util";
 
 export const ENOENT = -2;
 export const EEXIST = -17;
@@ -188,61 +190,88 @@ export async function whitelist_remove(uuid: string) {
 // ------------------------------------------------------------ //
 
 const UUID_CACHE_MUTEX = new Mutex();
-/** A cache storing uuids by player IGN */
 export const uuid_cache = new Map<string, string>();
+export const UuidCacheZod = z.record(z.string());
 
-/** Saves the UUID cache to uuid_cache.json */
+/**
+ * Saves the UUID cache to uuid_cache.json
+ */
 export async function uuid_cache_save() {
 	UUID_CACHE_MUTEX
 		.runExclusive(async () => {
-			await lib_fs.promises.writeFile(UUID_CACHE_FILE, JSON.stringify(Array.from(uuid_cache)));
+			await lib_fs.promises.writeFile(UUID_CACHE_FILE, JSON.stringify(Object.fromEntries(uuid_cache)));
 			console.log("[UUID Cache] Saved UUID cache");
 		})
 		.catch((e) => {
-			console.error("[UUID Cache] Error occured while saving the whitelist to the disk");
+			console.error("[UUID Cache] Error occurred while saving the whitelist to the disk");
 			console.error(e);
 		});
 }
 
-export async function uuid_cache_load(): Promise<void> {
+/**
+ * Loads the UUID cache from uuid_cache.json, replacing the current cache (if any) entirely.
+ */
+export async function uuid_cache_load() {
 	UUID_CACHE_MUTEX
 		.runExclusive(async () => {
-			const json: any = JSON.parse(await loadOrSaveDefaultStringFile(UUID_CACHE_FILE, "{}"));
-			if (typeof json !== "object") {
-				throw new Error("UUID cache file wasn't an JSON object");
+			let json: Record<string, string> = null!;
+			try {
+				json = UuidCacheZod.parse(JSON.parse(await loadOrSaveDefaultStringFile(UUID_CACHE_FILE, "{}")));
+			}
+			catch (e) {
+				if (e instanceof ZodError) {
+					throw new Error("UUID Cache error: " + util.inspect(e.issues.map((issue: ZodIssue) =>
+						"• [" + (issue.path.length < 1 ? "." : issue.path.join(".")) + "]: " + issue.message
+					), { compact: false }));
+				}
+				throw e;
 			}
 			uuid_cache.clear();
 			for (const [key, value] of Object.entries(json)) {
-				uuid_cache.set(key, String(value));
+				uuid_cache.set(key, value);
 			}
 			console.log("[UUID Cache] Saved UUID cache");
 		})
 		.catch((e) => {
-			if (get_os_error(e) === OsError.FileNotFound) {
-				console.error("[UUID Cache] No uuid cache file was found. A new one will be created shortly.");
-				uuid_cache_save(); // Don't await, will cause deadlock
-			}
-			else {
-				console.error("[UUID Cache] An error occured when attempting to read `uuid_cache.json`");
-				console.error(e);
-				console.error("[UUID Cache] A new uuid cache will be created");
-			}
+			console.error("[UUID Cache] An error occurred when attempting to read `uuid_cache.json`");
+			console.error(e);
+			console.error("[UUID Cache] A new uuid cache will be created");
 		});
 }
 
-// Load UUID cache on startup
+// Load the UUID cache on startup
 uuid_cache_load();
 
-/** Caches a player IGN with their UUID */
-export function uuid_cache_store(ign: string, uuid: string) {
-	if (uuid == null || ign == null) return;
-	uuid_cache.set(ign, uuid);
-	console.log(`[UUID Cache] cached "${ign}" as UUID "${uuid}"`);
-	uuid_cache_save();
+/**
+ * Associates an in-game name with a UUID.
+ *
+ * @param name The name to associate.
+ * @param uuid The UUID to associate the name with.
+ */
+export async function uuid_cache_store(name: string, uuid: string) {
+	if (!doesExist(name)) {
+		throw new Error("Name cannot be null!");
+	}
+	if (!doesExist(uuid)) {
+		throw new Error("UUID cannot be null!");
+	}
+	uuid_cache.set(uuid, name);
+	console.log(`[UUID Cache] cached "${name}" as UUID "${uuid}"`);
+	await uuid_cache_save();
 }
 
-/** Looks up a UUID from an IGN */
-export function uuid_cache_lookup(ign: string): string | null {
-	return uuid_cache.get(ign) ?? null;
+/**
+ * Attempts to get the UUID for a given in-game name.
+ *
+ * @param name The name to search with.
+ * @return Returns the matched UUID, or null.
+ */
+export function uuid_cache_lookup(name: string): string | null {
+	for (const [knownUuid, knownName] of uuid_cache.entries()) {
+		if (knownName === name) {
+			return knownUuid;
+		}
+	}
+	return null;
 }
 

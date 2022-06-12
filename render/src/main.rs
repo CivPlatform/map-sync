@@ -44,13 +44,11 @@ fn emain<'a>() -> Result<(), MyErr<'a>> {
         s: 256 * (img_z + 1),
     };
 
-    // TODO render all color modes
-    let color_mode = "terrain";
-
-    let img_path = format!("{}/{}/{},{}.png", tiles_dir, color_mode, img_x, img_z);
-
-    println!("Rendering {}", img_path);
-    render_img(&img_path, &bounds, &map, get_color_fn(color_mode)?)?;
+    for color_mode in ["terrain", "topo", "height", "slope"] {
+        let img_path = format!("{}/{}/{},{}.png", tiles_dir, color_mode, img_x, img_z);
+        println!("Rendering {}", img_path);
+        render_img(&img_path, &bounds, &map, get_color_fn(color_mode)?)?;
+    }
     println!("Done");
 
     Ok(())

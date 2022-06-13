@@ -4,6 +4,7 @@ use std::io::{self, Read};
 pub const CHUNK_WIDTH: usize = 16;
 pub const CHUNK_HEIGHT: usize = 16;
 pub const CHUNK_COLUMNS: usize = CHUNK_WIDTH * CHUNK_HEIGHT;
+pub const LOWEST_Y: i16 = -9999;
 
 pub type ChunkPos = (i32, i32);
 
@@ -63,6 +64,13 @@ impl BlockColumn {
 
     pub fn ground_layer(&self) -> &BlockInfo {
         self.layers.last().unwrap_or(&BlockInfo { y: -64, id: 0 })
+    }
+
+    pub fn top_layer_excluding(&self, ids: &[std::ops::RangeInclusive<u16>]) -> &BlockInfo {
+        self.layers
+            .iter()
+            .find(|&l| !ids.iter().any(|r| r.contains(&l.id)))
+            .unwrap_or(&BlockInfo { y: LOWEST_Y, id: 0 })
     }
 }
 

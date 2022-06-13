@@ -5,7 +5,7 @@ extern crate serde;
 use byteorder::{BigEndian, ReadBytesExt};
 
 use crate::chunk_tile::ChunkTile;
-use crate::coloring::get_color_fn;
+use crate::coloring::{get_color_fn, superimpose};
 use crate::render::{render_img, Bounds, ChunkMap};
 
 pub mod chunk_tile;
@@ -44,11 +44,16 @@ fn emain<'a>() -> Result<(), MyErr<'a>> {
         s: 256 * (img_z + 1),
     };
 
-    for color_mode in ["terrain", "topo", "height", "slope"] {
+    for color_mode in ["terrain", "topo", "biome", "height", "slope"] {
         let img_path = format!("{}/{}/{},{}.png", tiles_dir, color_mode, img_x, img_z);
         println!("Rendering {}", img_path);
         render_img(&img_path, &bounds, &map, get_color_fn(color_mode)?)?;
     }
+
+    let img_path_biome_slope = format!("{}/{}/{},{}.png", tiles_dir, "biome_slope", img_x, img_z);
+    let biome_slope = superimpose(get_color_fn("biome")?, get_color_fn("slope")?);
+    render_img(&img_path_biome_slope, &bounds, &map, &biome_slope)?;
+
     println!("Done");
 
     Ok(())

@@ -33,13 +33,13 @@ pub fn get_column_in_map<'map>(map: &'map ChunkMap, x: i32, z: i32) -> Option<&'
 }
 
 /// returns color in format 0xAABBGGRR
-pub type ColorFn = Box<dyn Fn(&ChunkMap, i32, i32) -> u32>;
+pub type ColorFn = dyn Fn(&ChunkMap, i32, i32) -> u32;
 
 pub fn render_img(
     img_path: &str,
     bounds: &Bounds,
     map: &ChunkMap,
-    color_fn: ColorFn,
+    color_fn: &ColorFn,
 ) -> Result<(), String> {
     let path = Path::new(img_path).parent().unwrap();
     fs::create_dir_all(path).map_err(|err| {

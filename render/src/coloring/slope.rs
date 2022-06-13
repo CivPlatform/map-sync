@@ -1,5 +1,9 @@
-use crate::color::{SHADE_DARKBLACK, SHADE_LITEBLACK, SHADE_LITEWHITE, TRANSPARENT};
 use crate::render::{get_column_in_map, ChunkMap};
+
+pub const TRANSPARENT: u32 = 0;
+pub const SHADE_DARKBLACK: u32 = 0x88_00_00_00;
+pub const SHADE_LITEBLACK: u32 = 0x44_00_00_00;
+pub const SHADE_LITEWHITE: u32 = 0x33_ff_ff_ff;
 
 pub fn get_slope_color(map: &ChunkMap, x: i32, z: i32) -> u32 {
     fn get_ground_y(map: &ChunkMap, x: i32, z: i32) -> i16 {

@@ -6,12 +6,17 @@ import { PlayerChunkDB } from './MapChunk'
 export async function renderTile(tileX: number, tileZ: number) {
 	const allChunks = await PlayerChunkDB.find({
 		where: {
-			chunk_x: Between(tileX - 1, tileX + 16 - 1),
-			chunk_z: Between(tileZ - 1, tileZ + 16 - 1),
+			chunk_x: Between(tileX * 16 - 1, (tileX + 1) * 16 - 1),
+			chunk_z: Between(tileZ * 16 - 1, (tileZ + 1) * 16 - 1),
 		},
 		order: { ts: 'DESC' }, // newest first
 		relations: ['data'],
 	})
+
+	if (!allChunks.length) {
+		console.error(`Skipping tile ${tileX},${tileZ} - no chunks`)
+		return
+	}
 
 	// skip old chunks at same pos (from different players)
 	const newestChunks = new Map<string, PlayerChunkDB>()
@@ -44,4 +49,6 @@ export async function renderTile(tileX: number, tileZ: number) {
 		await write(chunkHeaderBuf)
 		await write(chunk.data.data)
 	}
+
+	await new Promise((resolve) => proc.once('exit', resolve))
 }

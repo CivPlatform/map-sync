@@ -1,6 +1,10 @@
+use super::is_water_blockstate;
 use crate::chunk_tile::BlockColumn;
-use crate::color::{interpolate, BLACK, TRANSPARENT, WHITE};
+use crate::color::{interpolate, TRANSPARENT};
 use crate::render::{get_column_in_map, ChunkMap};
+
+pub const BLACK: u32 = 0xff_00_00_00;
+pub const WHITE: u32 = 0xff_ff_ff_ff;
 
 const SKY_COLOR: u32 = 0xff_88_00_88; // #880088 pink
 const MTN_COLOR: u32 = 0xff_32_6e_9f; // #9f6e32 brown
@@ -11,7 +15,7 @@ const SEA_COLOR: u32 = 0xff_ff_d9_00; // #00d9ff light blue
 const HIGH_LEVEL: i16 = 240;
 const MTN_LEVEL: i16 = 150;
 const MID_LEVEL: i16 = 100;
-const SEA_LEVEL: i16 = 64;
+const SEA_LEVEL: i16 = 63;
 
 pub fn get_topo_color(map: &ChunkMap, x: i32, z: i32) -> u32 {
     let col = get_column_in_map(map, x, z);
@@ -20,10 +24,10 @@ pub fn get_topo_color(map: &ChunkMap, x: i32, z: i32) -> u32 {
     }
     let col = col.unwrap();
 
-    if is_water(col) {
-        get_sea_color(0)//XXX col.get_ocean_floor_height())
+    if is_water_col(col) {
+        get_sea_color(col.ground_layer().y)
     } else {
-        get_land_color(col.ground_layer().y)
+        get_land_color(col.top_layer().y)
     }
 }
 
@@ -49,6 +53,9 @@ pub fn get_land_color(surface_height: i16) -> u32 {
     }
 }
 
-fn is_water(column: &BlockColumn) -> bool {
-    column.layers.iter().any(|b| false)// XXX b.id == water)
+fn is_water_col(column: &BlockColumn) -> bool {
+    column
+        .layers
+        .iter()
+        .any(|layer| is_water_blockstate(layer.id))
 }

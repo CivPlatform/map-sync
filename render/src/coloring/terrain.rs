@@ -4,16 +4,14 @@ use std::fs::File;
 use std::io::BufReader;
 
 pub fn get_terrain_color(map: &ChunkMap, x: i32, z: i32) -> u32 {
-    let col = get_column_in_map(map, x, z);
-    if col.is_none() {
-        return TRANSPARENT;
+    match get_column_in_map(map, x, z) {
+        None => TRANSPARENT,
+        Some(col) => BLOCK_STATE_COLORS[col.top_layer().id as usize],
     }
-    let col = col.unwrap();
-    COLORS[col.ground_layer().id as usize]
 }
 
 lazy_static! {
-    static ref COLORS: Vec<u32> = {
+    static ref BLOCK_STATE_COLORS: Vec<u32> = {
         #[derive(serde::Deserialize)]
         struct BlockJson {
             id: usize,

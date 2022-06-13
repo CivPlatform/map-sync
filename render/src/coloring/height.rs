@@ -1,4 +1,4 @@
-use crate::color::TRANSPARENT;
+use crate::color::{rgb, TRANSPARENT};
 use crate::render::{get_column_in_map, ChunkMap};
 
 const MIN_Y: i16 = -64;
@@ -14,5 +14,6 @@ pub fn get_height_color(map: &ChunkMap, x: i32, z: i32) -> u32 {
 	if h > 255 {
 		h = 255
 	}
-	0xff << 24 & h << 16 & h << 8 & h
+	let h = h as u8;
+	rgb(h, h, h)
 }

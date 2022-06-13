@@ -5,7 +5,7 @@ pub const SHADE_DARKBLACK: u32 = 0x88_00_00_00;
 pub const SHADE_LITEBLACK: u32 = 0x44_00_00_00;
 pub const SHADE_LITEWHITE: u32 = 0x33_ff_ff_ff;
 
-const EXCLUDE_IDS: [std::ops::RangeInclusive<u16>; 5] = [
+const FOLIAGE_IDS: [std::ops::RangeInclusive<u16>; 5] = [
     34..=49,     // water
     1398..=1403, // grass, fern, dead_bush, seagrass, tall_seagrass
     1468..=1482, // flowers, mushrooms
@@ -15,7 +15,7 @@ const EXCLUDE_IDS: [std::ops::RangeInclusive<u16>; 5] = [
 
 fn get_slope_y(default: i16, map: &ChunkMap, x: i32, z: i32) -> i16 {
     get_column_in_map(map, x, z)
-        .map(|c| c.top_layer_excluding(&EXCLUDE_IDS).y)
+        .map(|c| c.top_layer_excluding(&FOLIAGE_IDS).y)
         .unwrap_or(default)
 }
 

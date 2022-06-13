@@ -1,5 +1,4 @@
-use super::is_water_blockstate;
-use crate::chunk_tile::BlockColumn;
+use super::is_water_column;
 use crate::color::{interpolate, TRANSPARENT};
 use crate::render::{get_column_in_map, ChunkMap};
 
@@ -24,7 +23,7 @@ pub fn get_topo_color(map: &ChunkMap, x: i32, z: i32) -> u32 {
     }
     let col = col.unwrap();
 
-    if is_water_col(col) {
+    if is_water_column(col) {
         get_sea_color(col.ground_layer().y)
     } else {
         get_land_color(col.top_layer().y)
@@ -51,11 +50,4 @@ pub fn get_land_color(surface_height: i16) -> u32 {
     } else {
         interpolate(WHITE, SKY_COLOR, HIGH_LEVEL, 255, surface_height)
     }
-}
-
-fn is_water_col(column: &BlockColumn) -> bool {
-    column
-        .layers
-        .iter()
-        .any(|layer| is_water_blockstate(layer.id))
 }

@@ -1,17 +1,17 @@
-use crate::color::{rgb, TRANSPARENT};
+use crate::color::rgb;
 use crate::render::{get_column_in_map, ChunkMap};
 use std::fs::File;
 use std::io::BufReader;
 
 pub fn get_biome_color(map: &ChunkMap, x: i32, z: i32) -> u32 {
 	match get_column_in_map(map, x, z) {
-		None => TRANSPARENT,
+		None => 0,
 		Some(col) => BIOME_COLORS[col.biome as usize],
 	}
 }
 
 lazy_static! {
-	static ref BIOME_COLORS: Vec<u32> = {
+	pub static ref BIOME_COLORS: Vec<u32> = {
 		#[derive(serde::Deserialize)]
 		struct BiomeJson {
 			id: usize,

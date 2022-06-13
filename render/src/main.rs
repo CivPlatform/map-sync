@@ -45,12 +45,13 @@ fn emain<'a>() -> Result<(), MyErr<'a>> {
     };
 
     for color_mode in ["terrain", "topo", "biome", "height", "slope"] {
-        let img_path = format!("{}/{}/{},{}.png", tiles_dir, color_mode, img_x, img_z);
+        let img_path = format!("{}/{}/z0/{},{}.png", tiles_dir, color_mode, img_x, img_z);
         println!("Rendering {}", img_path);
         render_img(&img_path, &bounds, &map, get_color_fn(color_mode)?)?;
     }
 
-    let img_path_biome_slope = format!("{}/{}/{},{}.png", tiles_dir, "biome_slope", img_x, img_z);
+    let img_path_biome_slope =
+        format!("{}/{}/z0/{},{}.png", tiles_dir, "biome_slope", img_x, img_z);
     let biome_slope = superimpose(get_color_fn("biome")?, get_color_fn("slope")?);
     render_img(&img_path_biome_slope, &bounds, &map, &biome_slope)?;
 

@@ -42,7 +42,7 @@ export class TcpServer {
 		});
 		const { PORT = "12312", HOST = "127.0.0.1" } = process.env;
 		this.server.listen({ port: PORT, hostname: HOST }, () => {
-			console.log("[TcpServer] Listening on " + HOST + ":" + PORT);
+			console.log(`[TcpServer] Listening on ${HOST}:${PORT}`);
 		});
 	}
 
@@ -71,18 +71,45 @@ function decryptBuffer(buffer: Buffer): Buffer {
  */
 export class TcpClient {
 
-	// contains Mojang-name post-authentication
+	/**
+	 * The name of the client, eg: Client5
+	 */
 	public name: string;
+	/**
+	 * The version of MapSync the client is using.
+	 */
 	public modVersion?: string;
+	/**
+	 * The address of the Minecraft server the client is connected to.
+	 */
 	public gameAddress?: string;
+	/**
+	 * The client's post-authentication player UUID.
+	 */
 	public uuid?: string;
+	/**
+	 * The client's post-authentication player name.
+	 */
 	public mcName?: string;
+	/**
+	 * The dimension-name that the client is within (and whose chunks should be sent and will be received)
+	 */
 	public world?: string;
+	/**
+	 * The client's whitelist status.
+	 */
 	public whitelisted?: boolean;
-	// sent by client during handshake
+	/**
+	 * The player name the client claims to be during the handshake.
+	 */
 	private claimedMojangName?: string;
+	/**
+	 * The verification token sent to the player during the handshake.
+	 */
 	private verifyToken?: Buffer;
-	// we need to wait for the mojang auth response before we can [en/de]crypt packets following the handshake
+	/**
+	 * The post-authentication encryption used to [en/de]crypt packets post-handshake.
+	 */
 	private cryptoPromise?: Promise<{
 		cipher: crypto.Cipher
 		decipher: crypto.Decipher
@@ -241,6 +268,8 @@ export class TcpClient {
 		this.claimedMojangName = packet.mojangName;
 		this.world = packet.world;
 		this.verifyToken = crypto.randomBytes(4);
+		// Uses "INTERNAL_send" as "send" checks for verification and encryption.
+		// This is the handshake process so this client is/has neither.
 		await this.INTERNAL_send({
 			type: "EncryptionRequest",
 			publicKey: PUBLIC_KEY_BUFFER,

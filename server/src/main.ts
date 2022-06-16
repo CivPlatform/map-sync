@@ -19,18 +19,18 @@ export class Main {
 	handleClientConnected(client: ProtocolClient) {}
 
 	async handleClientAuthenticated(client: ProtocolClient) {
-		if (!client.uuid) throw new Error('Client not authenticated')
+		if (!client.mcPlayerUuid) throw new Error('Client not authenticated')
 
 		const { GAME_ADDRESS } = process.env
-		if (GAME_ADDRESS && client.gameAddress !== GAME_ADDRESS)
-			throw new Error(`Client on wrong mc server ${client.gameAddress}`)
+		if (GAME_ADDRESS && client.mcServerAddress !== GAME_ADDRESS)
+			throw new Error(`Client on wrong mc server ${client.mcServerAddress}`)
 
-		await uuid_cache_store(client.mcName!, client.uuid);
+		await uuid_cache_store(client.mcPlayerName!, client.mcPlayerUuid);
 
 		if ((await getConfig()).whitelist) {
-			if (!whitelist_check(client.uuid)) {
+			if (!whitelist_check(client.mcPlayerUuid)) {
 				client.log(
-					`Rejected unwhitelisted user ${client.mcName} (${client.uuid})`,
+					`Rejected unwhitelisted user ${client.mcPlayerName} (${client.mcPlayerUuid})`,
 				)
 				client.kick(`Not whitelisted`)
 				return;
@@ -42,7 +42,7 @@ export class Main {
 		// TODO check version, mc server, user access
 
 		const timestamps = await PlayerChunkDB.getRegionTimestamps();
-		client.send({ type: 'RegionTimestamps', world: client.world!, regions: timestamps });
+		client.send({ type: 'RegionTimestamps', world: client.mcServerWorld!, regions: timestamps });
 	}
 
 	handleClientDisconnected(client: ProtocolClient) {}
@@ -65,7 +65,7 @@ export class Main {
 
 	async handleChunkTilePacket(client: ProtocolClient, pkt: ChunkTilePacket) {
 		if (!client.whitelisted) return
-		if (!client.uuid) throw new Error(`${client.name} is not authenticated`)
+		if (!client.mcPlayerUuid) throw new Error(`${client.name} is not authenticated`)
 
 		// TODO ignore if same chunk hash exists in db
 
@@ -73,7 +73,7 @@ export class Main {
 			world: pkt.world,
 			chunk_x: pkt.chunk_x,
 			chunk_z: pkt.chunk_z,
-			uuid: client.uuid,
+			uuid: client.mcPlayerUuid,
 			ts: pkt.ts,
 			data: pkt.data,
 		}
@@ -92,9 +92,9 @@ export class Main {
 		client: ProtocolClient,
 		pkt: CatchupRequestPacket,
 	) {
-		client.debug(client.mcName + " <- " + pkt.type);
+		client.debug(client.mcPlayerName + " <- " + pkt.type);
 		if (!client.whitelisted) return
-		if (!client.uuid) throw new Error(`${client.name} is not authenticated`)
+		if (!client.mcPlayerUuid) throw new Error(`${client.name} is not authenticated`)
 
 		for (const req of pkt.chunks) {
 			const { world, chunk_x, chunk_z } = req
@@ -117,9 +117,9 @@ export class Main {
 	}
 
 	async handleRegionCatchupPacket(client: ProtocolClient, pkt: RegionCatchupPacket) {
-		client.debug(client.mcName + " <- " + pkt.type);
+		client.debug(client.mcPlayerName + " <- " + pkt.type);
 		if (!client.whitelisted) return
-		if (!client.uuid) throw new Error(`${client.name} is not authenticated`)
+		if (!client.mcPlayerUuid) throw new Error(`${client.name} is not authenticated`)
 
 		const chunks = await PlayerChunkDB.getCatchupData(pkt.world, pkt.regions)
 		if (chunks.length) client.send({ type: 'Catchup', chunks })

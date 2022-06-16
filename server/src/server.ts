@@ -82,19 +82,19 @@ export class TcpClient {
 	/**
 	 * The address of the Minecraft server the client is connected to.
 	 */
-	public gameAddress?: string;
-	/**
-	 * The client's post-authentication player UUID.
-	 */
-	public uuid?: string;
-	/**
-	 * The client's post-authentication player name.
-	 */
-	public mcName?: string;
+	public mcServerAddress?: string;
 	/**
 	 * The dimension-name that the client is within (and whose chunks should be sent and will be received)
 	 */
-	public world?: string;
+	public mcServerWorld?: string;
+	/**
+	 * The client's post-authentication player UUID.
+	 */
+	public mcPlayerUuid?: string;
+	/**
+	 * The client's post-authentication player name.
+	 */
+	public mcPlayerName?: string;
 	/**
 	 * The client's whitelist status.
 	 */
@@ -207,12 +207,12 @@ export class TcpClient {
 			this.debug("Not encrypted, dropping packet", packet.type);
 			return;
 		}
-		if (!this.uuid) {
+		if (!this.mcPlayerUuid) {
 			this.debug("Not authenticated, dropping packet", packet.type);
 			return;
 		}
 		if (packet.type !== "ChunkTile") {
-			this.debug(this.mcName + " -> " + packet.type);
+			this.debug(this.mcPlayerName + " -> " + packet.type);
 		}
 		await this.INTERNAL_send(packet, true);
 	}
@@ -238,7 +238,7 @@ export class TcpClient {
 	}
 
 	private async handlePacketReceived(packet: ClientPacket) {
-		if (!this.uuid) {
+		if (!this.mcPlayerUuid) {
 			// not authenticated yet
 			switch (packet.type) {
 				case "Handshake":
@@ -264,9 +264,9 @@ export class TcpClient {
 			throw new Error("Encryption already started");
 		}
 		this.modVersion = packet.modVersion;
-		this.gameAddress = packet.gameAddress;
+		this.mcServerAddress = packet.gameAddress;
 		this.claimedMojangName = packet.mojangName;
-		this.world = packet.world;
+		this.mcServerWorld = packet.world;
 		this.verifyToken = crypto.randomBytes(4);
 		// Uses "INTERNAL_send" as "send" checks for verification and encryption.
 		// This is the handshake process so this client is/has neither.
@@ -304,8 +304,8 @@ export class TcpClient {
 					throw new Error("Mojang auth failed");
 				}
 				this.log("Authenticated as", mojangAuth);
-				this.uuid = mojangAuth.uuid;
-				this.mcName = mojangAuth.name;
+				this.mcPlayerUuid = mojangAuth.uuid;
+				this.mcPlayerName = mojangAuth.name;
 				this.name += ":" + mojangAuth.name;
 				return {
 					cipher: crypto.createCipheriv("aes-128-cfb8", secret, secret),

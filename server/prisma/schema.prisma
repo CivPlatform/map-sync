@@ -1,0 +1,27 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model ChunkData {
+  hash        Bytes         @id
+  version     Int
+  data        Bytes
+  playerChunk PlayerChunk[]
+}
+
+model PlayerChunk {
+  world     String
+  chunkX    Int
+  chunkZ    Int
+  uuid      String
+  ts        BigInt
+  hash      Bytes?
+  chunkData ChunkData? @relation(fields: [hash], references: [hash], onDelete: NoAction, onUpdate: NoAction)
+
+  @@id([world, chunkX, chunkZ, uuid])
+}

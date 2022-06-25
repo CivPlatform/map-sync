@@ -1,6 +1,6 @@
 {
 	"name": "civmap-server",
-	"version": "SNAPSHOT",
+	"version": "0.0.0",
 	"private": true,
 	"author": "Gjum",
 	"license": "GPL-3.0-only",
@@ -8,9 +8,11 @@
 		"build": "tsc",
 		"test": "true",
 		"start": "node -r source-map-support/register dist/main.js",
-		"start:dev": "tsc && node -r source-map-support/register dist/main.js"
+		"start:dev": "tsc && node -r source-map-support/register dist/main.js",
+		"postinstall": "prisma generate"
 	},
 	"dependencies": {
+		"@prisma/client": "^3.15.2",
 		"async-mutex": "^0.3.2",
 		"node-fetch": "^2.6.7",
 		"source-map-support": "^0.5.21",
@@ -23,6 +25,7 @@
 		"@types/node-fetch": "^2.6.1",
 		"@types/sqlite3": "^3.1.8",
 		"dotenv": "^16.0.1",
+		"prisma": "^3.15.2",
 		"typescript": "^4.7.2"
 	},
 	"prettier": {

@@ -7,6 +7,7 @@ import {
 	PrimaryColumn,
 } from 'typeorm'
 import { registerEntity } from './db'
+import { prisma } from './prisma'
 
 export interface PlayerChunk {
 	world: string
@@ -67,12 +68,54 @@ export class PlayerChunkDB extends BaseEntity implements PlayerChunk {
 	@JoinColumn({ name: 'hash' })
 	data!: ChunkData
 
+	/**
+	 * Saves a chunk
+	 * @param map_chunk chunk
+	 */
 	static async store(map_chunk: PlayerChunk) {
 		// TODO if PlayerChunk exists, and holds last reference to old hash, delete ChunkData at old hash
-		await ChunkDataDB.upsert(map_chunk.data, {
-			conflictPaths: ChunkDataDB.primaryCols,
-			skipUpdateIfNoValuesChanged: true,
+
+		const chunkData = {
+			data: map_chunk.data.data,
+			hash: map_chunk.data.hash,
+			version: map_chunk.data.version,
+		}
+
+		const playerData = {
+			world: map_chunk.world,
+			chunkX: map_chunk.chunk_x,
+			chunkZ: map_chunk.chunk_z,
+			uuid: map_chunk.uuid,
+		}
+
+		prisma.playerChunk.upsert({
+			where: {
+				world_chunkX_chunkZ_uuid: playerData,
+			},
+			create: {
+				...playerData,
+				ts: map_chunk.ts,
+				chunkData: {
+					connectOrCreate: {
+						where: {
+							hash: map_chunk.data.hash,
+						},
+						create: chunkData,
+					},
+				},
+			},
+			update: {
+				...playerData,
+				ts: map_chunk.ts,
+				chunkData: {
+					upsert: {
+						create: chunkData,
+						update: chunkData,
+					},
+				},
+			},
 		})
+
 		await PlayerChunkDB.upsert(map_chunk, PlayerChunkDB.primaryCols)
 	}
 

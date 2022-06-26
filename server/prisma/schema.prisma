@@ -15,11 +15,12 @@ model ChunkData {
 }
 
 model PlayerChunk {
-  world     String
-  chunkX    Int
-  chunkZ    Int
-  uuid      String
-  ts        BigInt
+  world  String
+  chunkX Int
+  chunkZ Int
+  uuid   String
+  ts     BigInt
+
   hash      Bytes?
   chunkData ChunkData? @relation(fields: [hash], references: [hash], onDelete: NoAction, onUpdate: NoAction)
 

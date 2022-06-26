@@ -3,3 +3,4 @@ node_modules/
 *.sqlite
 *.pem
 /mapsync/
+.env

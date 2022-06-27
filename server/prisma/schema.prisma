@@ -8,18 +8,23 @@ datasource db {
 }
 
 model ChunkData {
-  hash        Bytes         @id
-  version     Int
-  data        Bytes
+  hash      Bytes  @id
+  version   Int
+  data      Bytes
+  world     String
+  chunkX    Int
+  chunkZ    Int
+  timestamp BigInt
+
   playerChunk PlayerChunk[]
 }
 
 model PlayerChunk {
-  world  String
-  chunkX Int
-  chunkZ Int
-  uuid   String
-  ts     BigInt
+  world     String
+  chunkX    Int
+  chunkZ    Int
+  uuid      String
+  timestamp BigInt
 
   hash      Bytes?
   chunkData ChunkData? @relation(fields: [hash], references: [hash], onDelete: NoAction, onUpdate: NoAction)

@@ -75,12 +75,19 @@ export class PlayerChunkDB extends BaseEntity implements PlayerChunk {
 	static async store(map_chunk: PlayerChunk) {
 		// TODO if PlayerChunk exists, and holds last reference to old hash, delete ChunkData at old hash
 
+		// create object to store all data needed for chunk data
 		const chunkData = {
 			data: map_chunk.data.data,
 			hash: map_chunk.data.hash,
 			version: map_chunk.data.version,
+			chunkX: map_chunk.chunk_x,
+			chunkZ: map_chunk.chunk_z,
+			timestamp: map_chunk.ts,
+			world: map_chunk.world,
 		}
 
+		// object for all player data minus timestamp because where can't take it
+		// added later when actually saving
 		const playerData = {
 			world: map_chunk.world,
 			chunkX: map_chunk.chunk_x,
@@ -94,7 +101,7 @@ export class PlayerChunkDB extends BaseEntity implements PlayerChunk {
 			},
 			create: {
 				...playerData,
-				ts: map_chunk.ts,
+				timestamp: map_chunk.ts,
 				chunkData: {
 					connectOrCreate: {
 						where: {
@@ -106,7 +113,7 @@ export class PlayerChunkDB extends BaseEntity implements PlayerChunk {
 			},
 			update: {
 				...playerData,
-				ts: map_chunk.ts,
+				timestamp: map_chunk.ts,
 				chunkData: {
 					upsert: {
 						create: chunkData,
@@ -115,8 +122,6 @@ export class PlayerChunkDB extends BaseEntity implements PlayerChunk {
 				},
 			},
 		})
-
-		await PlayerChunkDB.upsert(map_chunk, PlayerChunkDB.primaryCols)
 	}
 
 	static async getRegionTimestamps() {

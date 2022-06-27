@@ -1,3 +1,4 @@
+import { Prisma } from '@prisma/client'
 import {
 	BaseEntity,
 	Column,
@@ -126,29 +127,38 @@ export class PlayerChunkDB extends BaseEntity implements PlayerChunk {
 
 	static async getRegionTimestamps() {
 		// computing region coordinates in SQL requires truncating, not rounding
-		return await PlayerChunkDB.query(`
+		const chunks = await prisma.$queryRaw<any[]>(
+			Prisma.sql`
 			WITH region_real AS (SELECT
-				chunk_x / 32.0 AS region_x_real,
-				chunk_z / 32.0 AS region_z_real,
-				ts
-				FROM player_chunk
+				chunkX / 32.0 AS region_x_real,
+				chunkZ / 32.0 AS region_z_real,
+				timestamp
+				FROM PlayerChunk
 			) SELECT
 				cast (region_x_real as int) - (region_x_real < cast (region_x_real as int)) AS region_x,
 				cast (region_z_real as int) - (region_z_real < cast (region_z_real as int)) AS region_z,
-				MAX(ts) AS ts
+				MAX(timestamp) AS timestamp
 			FROM region_real
 			GROUP BY region_x, region_z
-			ORDER BY region_x DESC`)
+			ORDER BY region_x DESC`,
+		)
+
+		console.log(`raw query:`, { chunks })
+
+		return chunks
+
+		// Should convert above to prisma query at some point
 		/*
-		return await PlayerChunkDB.createQueryBuilder()
-				.select("chunk_x / 32", "region_x")
-				.addSelect("chunk_z / 32", "region_z")
-				.addSelect("max(ts) as ts")
-				.groupBy("region_x")
-				.addGroupBy("region_z")
-				.orderBy("region_x", "DESC")
-				.getRawMany();
-*/
+		return await prisma.playerChunk.groupBy({
+			orderBy: {
+				chunkX: 'desc',
+			},
+			by: ['chunkX', 'chunkZ'],
+			_max: {
+				timestamp: true,
+			},
+		})
+		*/
 	}
 
 	static async getCatchupData(world: string, regions: number[]) {

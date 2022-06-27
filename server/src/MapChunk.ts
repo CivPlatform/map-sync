@@ -207,14 +207,20 @@ export class PlayerChunkDB extends BaseEntity implements PlayerChunk {
 		chunk_x: number
 		chunk_z: number
 	}) {
-		return await PlayerChunkDB.findOne({
+		return await prisma.playerChunk.findFirst({
 			where: {
 				world: chunk.world,
-				chunk_x: chunk.chunk_x,
-				chunk_z: chunk.chunk_z,
+				chunkX: chunk.chunk_x,
+				chunkZ: chunk.chunk_z,
 			},
-			relations: ['data'], // include chunk data stored in other table
-			order: { ts: 'DESC' }, // get latest among all players that sent this chunk
+			include: {
+				// include all chunk data
+				chunkData: true,
+			},
+			orderBy: {
+				// get latest chunk among all players
+				timestamp: 'desc',
+			},
 		})
 	}
 }

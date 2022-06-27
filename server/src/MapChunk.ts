@@ -127,7 +127,7 @@ export class PlayerChunkDB extends BaseEntity implements PlayerChunk {
 
 	static async getRegionTimestamps() {
 		// computing region coordinates in SQL requires truncating, not rounding
-		const chunks = await prisma.$queryRaw<any[]>(
+		return await prisma.$queryRaw<any[]>(
 			Prisma.sql`
 			WITH region_real AS (SELECT
 				chunkX / 32.0 AS region_x_real,
@@ -142,10 +142,6 @@ export class PlayerChunkDB extends BaseEntity implements PlayerChunk {
 			GROUP BY region_x, region_z
 			ORDER BY region_x DESC`,
 		)
-
-		console.log(`raw query:`, { chunks })
-
-		return chunks
 
 		// Should convert above to prisma query at some point
 		/*

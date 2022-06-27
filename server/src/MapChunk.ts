@@ -76,13 +76,13 @@ export class PlayerChunkDB extends BaseEntity implements PlayerChunk {
 		// TODO if PlayerChunk exists, and holds last reference to old hash, delete ChunkData at old hash
 
 		// create object to store all data needed for chunk data
+		// minue timestamp as we only want it added the first time a chunk is seen
 		const chunkData = {
 			data: map_chunk.data.data,
 			hash: map_chunk.data.hash,
 			version: map_chunk.data.version,
 			chunkX: map_chunk.chunk_x,
 			chunkZ: map_chunk.chunk_z,
-			timestamp: map_chunk.ts,
 			world: map_chunk.world,
 		}
 
@@ -107,7 +107,7 @@ export class PlayerChunkDB extends BaseEntity implements PlayerChunk {
 						where: {
 							hash: map_chunk.data.hash,
 						},
-						create: chunkData,
+						create: { ...chunkData, timestamp: map_chunk.ts },
 					},
 				},
 			},
@@ -116,7 +116,7 @@ export class PlayerChunkDB extends BaseEntity implements PlayerChunk {
 				timestamp: map_chunk.ts,
 				chunkData: {
 					upsert: {
-						create: chunkData,
+						create: { ...chunkData, timestamp: map_chunk.ts },
 						update: chunkData,
 					},
 				},
@@ -201,7 +201,11 @@ export class PlayerChunkDB extends BaseEntity implements PlayerChunk {
 		return Object.values(seenChunks)
 	}
 
-	/** latest chunk at that location */
+	/**
+	 * Gets latest chunk at that location
+	 * @param chunk
+	 * @returns latest chunk
+	 */
 	static async getChunkWithData(chunk: {
 		world: string
 		chunk_x: number

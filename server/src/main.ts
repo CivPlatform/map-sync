@@ -6,7 +6,7 @@ import { ClientPacket } from './protocol'
 import { CatchupRequestPacket } from './protocol/CatchupRequestPacket'
 import { ChunkTilePacket } from './protocol/ChunkTilePacket'
 import { TcpClient, TcpServer } from './server'
-import {RegionCatchupPacket} from "./protocol/RegionCatchupPacket";
+import { RegionCatchupPacket } from './protocol/RegionCatchupPacket'
 
 connectDB().then(() => new Main())
 
@@ -25,7 +25,7 @@ export class Main {
 		if (GAME_ADDRESS && client.gameAddress !== GAME_ADDRESS)
 			throw new Error(`Client on wrong mc server ${client.gameAddress}`)
 
-		await uuid_cache_store(client.mcName!, client.uuid);
+		await uuid_cache_store(client.mcName!, client.uuid)
 
 		if ((await getConfig()).whitelist) {
 			if (!whitelist_check(client.uuid)) {
@@ -33,7 +33,7 @@ export class Main {
 					`Rejected unwhitelisted user ${client.mcName} (${client.uuid})`,
 				)
 				client.kick(`Not whitelisted`)
-				return;
+				return
 			}
 		}
 
@@ -41,8 +41,12 @@ export class Main {
 
 		// TODO check version, mc server, user access
 
-		const timestamps = await PlayerChunkDB.getRegionTimestamps();
-		client.send({ type: 'RegionTimestamps', world: client.world!, regions: timestamps });
+		const timestamps = await PlayerChunkDB.getRegionTimestamps()
+		client.send({
+			type: 'RegionTimestamps',
+			world: client.world!,
+			regions: timestamps,
+		})
 	}
 
 	handleClientDisconnected(client: ProtocolClient) {}
@@ -55,7 +59,7 @@ export class Main {
 			case 'CatchupRequest':
 				return this.handleCatchupRequest(client, pkt)
 			case 'RegionCatchup':
-				return this.handleRegionCatchupPacket(client, pkt);
+				return this.handleRegionCatchupPacket(client, pkt)
 			default:
 				throw new Error(
 					`Unknown packet '${(pkt as any).type}' from client ${client.id}`,
@@ -92,7 +96,7 @@ export class Main {
 		client: ProtocolClient,
 		pkt: CatchupRequestPacket,
 	) {
-		client.debug(client.mcName + " <- " + pkt.type);
+		client.debug(client.mcName + ' <- ' + pkt.type)
 		if (!client.whitelisted) return
 		if (!client.uuid) throw new Error(`${client.name} is not authenticated`)
 
@@ -104,20 +108,34 @@ export class Main {
 				chunk_x,
 				chunk_z,
 			})
-			if (!chunk) {
+			if (!chunk || !chunk.chunkData) {
 				console.error(`${client.name} requested unavailable chunk`, req)
 				continue
 			}
 
-			if (chunk.ts > req.ts) continue // someone sent a new chunk, which presumably got relayed to the client
-			if (chunk.ts < req.ts) continue // the client already has a chunk newer than this
+			if (chunk.timestamp > req.ts) continue // someone sent a new chunk, which presumably got relayed to the client
+			if (chunk.timestamp < req.ts) continue // the client already has a chunk newer than this
 
-			client.send({ type: 'ChunkTile', ...chunk })
+			client.send({
+				type: 'ChunkTile',
+				world: chunk.world,
+				chunk_x: chunk.chunkX,
+				chunk_z: chunk.chunkZ,
+				ts: Number(chunk.timestamp),
+				data: {
+					version: chunk.chunkData.version,
+					hash: chunk.chunkData.hash,
+					data: chunk.chunkData.data,
+				},
+			})
 		}
 	}
 
-	async handleRegionCatchupPacket(client: ProtocolClient, pkt: RegionCatchupPacket) {
-		client.debug(client.mcName + " <- " + pkt.type);
+	async handleRegionCatchupPacket(
+		client: ProtocolClient,
+		pkt: RegionCatchupPacket,
+	) {
+		client.debug(client.mcName + ' <- ' + pkt.type)
 		if (!client.whitelisted) return
 		if (!client.uuid) throw new Error(`${client.name} is not authenticated`)
 

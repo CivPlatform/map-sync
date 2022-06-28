@@ -1,12 +1,12 @@
-import { BufReader } from './BufReader'
-import { BufWriter } from './BufWriter'
+import { BufReader } from './BufReader';
+import { BufWriter } from './BufWriter';
 
 export interface HandshakePacket {
-	type: 'Handshake'
-	modVersion: string
-	mojangName: string
-	gameAddress: string
-	world: string
+	type: 'Handshake';
+	modVersion: string;
+	mojangName: string;
+	gameAddress: string;
+	world: string;
 }
 
 export namespace HandshakePacket {
@@ -16,7 +16,7 @@ export namespace HandshakePacket {
 			modVersion: reader.readString(),
 			mojangName: reader.readString(),
 			gameAddress: reader.readString(),
-			world: reader.readString()
-		}
+			world: reader.readString(),
+		};
 	}
 }

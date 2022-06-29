@@ -1,4 +1,4 @@
-import { promises as fs_promises } from "fs";
+import { promises as fs_promises } from 'fs';
 
 /**
  * Determines whether a given thing "exists", which in this case means having a value (not undefined) which is not null.
@@ -7,7 +7,7 @@ import { promises as fs_promises } from "fs";
  * @return Returns true if the given thing exists.
  */
 export function doesExist(thing: any) {
-    return thing !== undefined && thing !== null;
+	return thing !== undefined && thing !== null;
 }
 
 /**
@@ -21,18 +21,16 @@ export function doesExist(thing: any) {
  * @author Protonull
  */
 export async function loadOrSaveDefaultStringFile(
-    path: string,
-    fallback: string
+	path: string,
+	fallback: string
 ): Promise<string> {
-    try {
-        return await fs_promises.readFile(path, { encoding: "utf8" });
-    }
-    catch (thrown) { }
-    try {
-        await fs_promises.writeFile(path, fallback, { encoding: "utf8" });
-    }
-    catch (thrown) {
-        console.warn("Could not create default file for [" + path + "]");
-    }
-    return fallback;
+	try {
+		return await fs_promises.readFile(path, { encoding: 'utf8' });
+	} catch (thrown) {}
+	try {
+		await fs_promises.writeFile(path, fallback, { encoding: 'utf8' });
+	} catch (thrown) {
+		console.warn('Could not create default file for [' + path + ']');
+	}
+	return fallback;
 }

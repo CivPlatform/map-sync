@@ -24,3 +24,4 @@ _(Make sure that there are no comments in the actual config file)_
 | `SQLITE_PATH`       | Specify a custom path and name for the database file **(not recommended)**            |
 | `PORT`              | Specify a custom port                                                                 |
 | `HOST`              | Specify a custom host **(not recommended)**                                           |
+| `DISABLE_AUTH`      | Disables authentication with Mojang servers **(highly not recommended)**              |

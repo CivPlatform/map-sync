@@ -1,4 +1,4 @@
-import { Prisma } from '@prisma/client'
+import { Prisma } from '@prisma/client';
 import {
 	BaseEntity,
 	Column,
@@ -85,7 +85,7 @@ export class PlayerChunkDB extends BaseEntity implements PlayerChunk {
 			chunkX: map_chunk.chunk_x,
 			chunkZ: map_chunk.chunk_z,
 			world: map_chunk.world,
-		}
+		};
 
 		// object for all player data minus timestamp because where can't take it
 		// added later when actually saving
@@ -94,7 +94,7 @@ export class PlayerChunkDB extends BaseEntity implements PlayerChunk {
 			chunkX: map_chunk.chunk_x,
 			chunkZ: map_chunk.chunk_z,
 			uuid: map_chunk.uuid,
-		}
+		};
 
 		prisma.playerChunk.upsert({
 			where: {
@@ -122,7 +122,7 @@ export class PlayerChunkDB extends BaseEntity implements PlayerChunk {
 					},
 				},
 			},
-		})
+		});
 	}
 
 	static async getRegionTimestamps() {
@@ -140,8 +140,8 @@ export class PlayerChunkDB extends BaseEntity implements PlayerChunk {
 				MAX(timestamp) AS timestamp
 			FROM region_real
 			GROUP BY region_x, region_z
-			ORDER BY region_x DESC`,
-		)
+			ORDER BY region_x DESC`
+		);
 
 		// Should convert above to prisma query at some point
 		/*
@@ -169,34 +169,46 @@ export class PlayerChunkDB extends BaseEntity implements PlayerChunk {
 			list += '?';
 		}
 
-		/*let chunks = await PlayerChunkDB.query("WITH region_real AS (SELECT chunk_x, chunk_z, world, uuid, ts, hash, chunk_x / 32.0 AS region_x_real, chunk_z / 32.0 AS region_z_real FROM player_chunk) " +
-				"SELECT chunk_x, chunk_z, world, uuid, ts, hash AS data FROM region_real WHERE (cast (region_x_real as int) - (region_x_real < cast (region_x_real as int))) || \"_\" || (cast (region_z_real as int) - (region_z_real < cast (region_z_real as int))) IN (?) " +
-				"AND world = ? ORDER BY ts DESC",
-				[regionsAsString.join(","), world]);*/
+		// const chunks = prisma.$queryRaw<
+		// 	any[]
+		// >(Prisma.sql`WITH region_real AS (SELECT
+		// 	chunkX, chunkZ, world, uuid, timestamp, hash,
+		// 	chunkX / 32.0 AS region_x_real,
+		// 	chunkZ / 32.0 AS region_z_real
+		// 	FROM player_chunk
+		// ) SELECT
+		// 	(
+		// 		cast (region_x_real as int) - (region_x_real < cast (region_x_real as int))
+		// 	) || "_" || (
+		// 		cast (region_z_real as int) - (region_z_real < cast (region_z_real as int))
+		// 	) AS region,
+		// 	chunkX, chunkZ, world, uuid, timestamp,
+		// 	hash AS data
+		// FROM region_real
+		// WHERE region IN (${list}) AND world = ?
+		// ORDER BY ts DESC`);
+
+		console.log({ regionsAsString, world, list });
+
 		let chunks = await PlayerChunkDB.query(
 			`WITH region_real AS (SELECT
-				chunk_x, chunk_z, world, uuid, ts, hash,
-				chunk_x / 32.0 AS region_x_real,
-				chunk_z / 32.0 AS region_z_real
-				FROM player_chunk
+				chunkX, chunkZ, world, uuid, timestamp, hash,
+				chunkX / 32.0 AS region_x_real,
+				chunkZ / 32.0 AS region_z_real
+				FROM PlayerChunk
 			) SELECT
 				(
 					cast (region_x_real as int) - (region_x_real < cast (region_x_real as int))
 				) || "_" || (
 					cast (region_z_real as int) - (region_z_real < cast (region_z_real as int))
 				) AS region,
-				chunk_x, chunk_z, world, uuid, ts,
+				chunkX, chunkZ, world, uuid, timestamp,
 				hash AS data
 			FROM region_real
 			WHERE region IN (${list}) AND world = ?
 			ORDER BY ts DESC`,
 			[...regionsAsString, world]
 		);
-		/*let chunks = await PlayerChunkDB.createQueryBuilder()
-			.where('(chunk_x/32) || "_" || (chunk_z/32) IN (:...regions)', { regions: regionsAsString })
-			.andWhere("world = :world", { world: world })
-			.orderBy('ts', 'DESC')
-			.getMany()*/
 
 		const seenChunks: Record<string, PlayerChunkDB> = {};
 		for (const chunk of chunks) {
@@ -231,7 +243,7 @@ export class PlayerChunkDB extends BaseEntity implements PlayerChunk {
 				// get latest chunk among all players
 				timestamp: 'desc',
 			},
-		})
+		});
 	}
 }
 

@@ -1,13 +1,13 @@
-import { BufReader } from './BufReader'
-import { BufWriter } from './BufWriter'
+import { BufReader } from './BufReader';
+import { BufWriter } from './BufWriter';
 
 export interface ChunkTilePacket {
-	type: 'ChunkTile'
-	world: string
-	chunk_x: number
-	chunk_z: number
-	ts: number
-	data: { version: number; hash: Buffer; data: Buffer }
+	type: 'ChunkTile';
+	world: string;
+	chunk_x: number;
+	chunk_z: number;
+	ts: number;
+	data: { version: number; hash: Buffer; data: Buffer };
 }
 
 export namespace ChunkTilePacket {
@@ -23,16 +23,16 @@ export namespace ChunkTilePacket {
 				hash: reader.readBufWithLen(),
 				data: reader.readRemainder(),
 			},
-		}
+		};
 	}
 
 	export function encode(pkt: ChunkTilePacket, writer: BufWriter) {
-		writer.writeString(pkt.world)
-		writer.writeInt32(pkt.chunk_x)
-		writer.writeInt32(pkt.chunk_z)
-		writer.writeUInt64(pkt.ts)
-		writer.writeUInt16(pkt.data.version)
-		writer.writeBufWithLen(pkt.data.hash)
-		writer.writeBufRaw(pkt.data.data) // XXX do we need to prefix with length?
+		writer.writeString(pkt.world);
+		writer.writeInt32(pkt.chunk_x);
+		writer.writeInt32(pkt.chunk_z);
+		writer.writeUInt64(pkt.ts);
+		writer.writeUInt16(pkt.data.version);
+		writer.writeBufWithLen(pkt.data.hash);
+		writer.writeBufRaw(pkt.data.data); // XXX do we need to prefix with length?
 	}
 }

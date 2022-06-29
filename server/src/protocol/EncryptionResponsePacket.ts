@@ -1,12 +1,12 @@
-import { BufReader } from './BufReader'
-import { BufWriter } from './BufWriter'
+import { BufReader } from './BufReader';
+import { BufWriter } from './BufWriter';
 
 export interface EncryptionResponsePacket {
-	type: 'EncryptionResponse'
+	type: 'EncryptionResponse';
 	/** encrypted with server's public key */
-	sharedSecret: Buffer
+	sharedSecret: Buffer;
 	/** encrypted with server's public key */
-	verifyToken: Buffer
+	verifyToken: Buffer;
 }
 
 export namespace EncryptionResponsePacket {
@@ -15,11 +15,11 @@ export namespace EncryptionResponsePacket {
 			type: 'EncryptionResponse',
 			sharedSecret: reader.readBufWithLen(),
 			verifyToken: reader.readBufWithLen(),
-		}
+		};
 	}
 
 	export function encode(pkt: EncryptionResponsePacket, writer: BufWriter) {
-		writer.writeBufWithLen(pkt.sharedSecret)
-		writer.writeBufWithLen(pkt.verifyToken)
+		writer.writeBufWithLen(pkt.sharedSecret);
+		writer.writeBufWithLen(pkt.verifyToken);
 	}
 }

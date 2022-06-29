@@ -3,3 +3,5 @@ node_modules/
 *.sqlite
 *.pem
 /mapsync/
+.yarn
+.pnp.*

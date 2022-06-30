@@ -61,7 +61,7 @@ export class Main {
 			case 'CatchupRequest':
 				return this.handleCatchupRequest(client, pkt);
 			case 'RegionCatchup':
-				return this.handleRegionCatchupPacket(client, pkt)
+				return this.handleRegionCatchupPacket(client, pkt);
 			default:
 				throw new Error(
 					`Unknown packet '${(pkt as any).type}' from client ${
@@ -113,14 +113,17 @@ export class Main {
 				world,
 				chunk_x,
 				chunk_z,
-			})
+			});
 			if (!chunk || !chunk.chunkData) {
-				console.error(`${client.name} requested unavailable chunk`, req)
-				continue
+				console.error(
+					`${client.name} requested unavailable chunk`,
+					req
+				);
+				continue;
 			}
 
-			if (chunk.timestamp > req.ts) continue // someone sent a new chunk, which presumably got relayed to the client
-			if (chunk.timestamp < req.ts) continue // the client already has a chunk newer than this
+			if (chunk.timestamp > req.ts) continue; // someone sent a new chunk, which presumably got relayed to the client
+			if (chunk.timestamp < req.ts) continue; // the client already has a chunk newer than this
 
 			client.send({
 				type: 'ChunkTile',
@@ -133,7 +136,7 @@ export class Main {
 					hash: chunk.chunkData.hash,
 					data: chunk.chunkData.data,
 				},
-			})
+			});
 		}
 	}
 

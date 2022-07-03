@@ -10,7 +10,7 @@ public class JourneyMapHelper {
 			Class.forName("journeymap.client.JourneymapClient");
 			try {
 				// check it's a recent version
-				Class.forName("journeymap.client.model/NBTChunkMD");
+				Class.forName("journeymap.client.model.NBTChunkMD");
 				isJourneyMapNotAvailable = false;
 			} catch (NoClassDefFoundError | ClassNotFoundException ignored2) {
 				isJourneyMapNotAvailable = true;

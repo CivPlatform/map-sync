@@ -114,7 +114,7 @@ export class Main {
 				chunk_x,
 				chunk_z,
 			});
-			if (!chunk) {
+			if (!chunk || !chunk.chunkData) {
 				console.error(
 					`${client.name} requested unavailable chunk`,
 					req
@@ -122,10 +122,21 @@ export class Main {
 				continue;
 			}
 
-			if (chunk.ts > req.ts) continue; // someone sent a new chunk, which presumably got relayed to the client
-			if (chunk.ts < req.ts) continue; // the client already has a chunk newer than this
+			if (chunk.timestamp > req.ts) continue; // someone sent a new chunk, which presumably got relayed to the client
+			if (chunk.timestamp < req.ts) continue; // the client already has a chunk newer than this
 
-			client.send({ type: 'ChunkTile', ...chunk });
+			client.send({
+				type: 'ChunkTile',
+				world: chunk.world,
+				chunk_x: chunk.chunkX,
+				chunk_z: chunk.chunkZ,
+				ts: Number(chunk.timestamp),
+				data: {
+					version: chunk.chunkData.version,
+					hash: chunk.chunkData.hash,
+					data: chunk.chunkData.data,
+				},
+			});
 		}
 	}
 

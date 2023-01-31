@@ -11,7 +11,7 @@
 		"start:dev": "tsc && node -r source-map-support/register dist/main.js"
 	},
 	"dependencies": {
-		"async-mutex": "^0.3.2",
+		"async-mutex": "^0.4.0",
 		"node-fetch": "^2.6.7",
 		"source-map-support": "^0.5.21",
 		"sqlite3": "^5.0.8",

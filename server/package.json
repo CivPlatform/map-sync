@@ -5,11 +5,11 @@
     "author": "Gjum",
     "license": "GPL-3.0-only",
     "scripts": {
-        "prettify": "npx prettier --write .",
-        "build": "npx tsc --build --clean && npx tsc",
+        "prettify": "yarn prettier --write .",
+        "build": "yarn tsc --build --clean && yarn tsc",
         "test": "true",
         "start": "node -r source-map-support/register dist/main.js",
-        "start:dev": "npm run build && node -r source-map-support/register dist/main.js"
+        "start:dev": "yarn run build && yarn run start"
     },
     "dependencies": {
         "dotenv": "^16.0.3",

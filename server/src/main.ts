@@ -50,11 +50,11 @@ export class Main {
         client.debug(client.mcName + " <- " + pkt.type);
         switch (pkt.type) {
             case "ChunkTile":
-                return this.handleChunkTilePacket(client, pkt);
+                return this.handleChunkTilePacket(client, pkt as ChunkTilePacket);
             case "CatchupRequest":
-                return this.handleCatchupRequest(client, pkt);
+                return this.handleCatchupRequest(client, pkt as CatchupRequestPacket);
             case "RegionCatchup":
-                return this.handleRegionCatchupPacket(client, pkt);
+                return this.handleRegionCatchupPacket(client, pkt as RegionCatchupPacket);
             default:
                 throw new Error(
                     `Unknown packet '${(pkt as any).type}' from client ${

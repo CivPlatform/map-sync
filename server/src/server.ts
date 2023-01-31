@@ -166,9 +166,9 @@ export class TcpClient {
             // not authenticated yet
             switch (pkt.type) {
                 case "Handshake":
-                    return await this.handleHandshakePacket(pkt);
+                    return await this.handleHandshakePacket(pkt as HandshakePacket);
                 case "EncryptionResponse":
-                    return await this.handleEncryptionResponsePacket(pkt);
+                    return await this.handleEncryptionResponsePacket(pkt as EncryptionResponsePacket);
             }
             throw new Error(
                 `Packet ${pkt.type} from unauth'd client ${this.id}`,

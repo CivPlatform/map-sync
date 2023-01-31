@@ -7,7 +7,7 @@ import { decodePacket, encodePacket } from "./protocol";
 import { BufReader } from "./protocol/BufReader";
 import { BufWriter } from "./protocol/BufWriter";
 import { EncryptionResponsePacket } from "./protocol/EncryptionResponsePacket";
-import { HandshakePacket } from "./protocol/HandshakePacket";
+import { HandshakePacket } from "./protocol/packets";
 
 const { PORT = "12312", HOST = "127.0.0.1" } = process.env;
 

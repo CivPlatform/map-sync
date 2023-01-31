@@ -3,7 +3,7 @@ import { BufWriter } from "./BufWriter";
 import { ChunkTilePacket } from "./ChunkTilePacket";
 import { EncryptionRequestPacket } from "./EncryptionRequestPacket";
 import { EncryptionResponsePacket } from "./EncryptionResponsePacket";
-import { HandshakePacket } from "./HandshakePacket";
+import { HandshakePacket } from "./packets";
 import { CatchupPacket } from "./CatchupPacket";
 import { CatchupRequestPacket } from "./CatchupRequestPacket";
 import { RegionTimestampsPacket } from "./RegionTimestampsPacket";

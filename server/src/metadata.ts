@@ -2,6 +2,8 @@ import lib_fs from "fs";
 import { Mutex } from "async-mutex";
 import { loadOrSaveDefaultStringFile } from "./utilities";
 import { getErrorType, ErrorType } from "./deps/errors";
+import { parseConfigFile } from "./config/mod";
+import * as z from "zod";
 
 export const DATA_FOLDER = process.env["MAPSYNC_DATA_DIR"] ?? "./mapsync";
 try {
@@ -12,48 +14,29 @@ try {
     console.log(`Using data folder "${DATA_FOLDER}"`);
 }
 
-export const CONFIG_FILE = `${DATA_FOLDER}/config.json`;
 export const WHITELIST_FILE = `${DATA_FOLDER}/whitelist.json`;
 export const UUID_CACHE_FILE = `${DATA_FOLDER}/uuid_cache.json`;
 
-/** The config.json file */
-export interface Config {
-    /** Whether the whitelist is being enforced */
-    whitelist: boolean;
-}
-
-const default_config: Config = {
-    //Enable whitelist by default to prevent *tomfoolery*
-    whitelist: true,
-};
 
 // Force initialize
-const CONFIG_MUTEX = new Mutex();
-let config: Config | null = null;
-export async function getConfig(): Promise<Config> {
-    return await CONFIG_MUTEX.runExclusive(async () => {
-        if (config === null) {
-            const json: any = JSON.parse(
-                await loadOrSaveDefaultStringFile(
-                    CONFIG_FILE,
-                    JSON.stringify(default_config),
-                ),
-            );
-            if (typeof json !== "object") {
-                throw new Error("Config file wasn't an JSON object");
-            }
-            config = json as Config;
-        }
-        return config;
-    }).catch((e) => {
-        console.error(
-            "[Config] An error occurred when attempting to read `config.json`",
-        );
-        console.error(e);
-        throw e;
-    });
-}
+export type Config = z.infer<typeof ConfigSchema>;
+export const ConfigSchema = z.object({
+    whitelist: z.boolean().default(true),
+});
 
+let config: Config | null = null;
+export function getConfig(): Config {
+    if (config === null) {
+        config = parseConfigFile(
+            "config.json",
+            ConfigSchema.parse,
+            () => ({
+                whitelist: true
+            })
+        );
+    }
+    return config;
+}
 getConfig();
 
 // ------------------------------------------------------------ //

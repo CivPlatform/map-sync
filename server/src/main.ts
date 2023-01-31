@@ -23,7 +23,7 @@ export class Main {
 
         uuid_cache_store(client.mcName!, client.uuid);
 
-        if ((await getConfig()).whitelist) {
+        if (getConfig().whitelist) {
             if (!whitelist_check(client.uuid)) {
                 client.log(
                     `Rejected unwhitelisted user ${client.mcName} (${client.uuid})`,

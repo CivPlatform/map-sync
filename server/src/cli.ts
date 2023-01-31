@@ -11,7 +11,7 @@ interface TerminalExtras {
 type TermType = lib_readline.Interface & TerminalExtras;
 const term = lib_readline.createInterface({
     input: process.stdin,
-    output: process.stdout,
+    output: process.stdout
 }) as TermType;
 
 if (!("MAPSYNC_DUMB_TERM" in process.env)) {
@@ -26,7 +26,7 @@ if (!("MAPSYNC_DUMB_TERM" in process.env)) {
                 term.output.write("\x1b[2K\r");
                 var result = outout.write.apply(
                     this,
-                    Array.prototype.slice.call(arguments) as any,
+                    Array.prototype.slice.call(arguments) as any
                 );
                 term._refreshLine();
                 return result;
@@ -37,12 +37,12 @@ if (!("MAPSYNC_DUMB_TERM" in process.env)) {
         Object.defineProperty(process, "stdout", {
             get: function () {
                 return newStdout;
-            },
+            }
         });
         Object.defineProperty(process, "stderr", {
             get: function () {
                 return newStderr;
-            },
+            }
         });
     }
     fixStdoutFor(term);
@@ -72,21 +72,21 @@ async function handle_input(input: string): Promise<void> {
     else if (command === "help") {
         console.log('ping - Prints "pong" for my sanity. -SirAlador');
         console.log(
-            "help - Prints info about commands, including the help command.",
+            "help - Prints info about commands, including the help command."
         );
         console.log("whitelist_load - Loads the whitelist from disk");
         console.log("whitelist_save - Saves the whitelist to disk");
         console.log(
-            "whitelist_add <uuid> - Adds the given account UUID to the\n    whitelist, and saves the whitelist to disk",
+            "whitelist_add <uuid> - Adds the given account UUID to the\n    whitelist, and saves the whitelist to disk"
         );
         console.log(
-            "whitelist_add_ign <ign> - Adds the UUID cached with the\n    given IGN to the whitelist, and saves the whitelist to disk",
+            "whitelist_add_ign <ign> - Adds the UUID cached with the\n    given IGN to the whitelist, and saves the whitelist to disk"
         );
         console.log(
-            "whitelist_remove <uuid> - Removes the given account UUID\n    from the whitelist, and saves the whitelist to disk",
+            "whitelist_remove <uuid> - Removes the given account UUID\n    from the whitelist, and saves the whitelist to disk"
         );
         console.log(
-            "whitelist_remove_ign <ign> - Removes the UUID cached with\n    the given IGN from the whitelist, and saves the whitelist to disk",
+            "whitelist_remove_ign <ign> - Removes the UUID cached with\n    the given IGN from the whitelist, and saves the whitelist to disk"
         );
     } else if (command === "whitelist_load") metadata.whitelist_load();
     else if (command === "whitelist_save") metadata.whitelist_save();
@@ -131,7 +131,7 @@ function input_loop() {
                 console.error("Command failed:");
                 console.error(e);
             })
-            .finally(input_loop),
+            .finally(input_loop)
     );
 }
 input_loop();

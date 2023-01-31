@@ -22,8 +22,7 @@ export function parseConfigFile<T>(
     let fileContents: string = null!;
     try {
         fileContents = lib_fs.readFileSync(file, "utf8");
-    }
-    catch (e) {
+    } catch (e) {
         if (errors.getErrorType(e) !== errors.ErrorType.FileNotFound) {
             throw e;
         }
@@ -32,9 +31,7 @@ export function parseConfigFile<T>(
         lib_fs.writeFileSync(file, JSON.stringify(defaultContent), "utf8");
         return defaultContent;
     }
-    return parser(
-        JSON.parse(fileContents) as JSONValue
-    );
+    return parser(JSON.parse(fileContents) as JSONValue);
 }
 
 /**
@@ -43,10 +40,7 @@ export function parseConfigFile<T>(
  * @param file The file-name, eg: "config.json"
  * @param content The file's contents, which will be JSON-stringified if it's not already a string.
  */
-export function saveConfigFile(
-    file: string,
-    content: any
-) {
+export function saveConfigFile(file: string, content: any) {
     file = lib_path.join(DATA_FOLDER, file);
     if (typeof content !== "string") {
         content = JSON.stringify(content);

@@ -27,7 +27,7 @@ export class Main {
         if (getConfig().whitelist) {
             if (!whitelist.has(client.uuid)) {
                 client.log(
-                    `Rejected unwhitelisted user ${client.mcName} (${client.uuid})`,
+                    `Rejected unwhitelisted user ${client.mcName} (${client.uuid})`
                 );
                 client.kick(`Not whitelisted`);
                 return;
@@ -40,7 +40,7 @@ export class Main {
         client.send({
             type: "RegionTimestamps",
             world: client.world!,
-            regions: timestamps,
+            regions: timestamps
         });
     }
 
@@ -50,16 +50,25 @@ export class Main {
         client.debug(client.mcName + " <- " + pkt.type);
         switch (pkt.type) {
             case "ChunkTile":
-                return this.handleChunkTilePacket(client, pkt as ChunkTilePacket);
+                return this.handleChunkTilePacket(
+                    client,
+                    pkt as ChunkTilePacket
+                );
             case "CatchupRequest":
-                return this.handleCatchupRequest(client, pkt as CatchupRequestPacket);
+                return this.handleCatchupRequest(
+                    client,
+                    pkt as CatchupRequestPacket
+                );
             case "RegionCatchup":
-                return this.handleRegionCatchupPacket(client, pkt as RegionCatchupPacket);
+                return this.handleRegionCatchupPacket(
+                    client,
+                    pkt as RegionCatchupPacket
+                );
             default:
                 throw new Error(
                     `Unknown packet '${(pkt as any).type}' from client ${
                         client.id
-                    }`,
+                    }`
                 );
         }
     }
@@ -76,7 +85,7 @@ export class Main {
             chunk_z: pkt.chunk_z,
             uuid: client.uuid,
             ts: pkt.ts,
-            data: pkt.data,
+            data: pkt.data
         };
         PlayerChunkDB.store(playerChunk).catch(console.error);
 
@@ -91,7 +100,7 @@ export class Main {
 
     async handleCatchupRequest(
         client: ProtocolClient,
-        pkt: CatchupRequestPacket,
+        pkt: CatchupRequestPacket
     ) {
         if (!client.uuid)
             throw new Error(`${client.name} is not authenticated`);
@@ -102,12 +111,12 @@ export class Main {
             let chunk = await PlayerChunkDB.getChunkWithData({
                 world,
                 chunk_x,
-                chunk_z,
+                chunk_z
             });
             if (!chunk) {
                 console.error(
                     `${client.name} requested unavailable chunk`,
-                    req,
+                    req
                 );
                 continue;
             }
@@ -121,14 +130,14 @@ export class Main {
 
     async handleRegionCatchupPacket(
         client: ProtocolClient,
-        pkt: RegionCatchupPacket,
+        pkt: RegionCatchupPacket
     ) {
         if (!client.uuid)
             throw new Error(`${client.name} is not authenticated`);
 
         const chunks = await PlayerChunkDB.getCatchupData(
             pkt.world,
-            pkt.regions,
+            pkt.regions
         );
         if (chunks.length) client.send({ type: "Catchup", chunks });
     }

@@ -4,7 +4,7 @@ import {
     Entity,
     JoinColumn,
     ManyToOne,
-    PrimaryColumn,
+    PrimaryColumn
 } from "typeorm";
 import { registerEntity } from "./db";
 
@@ -71,7 +71,7 @@ export class PlayerChunkDB extends BaseEntity implements PlayerChunk {
         // TODO if PlayerChunk exists, and holds last reference to old hash, delete ChunkData at old hash
         await ChunkDataDB.upsert(map_chunk.data, {
             conflictPaths: ChunkDataDB.primaryCols,
-            skipUpdateIfNoValuesChanged: true,
+            skipUpdateIfNoValuesChanged: true
         });
         await PlayerChunkDB.upsert(map_chunk, PlayerChunkDB.primaryCols);
     }
@@ -136,7 +136,7 @@ export class PlayerChunkDB extends BaseEntity implements PlayerChunk {
 			FROM region_real
 			WHERE region IN (${list}) AND world = ?
 			ORDER BY ts DESC`,
-            [...regionsAsString, world],
+            [...regionsAsString, world]
         );
         /*let chunks = await PlayerChunkDB.createQueryBuilder()
 			.where('(chunk_x/32) || "_" || (chunk_z/32) IN (:...regions)', { regions: regionsAsString })
@@ -163,10 +163,10 @@ export class PlayerChunkDB extends BaseEntity implements PlayerChunk {
             where: {
                 world: chunk.world,
                 chunk_x: chunk.chunk_x,
-                chunk_z: chunk.chunk_z,
+                chunk_z: chunk.chunk_z
             },
             relations: ["data"], // include chunk data stored in other table
-            order: { ts: "DESC" }, // get latest among all players that sent this chunk
+            order: { ts: "DESC" } // get latest among all players that sent this chunk
         });
     }
 }

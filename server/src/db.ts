@@ -21,7 +21,7 @@ export function connectDB() {
             entities: Object.values(entities),
             synchronize: true,
             type: "sqlite",
-            database: SQLITE_PATH,
+            database: SQLITE_PATH
         });
     }
     return _dbp;

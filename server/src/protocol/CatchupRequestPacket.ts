@@ -16,7 +16,7 @@ export namespace CatchupRequestPacket {
                 world,
                 chunk_x: reader.readInt32(),
                 chunk_z: reader.readInt32(),
-                ts: reader.readUInt64(),
+                ts: reader.readUInt64()
             });
         }
         return { type: "CatchupRequest", chunks };

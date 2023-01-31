@@ -21,8 +21,8 @@ export namespace ChunkTilePacket {
             data: {
                 version: reader.readUInt16(),
                 hash: reader.readBufWithLen(),
-                data: reader.readRemainder(),
-            },
+                data: reader.readRemainder()
+            }
         };
     }
 

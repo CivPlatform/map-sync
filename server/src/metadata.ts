@@ -15,19 +15,15 @@ try {
 // Force initialize
 export type Config = z.infer<typeof ConfigSchema>;
 export const ConfigSchema = z.object({
-    whitelist: z.boolean().default(true),
+    whitelist: z.boolean().default(true)
 });
 
 let config: Config | null = null;
 export function getConfig(): Config {
     if (config === null) {
-        config = parseConfigFile(
-            "config.json",
-            ConfigSchema.parse,
-            () => ({
-                whitelist: true
-            })
-        );
+        config = parseConfigFile("config.json", ConfigSchema.parse, () => ({
+            whitelist: true
+        }));
     }
     return config;
 }
@@ -70,7 +66,10 @@ export const uuid_cache = new Map<string, string>();
 
 /** Saves the UUID cache to uuid_cache.json */
 export function uuid_cache_save() {
-    saveConfigFile(UUID_CACHE_FILENAME, Object.fromEntries(uuid_cache.entries()));
+    saveConfigFile(
+        UUID_CACHE_FILENAME,
+        Object.fromEntries(uuid_cache.entries())
+    );
 }
 
 export function uuid_cache_load() {

@@ -24,7 +24,7 @@ export class TcpServer {
     // precomputed for networking
     publicKeyBuffer = this.keyPair.publicKey.export({
         type: "spki",
-        format: "der",
+        format: "der"
     });
 
     constructor(readonly handler: ProtocolHandler) {
@@ -49,9 +49,9 @@ export class TcpServer {
         return crypto.privateDecrypt(
             {
                 key: this.keyPair.privateKey,
-                padding: crypto.constants.RSA_PKCS1_PADDING,
+                padding: crypto.constants.RSA_PKCS1_PADDING
             },
-            buf,
+            buf
         );
     }
 }
@@ -87,7 +87,7 @@ export class TcpClient {
     constructor(
         private socket: net.Socket,
         private server: TcpServer,
-        private handler: ProtocolHandler,
+        private handler: ProtocolHandler
     ) {
         this.log("Connected from", socket.remoteAddress);
         handler.handleClientConnected(this);
@@ -116,7 +116,7 @@ export class TcpClient {
                             "Frame too large: " +
                                 frameSize +
                                 " have " +
-                                accBuf.length,
+                                accBuf.length
                         );
                     }
 
@@ -166,12 +166,16 @@ export class TcpClient {
             // not authenticated yet
             switch (pkt.type) {
                 case "Handshake":
-                    return await this.handleHandshakePacket(pkt as HandshakePacket);
+                    return await this.handleHandshakePacket(
+                        pkt as HandshakePacket
+                    );
                 case "EncryptionResponse":
-                    return await this.handleEncryptionResponsePacket(pkt as EncryptionResponsePacket);
+                    return await this.handleEncryptionResponsePacket(
+                        pkt as EncryptionResponsePacket
+                    );
             }
             throw new Error(
-                `Packet ${pkt.type} from unauth'd client ${this.id}`,
+                `Packet ${pkt.type} from unauth'd client ${this.id}`
             );
         } else {
             return await this.handler.handleClientPacketReceived(this, pkt);
@@ -226,14 +230,16 @@ export class TcpClient {
         this.world = packet.world;
         this.verifyToken = crypto.randomBytes(4);
 
-        await this.sendInternal(new EncryptionRequestPacket(
-            this.server.publicKeyBuffer,
-            this.verifyToken
-        ));
+        await this.sendInternal(
+            new EncryptionRequestPacket(
+                this.server.publicKeyBuffer,
+                this.verifyToken
+            )
+        );
     }
 
     private async handleEncryptionResponsePacket(
-        pkt: EncryptionResponsePacket,
+        pkt: EncryptionResponsePacket
     ) {
         if (this.cryptoPromise) throw new Error(`Already authenticated`);
         if (!this.claimedMojangName)
@@ -244,7 +250,7 @@ export class TcpClient {
         const verifyToken = this.server.decrypt(pkt.verifyToken);
         if (!this.verifyToken.equals(verifyToken)) {
             throw new Error(
-                `verifyToken mismatch: got ${verifyToken} expected ${this.verifyToken}`,
+                `verifyToken mismatch: got ${verifyToken} expected ${this.verifyToken}`
             );
         }
 
@@ -259,7 +265,7 @@ export class TcpClient {
 
         this.cryptoPromise = fetchHasJoined({
             username: this.claimedMojangName,
-            shaHex,
+            shaHex
         }).then(async (mojangAuth) => {
             if (!mojangAuth?.uuid) {
                 this.kick(`Mojang auth failed`);
@@ -277,8 +283,8 @@ export class TcpClient {
                 decipher: crypto.createDecipheriv(
                     "aes-128-cfb8",
                     secret,
-                    secret,
-                ),
+                    secret
+                )
             };
         });
 
@@ -315,7 +321,7 @@ async function fetchHasJoined(args: {
         let { id, name } = (await res.json()) as { id: string; name: string };
         const uuid = id.replace(
             /^(........)-?(....)-?(....)-?(....)-?(............)$/,
-            "$1-$2-$3-$4-$5",
+            "$1-$2-$3-$4-$5"
         );
         return { uuid, name };
     } catch (err) {

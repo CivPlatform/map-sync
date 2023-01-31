@@ -31,7 +31,7 @@
     "prettier": {
         "useTabs": false,
         "tabWidth": 4,
-        "trailingComma": "all",
+        "trailingComma": "none",
         "singleQuote": false,
         "semi": true
     }

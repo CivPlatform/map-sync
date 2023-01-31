@@ -3,7 +3,7 @@ import std_os from "os";
 export enum ErrorType {
     FileExists,
     FileNotFound,
-    UNKNOWN,
+    UNKNOWN
 }
 
 /**

@@ -51,7 +51,13 @@ export function decodePacket(reader: BufReader): ClientPacket {
         case Packets.RegionCatchup:
             return RegionCatchupPacket.decode(reader);
         default:
-            throw new Error("Unknown server←client packet [" + packetID + ":" + reader.readRemainder().toString("base64") + "]");
+            throw new Error(
+                "Unknown server←client packet [" +
+                    packetID +
+                    ":" +
+                    reader.readRemainder().toString("base64") +
+                    "]"
+            );
     }
 }
 
@@ -66,8 +72,13 @@ export function encodePacket(packet: ServerPacket, writer: BufWriter): void {
         case Packets.Catchup:
             return CatchupPacket.encode(packet as CatchupPacket, writer);
         case Packets.RegionTimestamps:
-            return RegionTimestampsPacket.encode(packet as RegionTimestampsPacket, writer);
+            return RegionTimestampsPacket.encode(
+                packet as RegionTimestampsPacket,
+                writer
+            );
         default:
-            throw new Error(`Unknown server→client packet [${inspect(packet)}]`);
+            throw new Error(
+                `Unknown server→client packet [${inspect(packet)}]`
+            );
     }
 }

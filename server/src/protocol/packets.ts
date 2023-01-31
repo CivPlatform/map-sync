@@ -21,7 +21,7 @@ export class HandshakePacket {
         public readonly mojangName: string,
         public readonly gameAddress: string,
         public readonly world: string
-    ) { }
+    ) {}
 
     public static decode(reader: BufReader): HandshakePacket {
         return new HandshakePacket(
@@ -46,7 +46,7 @@ export class EncryptionRequestPacket {
     public constructor(
         public readonly publicKey: Buffer,
         public readonly verifyToken: Buffer
-    ) { }
+    ) {}
 
     public encode(writer: BufWriter) {
         writer.writeBufWithLen(this.publicKey);
@@ -69,7 +69,7 @@ export class EncryptionResponsePacket {
     public constructor(
         public readonly sharedSecret: Buffer,
         public readonly verifyToken: Buffer
-    ) { }
+    ) {}
 
     public static decode(reader: BufReader): EncryptionResponsePacket {
         return new EncryptionResponsePacket(

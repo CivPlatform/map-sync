@@ -1,5 +1,4 @@
 import lib_fs from "fs";
-import { loadOrSaveDefaultStringFile } from "./utilities";
 import { getErrorType, ErrorType } from "./deps/errors";
 import { parseConfigFile, saveConfigFile } from "./config/mod";
 import * as z from "zod";

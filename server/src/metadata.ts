@@ -14,9 +14,6 @@ try {
     console.log(`Using data folder "${DATA_FOLDER}"`);
 }
 
-export const UUID_CACHE_FILE = `${DATA_FOLDER}/uuid_cache.json`;
-
-
 // Force initialize
 export type Config = z.infer<typeof ConfigSchema>;
 export const ConfigSchema = z.object({
@@ -69,67 +66,24 @@ export function whitelist_save() {
 // UUID Cache
 // ------------------------------------------------------------ //
 
-const UUID_CACHE_MUTEX = new Mutex();
-/** A cache storing uuids by player IGN */
+export const UUID_CACHE_FILENAME = "uuid_cache.json";
+export const UUID_CACHE_SCHEMA = z.record(z.string().uuid());
 export const uuid_cache = new Map<string, string>();
 
 /** Saves the UUID cache to uuid_cache.json */
-export async function uuid_cache_save() {
-    UUID_CACHE_MUTEX.runExclusive(async () => {
-        await lib_fs.promises.writeFile(
-            UUID_CACHE_FILE,
-            JSON.stringify(Array.from(uuid_cache)),
-        );
-        console.log("[UUID Cache] Saved UUID cache");
-    }).catch((e) => {
-        console.error(
-            "[UUID Cache] Error occured while saving the whitelist to the disk",
-        );
-        console.error(e);
-    });
+export function uuid_cache_save() {
+    saveConfigFile(UUID_CACHE_FILENAME, Object.fromEntries(uuid_cache.entries()));
 }
 
-export async function uuid_cache_load(): Promise<void> {
-    UUID_CACHE_MUTEX.runExclusive(async () => {
-        const json: any = JSON.parse(
-            await loadOrSaveDefaultStringFile(UUID_CACHE_FILE, "{}"),
-        );
-        if (typeof json !== "object") {
-            throw new Error("UUID cache file wasn't an JSON object");
-        }
-        uuid_cache.clear();
-        for (const [key, value] of Object.entries(json)) {
-            uuid_cache.set(key, String(value));
-        }
-        console.log("[UUID Cache] Saved UUID cache");
-    }).catch((e) => {
-        if (getErrorType(e) === ErrorType.FileNotFound) {
-            console.error(
-                "[UUID Cache] No uuid cache file was found. A new one will be created shortly.",
-            );
-            uuid_cache_save(); // Don't await, will cause deadlock
-        } else {
-            console.error(
-                "[UUID Cache] An error occured when attempting to read `uuid_cache.json`",
-            );
-            console.error(e);
-            console.error("[UUID Cache] A new uuid cache will be created");
-        }
-    });
+export function uuid_cache_load() {
+    uuid_cache.clear();
+    const entries: Record<string, string> = parseConfigFile(
+        UUID_CACHE_FILENAME,
+        UUID_CACHE_SCHEMA.parse,
+        () => ({})
+    );
+    for (const [key, value] of Object.entries(entries)) {
+        uuid_cache.set(key, value);
+    }
 }
-
-// Load UUID cache on startup
 uuid_cache_load();
-
-/** Caches a player IGN with their UUID */
-export function uuid_cache_store(ign: string, uuid: string) {
-    if (uuid == null || ign == null) return;
-    uuid_cache.set(ign, uuid);
-    console.log(`[UUID Cache] cached "${ign}" as UUID "${uuid}"`);
-    uuid_cache_save();
-}
-
-/** Looks up a UUID from an IGN */
-export function uuid_cache_lookup(ign: string): string | null {
-    return uuid_cache.get(ign) ?? null;
-}

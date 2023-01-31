@@ -100,8 +100,8 @@ async function handle_input(input: string): Promise<void> {
         if (extras.length === 0)
             throw new Error("Did not provide UUID to whitelist");
         const ign = extras;
-        const uuid = metadata.uuid_cache_lookup(ign);
-        if (uuid == null) throw new Error("No cached UUID for IGN " + ign);
+        const uuid = metadata.uuid_cache.get(ign) ?? null;
+        if (uuid === null) throw new Error("No cached UUID for IGN " + ign);
         metadata.whitelist.add(uuid);
         metadata.whitelist_save();
     } else if (command === "whitelist_remove") {
@@ -114,8 +114,8 @@ async function handle_input(input: string): Promise<void> {
         if (extras.length === 0)
             throw new Error("Did not provide UUID to whitelist");
         const ign = extras;
-        const uuid = metadata.uuid_cache_lookup(ign);
-        if (uuid == null) throw new Error("No cached UUID for IGN " + ign);
+        const uuid = metadata.uuid_cache.get(ign) ?? null;
+        if (uuid === null) throw new Error("No cached UUID for IGN " + ign);
         metadata.whitelist.delete(uuid);
         metadata.whitelist_save();
     } else {

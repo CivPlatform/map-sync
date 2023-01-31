@@ -12,7 +12,6 @@
         "start:dev": "tsc && node -r source-map-support/register dist/main.js"
     },
     "dependencies": {
-        "async-mutex": "^0.4.0",
         "dotenv": "^16.0.3",
         "json-bigint": "^1.0.0",
         "node-fetch": "^2.6.7",

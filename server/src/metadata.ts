@@ -2,7 +2,7 @@ import lib_fs from "fs";
 import { Mutex } from "async-mutex";
 import { loadOrSaveDefaultStringFile } from "./utilities";
 import { getErrorType, ErrorType } from "./deps/errors";
-import { parseConfigFile } from "./config/mod";
+import { parseConfigFile, saveConfigFile } from "./config/mod";
 import * as z from "zod";
 
 export const DATA_FOLDER = process.env["MAPSYNC_DATA_DIR"] ?? "./mapsync";
@@ -14,7 +14,6 @@ try {
     console.log(`Using data folder "${DATA_FOLDER}"`);
 }
 
-export const WHITELIST_FILE = `${DATA_FOLDER}/whitelist.json`;
 export const UUID_CACHE_FILE = `${DATA_FOLDER}/uuid_cache.json`;
 
 
@@ -43,94 +42,27 @@ getConfig();
 // Whitelist
 // ------------------------------------------------------------ //
 
-// A "queue" of sorts so operations don't conflict
-const WHITELIST_MUTEX = new Mutex();
+export const WHITELIST_FILENAME = "whitelist.json";
+export const WHITELIST_SCHEMA = z.array(z.string().uuid());
 export const whitelist = new Set<string>();
 
 /** Loads the whitelist from whitelist.json */
-export async function whitelist_load() {
-    WHITELIST_MUTEX.runExclusive(async () => {
-        const json: any = JSON.parse(
-            await loadOrSaveDefaultStringFile(WHITELIST_FILE, "[]"),
-        );
-        if (!Array.isArray(json)) {
-            throw new Error("Whitelist file wasn't an array");
-        }
-        for (const entry of json as any[]) {
-            if (typeof entry !== "string") {
-                throw new Error(`Entry "${entry}" is not a string`);
-            }
-        }
-        whitelist.clear();
-        for (const entry of json as string[]) {
-            whitelist.add(entry);
-        }
-        console.log("[Whitelist] Loaded whitelist");
-    }).catch((e) => {
-        if (getErrorType(e) === ErrorType.FileNotFound) {
-            console.error(
-                "[Whitelist] No whitelist file was found. An empty one will be created shortly.",
-            );
-            whitelist_save(); // Don't await, will cause deadlock
-        } else {
-            console.error(
-                "[Whitelist] Error occurred while loading the whitelist from disk",
-            );
-            console.error(e);
-            console.error("[Whitelist] The whitelist will be loaded as empty");
-        }
-    });
+export function whitelist_load() {
+    whitelist.clear();
+    const entries: string[] = parseConfigFile(
+        WHITELIST_FILENAME,
+        WHITELIST_SCHEMA.parse,
+        () => []
+    );
+    for (const entry of entries) {
+        whitelist.add(entry);
+    }
 }
-
-/** Saves the whitelist to whitelist.json */
-export async function whitelist_save() {
-    WHITELIST_MUTEX.runExclusive(async () => {
-        await lib_fs.promises.writeFile(
-            WHITELIST_FILE,
-            JSON.stringify(Array.from(whitelist)),
-        );
-        console.log("[Whitelist] Saved whitelist");
-    }).catch((e) => {
-        console.error(
-            "[Whitelist] Error occurred while saving the whitelist to the disk",
-        );
-        console.error(e);
-    });
-}
-
-// Load whitelist on startup
 whitelist_load();
 
-/** Checks if the given uuid is in the whitelist */
-export function whitelist_check(uuid: string): boolean {
-    return whitelist.has(uuid);
-}
-
-// These need to enqueue in whitelist_operation in case they are called in the middle of a load operation
-/** Adds the given uuid to the whitelist */
-export async function whitelist_add(uuid: string) {
-    WHITELIST_MUTEX.runExclusive(async () => {
-        whitelist.add(uuid);
-        console.log(`[Whitelist] Added user "${uuid}" to the whitelist`);
-    }).catch((e) => {
-        console.error(
-            `[Whitelist] Error occurred adding user "${uuid}" to the whitelist`,
-        );
-        console.error(e);
-    });
-}
-
-/** Removes the given uuid from the whitelist */
-export async function whitelist_remove(uuid: string) {
-    WHITELIST_MUTEX.runExclusive(async () => {
-        whitelist.delete(uuid);
-        console.log(`[Whitelist] Removed user "${uuid}" from the whitelist`);
-    }).catch((e) => {
-        console.error(
-            `[Whitelist] Error occurred removing user "${uuid}" to the whitelist`,
-        );
-        console.error(e);
-    });
+/** Saves the whitelist to whitelist.json */
+export function whitelist_save() {
+    saveConfigFile(WHITELIST_FILENAME, Array.from(whitelist.values()));
 }
 
 // ------------------------------------------------------------ //

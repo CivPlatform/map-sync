@@ -7,7 +7,10 @@ import { decodePacket, encodePacket } from "./protocol";
 import { BufReader } from "./protocol/BufReader";
 import { BufWriter } from "./protocol/BufWriter";
 import { EncryptionResponsePacket } from "./protocol/EncryptionResponsePacket";
-import { HandshakePacket } from "./protocol/packets";
+import {
+    HandshakePacket,
+    EncryptionRequestPacket
+} from "./protocol/packets";
 
 const { PORT = "12312", HOST = "127.0.0.1" } = process.env;
 
@@ -223,11 +226,10 @@ export class TcpClient {
         this.world = packet.world;
         this.verifyToken = crypto.randomBytes(4);
 
-        await this.sendInternal({
-            type: "EncryptionRequest",
-            publicKey: this.server.publicKeyBuffer,
-            verifyToken: this.verifyToken,
-        });
+        await this.sendInternal(new EncryptionRequestPacket(
+            this.server.publicKeyBuffer,
+            this.verifyToken
+        ));
     }
 
     private async handleEncryptionResponsePacket(

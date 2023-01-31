@@ -1,9 +1,11 @@
 import { BufReader } from "./BufReader";
 import { BufWriter } from "./BufWriter";
 import { ChunkTilePacket } from "./ChunkTilePacket";
-import { EncryptionRequestPacket } from "./EncryptionRequestPacket";
 import { EncryptionResponsePacket } from "./EncryptionResponsePacket";
-import { HandshakePacket } from "./packets";
+import {
+    HandshakePacket,
+    EncryptionRequestPacket
+} from "./packets";
 import { CatchupPacket } from "./CatchupPacket";
 import { CatchupRequestPacket } from "./CatchupRequestPacket";
 import { RegionTimestampsPacket } from "./RegionTimestampsPacket";
@@ -58,7 +60,7 @@ export function encodePacket(packet: ServerPacket, writer: BufWriter): void {
     writer.writeUInt8(packetID);
     switch (packetID) {
         case Packets.EncryptionRequest:
-            return EncryptionRequestPacket.encode(packet as EncryptionRequestPacket, writer);
+            return (packet as EncryptionRequestPacket).encode(writer);
         case Packets.ChunkTile:
             return ChunkTilePacket.encode(packet as ChunkTilePacket, writer);
         case Packets.Catchup:

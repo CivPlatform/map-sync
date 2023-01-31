@@ -6,7 +6,7 @@
     "license": "GPL-3.0-only",
     "scripts": {
         "prettify": "npx prettier --write .",
-        "build": "tsc",
+        "build": "npx tsc --build --clean && npx tsc",
         "test": "true",
         "start": "node -r source-map-support/register dist/main.js",
         "start:dev": "tsc && node -r source-map-support/register dist/main.js"

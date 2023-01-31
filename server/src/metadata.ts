@@ -1,27 +1,14 @@
 import lib_fs from "fs";
 import { Mutex } from "async-mutex";
 import { loadOrSaveDefaultStringFile } from "./utilities";
-
-export const ENOENT = -2;
-export const EEXIST = -17;
-export enum OsError {
-    FileExists,
-    FileNotFound,
-    UNKNOWN,
-}
-export function get_os_error(e: any): OsError {
-    if (typeof e !== "object") return OsError.UNKNOWN;
-    if (e.errno === ENOENT) return OsError.FileNotFound;
-    if (e.errno === EEXIST) return OsError.FileExists;
-    return OsError.UNKNOWN;
-}
+import { getErrorType, ErrorType } from "./deps/errors";
 
 export const DATA_FOLDER = process.env["MAPSYNC_DATA_DIR"] ?? "./mapsync";
 try {
     lib_fs.mkdirSync(DATA_FOLDER, { recursive: true });
     console.log(`Created data folder "${DATA_FOLDER}"`);
 } catch (e: any) {
-    if (get_os_error(e) !== OsError.FileExists) throw e;
+    if (getErrorType(e) !== ErrorType.FileExists) throw e;
     console.log(`Using data folder "${DATA_FOLDER}"`);
 }
 
@@ -97,7 +84,7 @@ export async function whitelist_load() {
         }
         console.log("[Whitelist] Loaded whitelist");
     }).catch((e) => {
-        if (get_os_error(e) === OsError.FileNotFound) {
+        if (getErrorType(e) === ErrorType.FileNotFound) {
             console.error(
                 "[Whitelist] No whitelist file was found. An empty one will be created shortly.",
             );
@@ -201,7 +188,7 @@ export async function uuid_cache_load(): Promise<void> {
         }
         console.log("[UUID Cache] Saved UUID cache");
     }).catch((e) => {
-        if (get_os_error(e) === OsError.FileNotFound) {
+        if (getErrorType(e) === ErrorType.FileNotFound) {
             console.error(
                 "[UUID Cache] No uuid cache file was found. A new one will be created shortly.",
             );

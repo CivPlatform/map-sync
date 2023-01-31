@@ -8,6 +8,7 @@ import { CatchupPacket } from "./CatchupPacket";
 import { CatchupRequestPacket } from "./CatchupRequestPacket";
 import { RegionTimestampsPacket } from "./RegionTimestampsPacket";
 import { RegionCatchupPacket } from "./RegionCatchupPacket";
+import { inspect } from "util";
 
 export type ClientPacket =
     | ChunkTilePacket
@@ -22,7 +23,7 @@ export type ServerPacket =
     | CatchupPacket
     | RegionTimestampsPacket;
 
-export const packetIds = [
+export enum Packets {
     "ERROR:pkt0",
     "Handshake",
     "EncryptionRequest",
@@ -31,45 +32,40 @@ export const packetIds = [
     "Catchup",
     "CatchupRequest",
     "RegionTimestamps",
-    "RegionCatchup",
-];
-
-export function getPacketId(type: ServerPacket["type"]) {
-    const id = packetIds.indexOf(type);
-    if (id === -1) throw new Error(`Unknown packet type ${type}`);
-    return id;
+    "RegionCatchup"
 }
 
 export function decodePacket(reader: BufReader): ClientPacket {
-    const packetType = reader.readUInt8();
-    switch (packetIds[packetType]) {
-        case "ChunkTile":
-            return ChunkTilePacket.decode(reader);
-        case "Handshake":
+    const packetID = reader.readUInt8();
+    switch (packetID) {
+        case Packets.Handshake:
             return HandshakePacket.decode(reader);
-        case "EncryptionResponse":
+        case Packets.EncryptionResponse:
             return EncryptionResponsePacket.decode(reader);
-        case "CatchupRequest":
+        case Packets.ChunkTile:
+            return ChunkTilePacket.decode(reader);
+        case Packets.CatchupRequest:
             return CatchupRequestPacket.decode(reader);
-        case "RegionCatchup":
+        case Packets.RegionCatchup:
             return RegionCatchupPacket.decode(reader);
         default:
-            throw new Error(`Unknown packet type ${packetType}`);
+            throw new Error("Unknown server←client packet [" + packetID + ":" + reader.readRemainder().toString("base64") + "]");
     }
 }
 
-export function encodePacket(pkt: ServerPacket, writer: BufWriter): void {
-    writer.writeUInt8(getPacketId(pkt.type));
-    switch (pkt.type) {
-        case "ChunkTile":
-            return ChunkTilePacket.encode(pkt, writer);
-        case "Catchup":
-            return CatchupPacket.encode(pkt, writer);
-        case "EncryptionRequest":
-            return EncryptionRequestPacket.encode(pkt, writer);
-        case "RegionTimestamps":
-            return RegionTimestampsPacket.encode(pkt, writer);
+export function encodePacket(packet: ServerPacket, writer: BufWriter): void {
+    const packetID = Packets[packet.type] ?? Packets["ERROR:pkt0"];
+    writer.writeUInt8(packetID);
+    switch (packetID) {
+        case Packets.EncryptionRequest:
+            return EncryptionRequestPacket.encode(packet as EncryptionRequestPacket, writer);
+        case Packets.ChunkTile:
+            return ChunkTilePacket.encode(packet as ChunkTilePacket, writer);
+        case Packets.Catchup:
+            return CatchupPacket.encode(packet as CatchupPacket, writer);
+        case Packets.RegionTimestamps:
+            return RegionTimestampsPacket.encode(packet as RegionTimestampsPacket, writer);
         default:
-            throw new Error(`Unknown packet type ${(pkt as any).type}`);
+            throw new Error(`Unknown server→client packet [${inspect(packet)}]`);
     }
 }

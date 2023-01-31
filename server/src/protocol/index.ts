@@ -1,10 +1,10 @@
 import { BufReader } from "./BufReader";
 import { BufWriter } from "./BufWriter";
 import { ChunkTilePacket } from "./ChunkTilePacket";
-import { EncryptionResponsePacket } from "./EncryptionResponsePacket";
 import {
     HandshakePacket,
-    EncryptionRequestPacket
+    EncryptionRequestPacket,
+    EncryptionResponsePacket
 } from "./packets";
 import { CatchupPacket } from "./CatchupPacket";
 import { CatchupRequestPacket } from "./CatchupRequestPacket";

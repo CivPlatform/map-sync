@@ -53,3 +53,28 @@ export class EncryptionRequestPacket {
         writer.writeBufWithLen(this.verifyToken);
     }
 }
+
+/**
+ * Once this packet is received, the client should be considered fully verified
+ * and thus can share map information.
+ */
+export class EncryptionResponsePacket {
+    public readonly type: string = Packets[Packets.EncryptionResponse];
+
+    /**
+     * @param sharedSecret A 16-bit secret created and shared by the client
+     * @param verifyToken The verifyToken sent in the EncyrptionRequest which
+     *                    has been encrypted with the server's public key.
+     */
+    public constructor(
+        public readonly sharedSecret: Buffer,
+        public readonly verifyToken: Buffer
+    ) { }
+
+    public static decode(reader: BufReader): EncryptionResponsePacket {
+        return new EncryptionResponsePacket(
+            reader.readBufWithLen(),
+            reader.readBufWithLen()
+        );
+    }
+}

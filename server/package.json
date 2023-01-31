@@ -18,7 +18,7 @@
 		"typeorm": "^0.3.6"
 	},
 	"devDependencies": {
-		"@types/node": "^16.11.38",
+		"@types/node": "^18.11.18",
 		"@types/node-fetch": "^2.6.1",
 		"@types/sqlite3": "^3.1.8",
 		"dotenv": "^16.0.1",

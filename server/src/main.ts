@@ -6,8 +6,10 @@ import { ClientPacket } from "./protocol";
 import { CatchupRequestPacket } from "./protocol/CatchupRequestPacket";
 import { ChunkTilePacket } from "./protocol/ChunkTilePacket";
 import { TcpClient, TcpServer } from "./server";
-import { RegionCatchupPacket } from "./protocol/RegionCatchupPacket";
-import { RegionTimestampsPacket } from "./protocol/packets";
+import {
+    RegionTimestampsPacket,
+    RegionCatchupRequestPacket
+} from "./protocol/packets";
 import { RegionTimestamp } from "./protocol/structs";
 
 connectDB().then(() => new Main());
@@ -67,7 +69,7 @@ export class Main {
             case "RegionCatchup":
                 return this.handleRegionCatchupPacket(
                     client,
-                    pkt as RegionCatchupPacket
+                    pkt as RegionCatchupRequestPacket
                 );
             default:
                 throw new Error(
@@ -135,7 +137,7 @@ export class Main {
 
     async handleRegionCatchupPacket(
         client: ProtocolClient,
-        pkt: RegionCatchupPacket
+        pkt: RegionCatchupRequestPacket
     ) {
         if (!client.uuid)
             throw new Error(`${client.name} is not authenticated`);
@@ -143,6 +145,8 @@ export class Main {
         const chunks = await PlayerChunkDB.getCatchupData(
             pkt.world,
             pkt.regions
+                .map((region) => [region.x, region.z])
+                .flat()
         );
         if (chunks.length) client.send({ type: "Catchup", chunks });
     }

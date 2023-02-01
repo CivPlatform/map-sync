@@ -1,7 +1,7 @@
 import { BufReader } from "./BufReader";
 import { Packets } from "./index";
 import { BufWriter } from "./BufWriter";
-import { RegionTimestamp } from "./structs";
+import { RegionPos, RegionTimestamp } from "./structs";
 
 /**
  * The Minecraft client should send this packet IMMEDIATELY upon a successful
@@ -104,5 +104,34 @@ export class RegionTimestampsPacket {
             writer.writeInt16(region.z);
             writer.writeInt64(region.ts);
         }
+    }
+}
+
+/**
+ * This is a response to the RegionTimestampsPacket: the client is requesting
+ * to be updated on regions that are outdated for it.
+ */
+export class RegionCatchupRequestPacket {
+    public readonly type: string = Packets[Packets.RegionCatchup];
+
+    public constructor(
+        public readonly world: string,
+        public readonly regions: RegionPos[]
+    ) {}
+
+    public static decode(reader: BufReader): RegionCatchupRequestPacket {
+        return new RegionCatchupRequestPacket(
+            reader.readString(),
+            (function (length) {
+                const regions: RegionPos[] = new Array(length);
+                for (let i = 0; i < length; i++) {
+                    regions[i] = {
+                        x: reader.readInt16(),
+                        z: reader.readInt16()
+                    };
+                }
+                return regions;
+            })(reader.readInt16())
+        );
     }
 }

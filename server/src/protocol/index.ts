@@ -5,11 +5,11 @@ import {
     HandshakePacket,
     EncryptionRequestPacket,
     EncryptionResponsePacket,
-    RegionTimestampsPacket
+    RegionTimestampsPacket,
+    RegionCatchupRequestPacket
 } from "./packets";
 import { CatchupPacket } from "./CatchupPacket";
 import { CatchupRequestPacket } from "./CatchupRequestPacket";
-import { RegionCatchupPacket } from "./RegionCatchupPacket";
 import { inspect } from "util";
 
 export type ClientPacket =
@@ -17,7 +17,7 @@ export type ClientPacket =
     | EncryptionResponsePacket
     | HandshakePacket
     | CatchupRequestPacket
-    | RegionCatchupPacket;
+    | RegionCatchupRequestPacket;
 
 export type ServerPacket =
     | ChunkTilePacket
@@ -49,7 +49,7 @@ export function decodePacket(reader: BufReader): ClientPacket {
         case Packets.CatchupRequest:
             return CatchupRequestPacket.decode(reader);
         case Packets.RegionCatchup:
-            return RegionCatchupPacket.decode(reader);
+            return RegionCatchupRequestPacket.decode(reader);
         default:
             throw new Error(
                 "Unknown server←client packet [" +

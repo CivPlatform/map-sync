@@ -8,7 +8,8 @@ import { ChunkTilePacket } from "./protocol/ChunkTilePacket";
 import { TcpClient, TcpServer } from "./server";
 import {
     RegionTimestampsPacket,
-    RegionCatchupRequestPacket
+    RegionCatchupRequestPacket,
+    RegionCatchupResponsePacket
 } from "./protocol/packets";
 import { RegionTimestamp } from "./protocol/structs";
 
@@ -148,6 +149,11 @@ export class Main {
                 .map((region) => [region.x, region.z])
                 .flat()
         );
-        if (chunks.length) client.send({ type: "Catchup", chunks });
+        if (chunks.length > 0) {
+            client.send(new RegionCatchupResponsePacket(
+                pkt.world,
+                chunks
+            ));
+        }
     }
 }

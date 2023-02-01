@@ -6,9 +6,9 @@ import {
     EncryptionRequestPacket,
     EncryptionResponsePacket,
     RegionTimestampsPacket,
-    RegionCatchupRequestPacket
+    RegionCatchupRequestPacket,
+    RegionCatchupResponsePacket
 } from "./packets";
-import { CatchupPacket } from "./CatchupPacket";
 import { CatchupRequestPacket } from "./CatchupRequestPacket";
 import { inspect } from "util";
 
@@ -22,7 +22,7 @@ export type ClientPacket =
 export type ServerPacket =
     | ChunkTilePacket
     | EncryptionRequestPacket
-    | CatchupPacket
+    | RegionCatchupResponsePacket
     | RegionTimestampsPacket;
 
 export enum Packets {
@@ -70,7 +70,7 @@ export function encodePacket(packet: ServerPacket, writer: BufWriter): void {
         case Packets.ChunkTile:
             return ChunkTilePacket.encode(packet as ChunkTilePacket, writer);
         case Packets.Catchup:
-            return CatchupPacket.encode(packet as CatchupPacket, writer);
+            return (packet as RegionCatchupResponsePacket).encode(writer);
         case Packets.RegionTimestamps:
             return (packet as RegionTimestampsPacket).encode(writer);
         default:

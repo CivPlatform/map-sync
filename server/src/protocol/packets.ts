@@ -1,7 +1,7 @@
 import { BufReader } from "./BufReader";
 import { Packets } from "./index";
 import { BufWriter } from "./BufWriter";
-import { RegionPos, RegionTimestamp } from "./structs";
+import { CatchupChunk, RegionPos, RegionTimestamp } from "./structs";
 
 /**
  * The Minecraft client should send this packet IMMEDIATELY upon a successful
@@ -133,5 +133,30 @@ export class RegionCatchupRequestPacket {
                 return regions;
             })(reader.readInt16())
         );
+    }
+}
+
+/**
+ * This is a clarification packet. It responds to the request with all the
+ * regions' internal chunk timestamps. That way the client doesn't need to
+ * receive 32x32 chunk's worth of data if only a single chunk inside is newer
+ * to the client.
+ */
+export class RegionCatchupResponsePacket {
+    public readonly type = Packets[Packets.Catchup];
+
+    public constructor(
+        public readonly world: string,
+        public readonly chunks: CatchupChunk[]
+    ) { }
+
+    public encode(writer: BufWriter) {
+        writer.writeString(this.world);
+        writer.writeUInt32(this.chunks.length);
+        for (const region of this.chunks) {
+            writer.writeInt32(region.chunk_x);
+            writer.writeInt32(region.chunk_z);
+            writer.writeUInt64(region.ts);
+        }
     }
 }

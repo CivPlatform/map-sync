@@ -98,7 +98,7 @@ export class Main {
         PlayerChunkDB.store(playerChunk).catch(console.error);
 
         // TODO small timeout, then skip if other client already has it
-        for (const otherClient of Object.values(this.server.clients)) {
+        for (const otherClient of this.server.clients.values()) {
             if (client === otherClient) continue;
             otherClient.send(pkt);
         }

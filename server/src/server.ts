@@ -18,7 +18,7 @@ type ProtocolHandler = Main; // TODO cleanup
 
 export class TcpServer {
     server: net.Server;
-    clients: Record<number, TcpClient> = {};
+    public readonly clients = new Map<number, TcpClient>();
 
     keyPair = crypto.generateKeyPairSync("rsa", { modulusLength: 1024 });
     // precomputed for networking
@@ -30,9 +30,9 @@ export class TcpServer {
     constructor(readonly handler: ProtocolHandler) {
         this.server = net.createServer({}, (socket) => {
             const client = new TcpClient(socket, this, handler);
-            this.clients[client.id] = client;
-            socket.on("end", () => delete this.clients[client.id]);
-            socket.on("close", () => delete this.clients[client.id]);
+            this.clients.set(client.id, client);
+            socket.on("end", () => this.clients.delete(client.id));
+            socket.on("close", () => this.clients.delete(client.id));
         });
 
         this.server.on("error", (err: Error) => {

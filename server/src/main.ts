@@ -3,13 +3,13 @@ import { connectDB } from "./db";
 import { PlayerChunk, PlayerChunkDB } from "./MapChunk";
 import { uuid_cache, uuid_cache_save, getConfig, whitelist } from "./metadata";
 import { ClientPacket } from "./protocol";
-import { CatchupRequestPacket } from "./protocol/CatchupRequestPacket";
 import { ChunkTilePacket } from "./protocol/ChunkTilePacket";
 import { TcpClient, TcpServer } from "./server";
 import {
     RegionTimestampsPacket,
     RegionCatchupRequestPacket,
-    RegionCatchupResponsePacket
+    RegionCatchupResponsePacket,
+    ChunkCatchupRequestPacket
 } from "./protocol/packets";
 import { RegionTimestamp } from "./protocol/structs";
 
@@ -65,7 +65,7 @@ export class Main {
             case "CatchupRequest":
                 return this.handleCatchupRequest(
                     client,
-                    pkt as CatchupRequestPacket
+                    pkt as ChunkCatchupRequestPacket
                 );
             case "RegionCatchup":
                 return this.handleRegionCatchupPacket(
@@ -108,7 +108,7 @@ export class Main {
 
     async handleCatchupRequest(
         client: ProtocolClient,
-        pkt: CatchupRequestPacket
+        pkt: ChunkCatchupRequestPacket
     ) {
         if (!client.uuid)
             throw new Error(`${client.name} is not authenticated`);

@@ -160,3 +160,35 @@ export class RegionCatchupResponsePacket {
         }
     }
 }
+
+/**
+ * This is the final packet in the catchup request: it contains a list of all
+ * the chunks the client wishes to receive.
+ */
+export class ChunkCatchupRequestPacket {
+    public readonly type: string = Packets[Packets.CatchupRequest];
+
+    public constructor(
+        public readonly world: string,
+        public readonly chunks: CatchupChunk[]
+    ) {}
+
+    public static decode(reader: BufReader): ChunkCatchupRequestPacket {
+        const world = reader.readString();
+        return new ChunkCatchupRequestPacket(
+            world,
+            (function (length) {
+                const chunks: CatchupChunk[] = new Array(length);
+                for (let i = 0; i < length; i++) {
+                    chunks[i] = {
+                        world: world,
+                        chunk_x: reader.readInt32(),
+                        chunk_z: reader.readInt32(),
+                        ts: reader.readUInt64()
+                    };
+                }
+                return chunks;
+            })(reader.readUInt32())
+        );
+    }
+}

@@ -7,16 +7,16 @@ import {
     EncryptionResponsePacket,
     RegionTimestampsPacket,
     RegionCatchupRequestPacket,
-    RegionCatchupResponsePacket
+    RegionCatchupResponsePacket,
+    ChunkCatchupRequestPacket
 } from "./packets";
-import { CatchupRequestPacket } from "./CatchupRequestPacket";
 import { inspect } from "util";
 
 export type ClientPacket =
     | ChunkTilePacket
     | EncryptionResponsePacket
     | HandshakePacket
-    | CatchupRequestPacket
+    | ChunkCatchupRequestPacket
     | RegionCatchupRequestPacket;
 
 export type ServerPacket =
@@ -47,7 +47,7 @@ export function decodePacket(reader: BufReader): ClientPacket {
         case Packets.ChunkTile:
             return ChunkTilePacket.decode(reader);
         case Packets.CatchupRequest:
-            return CatchupRequestPacket.decode(reader);
+            return ChunkCatchupRequestPacket.decode(reader);
         case Packets.RegionCatchup:
             return RegionCatchupRequestPacket.decode(reader);
         default:

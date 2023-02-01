@@ -192,3 +192,48 @@ export class ChunkCatchupRequestPacket {
         );
     }
 }
+
+/**
+ * This is a bidirectional packet. It's used to fulfil chunk catchup requests,
+ * but is also relayed verbatim to all other connected clients when new chunk
+ * data is received.
+ */
+export class ChunkDataPacket {
+    public readonly type = Packets[Packets.ChunkTile];
+
+    public constructor(
+        public readonly world: string,
+        public readonly x: number,
+        public readonly z: number,
+        public readonly timestamp: number,
+        public readonly data: {
+            readonly version: number,
+            readonly hash: Buffer,
+            readonly data: Buffer
+        }
+    ) { }
+
+    public encode(writer: BufWriter) {
+        writer.writeString(this.world);
+        writer.writeInt32(this.x);
+        writer.writeInt32(this.z);
+        writer.writeUInt64(this.timestamp);
+        writer.writeUInt16(this.data.version);
+        writer.writeBufWithLen(this.data.hash);
+        writer.writeBufRaw(this.data.data); // XXX do we need to prefix with length?
+    }
+
+    public static decode(reader: BufReader): ChunkDataPacket {
+        return new ChunkDataPacket(
+            reader.readString(),
+            reader.readInt32(),
+            reader.readInt32(),
+            reader.readUInt64(),
+            {
+                version: reader.readUInt16(),
+                hash: reader.readBufWithLen(),
+                data: reader.readRemainder()
+            }
+        );
+    }
+}

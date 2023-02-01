@@ -3,13 +3,13 @@ import { connectDB } from "./db";
 import { PlayerChunk, PlayerChunkDB } from "./MapChunk";
 import { uuid_cache, uuid_cache_save, getConfig, whitelist } from "./metadata";
 import { ClientPacket } from "./protocol";
-import { ChunkTilePacket } from "./protocol/ChunkTilePacket";
 import { TcpClient, TcpServer } from "./server";
 import {
     RegionTimestampsPacket,
     RegionCatchupRequestPacket,
     RegionCatchupResponsePacket,
-    ChunkCatchupRequestPacket
+    ChunkCatchupRequestPacket,
+    ChunkDataPacket
 } from "./protocol/packets";
 import { RegionTimestamp } from "./protocol/structs";
 
@@ -60,7 +60,7 @@ export class Main {
             case "ChunkTile":
                 return this.handleChunkTilePacket(
                     client,
-                    pkt as ChunkTilePacket
+                    pkt as ChunkDataPacket
                 );
             case "CatchupRequest":
                 return this.handleCatchupRequest(
@@ -81,7 +81,7 @@ export class Main {
         }
     }
 
-    async handleChunkTilePacket(client: ProtocolClient, pkt: ChunkTilePacket) {
+    async handleChunkTilePacket(client: ProtocolClient, pkt: ChunkDataPacket) {
         if (!client.uuid)
             throw new Error(`${client.name} is not authenticated`);
 
@@ -89,10 +89,10 @@ export class Main {
 
         const playerChunk: PlayerChunk = {
             world: pkt.world,
-            chunk_x: pkt.chunk_x,
-            chunk_z: pkt.chunk_z,
+            chunk_x: pkt.x,
+            chunk_z: pkt.z,
             uuid: client.uuid,
-            ts: pkt.ts,
+            ts: pkt.timestamp,
             data: pkt.data
         };
         PlayerChunkDB.store(playerChunk).catch(console.error);
@@ -132,7 +132,13 @@ export class Main {
             if (chunk.ts > req.ts) continue; // someone sent a new chunk, which presumably got relayed to the client
             if (chunk.ts < req.ts) continue; // the client already has a chunk newer than this
 
-            client.send({ type: "ChunkTile", ...chunk });
+            client.send(new ChunkDataPacket(
+                world,
+                chunk_x,
+                chunk_z,
+                chunk.ts,
+                chunk.data
+            ));
         }
     }
 

@@ -1,6 +1,7 @@
 import { BufReader } from "./BufReader";
 import { Packets } from "./index";
 import { BufWriter } from "./BufWriter";
+import { RegionTimestamp } from "./structs";
 
 /**
  * The Minecraft client should send this packet IMMEDIATELY upon a successful
@@ -76,5 +77,32 @@ export class EncryptionResponsePacket {
             reader.readBufWithLen(),
             reader.readBufWithLen()
         );
+    }
+}
+
+/**
+ * This is the first packet send to the client post-encryption setup. This
+ * packet is used to inform the client when each region was last updated, which
+ * the client can use to request newer regions from MapSync.
+ */
+export class RegionTimestampsPacket {
+    public readonly type = Packets[Packets.RegionTimestamps];
+
+    public constructor(
+        public readonly world: string,
+        public readonly regions: RegionTimestamp[]
+    ) { }
+
+    public encode(writer: BufWriter) {
+        writer.writeString(this.world);
+        writer.writeInt16(this.regions.length);
+        if (this.regions.length > 32767) { // TODO: Remove this if it's not an issue
+            console.error("Attempting to send region timestamps, but the regions surpass the maximum value for a signed-short length!");
+        }
+        for (const region of this.regions) {
+            writer.writeInt16(region.x);
+            writer.writeInt16(region.z);
+            writer.writeInt64(region.ts);
+        }
     }
 }

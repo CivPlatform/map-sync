@@ -7,6 +7,8 @@ import { CatchupRequestPacket } from "./protocol/CatchupRequestPacket";
 import { ChunkTilePacket } from "./protocol/ChunkTilePacket";
 import { TcpClient, TcpServer } from "./server";
 import { RegionCatchupPacket } from "./protocol/RegionCatchupPacket";
+import { RegionTimestampsPacket } from "./protocol/packets";
+import { RegionTimestamp } from "./protocol/structs";
 
 connectDB().then(() => new Main());
 
@@ -37,11 +39,14 @@ export class Main {
         // TODO check version, mc server, user access
 
         const timestamps = await PlayerChunkDB.getRegionTimestamps();
-        client.send({
-            type: "RegionTimestamps",
-            world: client.world!,
-            regions: timestamps
-        });
+        client.send(new RegionTimestampsPacket(
+            client.world!,
+            timestamps.map((timestamp) => ({
+                x: timestamp.region_x,
+                z: timestamp.region_z,
+                ts: timestamp.ts
+            }) as RegionTimestamp)
+        ));
     }
 
     handleClientDisconnected(client: ProtocolClient) {}

@@ -4,11 +4,11 @@ import { ChunkTilePacket } from "./ChunkTilePacket";
 import {
     HandshakePacket,
     EncryptionRequestPacket,
-    EncryptionResponsePacket
+    EncryptionResponsePacket,
+    RegionTimestampsPacket
 } from "./packets";
 import { CatchupPacket } from "./CatchupPacket";
 import { CatchupRequestPacket } from "./CatchupRequestPacket";
-import { RegionTimestampsPacket } from "./RegionTimestampsPacket";
 import { RegionCatchupPacket } from "./RegionCatchupPacket";
 import { inspect } from "util";
 
@@ -72,10 +72,7 @@ export function encodePacket(packet: ServerPacket, writer: BufWriter): void {
         case Packets.Catchup:
             return CatchupPacket.encode(packet as CatchupPacket, writer);
         case Packets.RegionTimestamps:
-            return RegionTimestampsPacket.encode(
-                packet as RegionTimestampsPacket,
-                writer
-            );
+            return (packet as RegionTimestampsPacket).encode(writer);
         default:
             throw new Error(
                 `Unknown server→client packet [${inspect(packet)}]`

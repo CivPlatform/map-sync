@@ -1,7 +1,7 @@
 import crypto from "crypto";
 import net from "net";
 import fetch from "node-fetch";
-import { Main } from "./main";
+import { ProtocolHandler } from "./main";
 import type { ClientPacket, ServerPacket } from "./protocol";
 import { decodePacket, encodePacket } from "./protocol";
 import { BufReader } from "./protocol/BufReader";
@@ -14,8 +14,6 @@ import {
 import * as encryption from "./server/encryption";
 
 const { PORT = "12312", HOST = "127.0.0.1" } = process.env;
-
-type ProtocolHandler = Main; // TODO cleanup
 
 export class TcpServer {
     server: net.Server;

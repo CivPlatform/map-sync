@@ -15,7 +15,8 @@ import { RegionTimestamp } from "./protocol/structs";
 
 connectDB().then(() => new Main());
 
-type ProtocolClient = TcpClient; // TODO cleanup
+export type ProtocolClient = TcpClient; // TODO cleanup
+export type ProtocolHandler = Main; // TODO cleanup
 
 export class Main {
     server = new TcpServer(this);

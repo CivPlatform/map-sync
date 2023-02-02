@@ -14,13 +14,19 @@ import {
 } from "./protocol/packets";
 import { RegionTimestamp } from "./protocol/structs";
 
-connectDB().then(() => new Main());
-
 export type ProtocolClient = TcpClient; // TODO cleanup
 export type ProtocolHandler = Main; // TODO cleanup
 
+// Have to do this because node doesn't have top-level await for CommonJS
+Promise.resolve().then(async () => {
+    await connectDB();
+    const protocolHandler: ProtocolHandler = new Main();
+    const server = new TcpServer(protocolHandler);
+    protocolHandler.server = server; // TODO: Remove this with handler refactor
+});
+
 export class Main {
-    server = new TcpServer(this);
+    server: TcpServer = null!;
 
     //Cannot be async, as it's caled from a synchronous constructor
     handleClientConnected(client: ProtocolClient) {}

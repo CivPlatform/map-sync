@@ -11,6 +11,7 @@ import {
     EncryptionRequestPacket,
     EncryptionResponsePacket
 } from "./protocol/packets";
+import * as encryption from "./server/encryption";
 
 const { PORT = "12312", HOST = "127.0.0.1" } = process.env;
 
@@ -19,13 +20,6 @@ type ProtocolHandler = Main; // TODO cleanup
 export class TcpServer {
     server: net.Server;
     public readonly clients = new Map<number, TcpClient>();
-
-    keyPair = crypto.generateKeyPairSync("rsa", { modulusLength: 1024 });
-    // precomputed for networking
-    publicKeyBuffer = this.keyPair.publicKey.export({
-        type: "spki",
-        format: "der"
-    });
 
     constructor(readonly handler: ProtocolHandler) {
         this.server = net.createServer({}, (socket) => {
@@ -43,16 +37,6 @@ export class TcpServer {
         this.server.listen({ port: PORT, hostname: HOST }, () => {
             console.log("[TcpServer] Listening on", HOST, PORT);
         });
-    }
-
-    decrypt(buf: Buffer) {
-        return crypto.privateDecrypt(
-            {
-                key: this.keyPair.privateKey,
-                padding: crypto.constants.RSA_PKCS1_PADDING
-            },
-            buf
-        );
     }
 }
 
@@ -79,10 +63,7 @@ export class TcpClient {
     private verifyToken?: Buffer;
     /** we need to wait for the mojang auth response
      * before we can en/decrypt packets following the handshake */
-    private cryptoPromise?: Promise<{
-        cipher: crypto.Cipher;
-        decipher: crypto.Decipher;
-    }>;
+    private cryptoPromise?: Promise<encryption.Ciphers>;
 
     constructor(
         private socket: net.Socket,
@@ -213,8 +194,8 @@ export class TcpClient {
         buf.writeUInt32BE(buf.length - 4, 0); // write into space reserved above
 
         if (doCrypto) {
-            const { cipher } = await this.cryptoPromise!;
-            buf = cipher!.update(buf);
+            const { encipher } = await this.cryptoPromise!;
+            buf = encipher.update(buf);
         }
 
         this.socket.write(buf);
@@ -232,7 +213,7 @@ export class TcpClient {
 
         await this.sendInternal(
             new EncryptionRequestPacket(
-                this.server.publicKeyBuffer,
+                encryption.PUBLIC_KEY_BUFFER,
                 this.verifyToken
             )
         );
@@ -247,25 +228,18 @@ export class TcpClient {
         if (!this.verifyToken)
             throw new Error(`Encryption has not started: no verifyToken`);
 
-        const verifyToken = this.server.decrypt(pkt.verifyToken);
+        const verifyToken = encryption.decrypt(pkt.verifyToken);
         if (!this.verifyToken.equals(verifyToken)) {
             throw new Error(
                 `verifyToken mismatch: got ${verifyToken} expected ${this.verifyToken}`
             );
         }
 
-        const secret = this.server.decrypt(pkt.sharedSecret);
-
-        const shaHex = crypto
-            .createHash("sha1")
-            .update(secret)
-            .update(this.server.publicKeyBuffer)
-            .digest()
-            .toString("hex");
+        const secret = encryption.decrypt(pkt.sharedSecret);
 
         this.cryptoPromise = fetchHasJoined({
             username: this.claimedMojangName,
-            shaHex
+            shaHex: encryption.generateShaHex(secret)
         }).then(async (mojangAuth) => {
             if (!mojangAuth?.uuid) {
                 this.kick(`Mojang auth failed`);
@@ -278,14 +252,7 @@ export class TcpClient {
             this.mcName = mojangAuth.name;
             this.name += ":" + mojangAuth.name;
 
-            return {
-                cipher: crypto.createCipheriv("aes-128-cfb8", secret, secret),
-                decipher: crypto.createDecipheriv(
-                    "aes-128-cfb8",
-                    secret,
-                    secret
-                )
-            };
+            return encryption.generateCiphers(secret);
         });
 
         await this.cryptoPromise.then(async () => {

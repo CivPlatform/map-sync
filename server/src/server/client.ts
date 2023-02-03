@@ -1,7 +1,6 @@
 import crypto from "node:crypto";
 import net from "node:net";
 import fetch from "node-fetch";
-import { ProtocolHandler } from "../main";
 import type { ClientPacket, ServerPacket } from "../protocol";
 import { decodePacket, encodePacket } from "../protocol";
 import { BufReader } from "../protocol/BufReader";
@@ -39,8 +38,7 @@ export class TcpClient {
 
     public constructor(
         public readonly socket: net.Socket,
-        public readonly server: TcpServer,
-        public readonly handler: ProtocolHandler
+        public readonly server: TcpServer
     ) {
         this.setStage0PreAuthMode();
         /** Accumulates received data, containing none, one, or multiple frames; the last frame may be partial only. */

@@ -1,5 +1,4 @@
 import net from "node:net";
-import { ProtocolHandler } from "../main";
 import { TcpClient } from "./client";
 
 const { PORT = "12312", HOST = "127.0.0.1" } = process.env;
@@ -8,9 +7,9 @@ export class TcpServer {
     public readonly server: net.Server;
     public readonly clients = new Map<number, TcpClient>();
 
-    public constructor(public readonly handler: ProtocolHandler) {
+    public constructor() {
         this.server = net.createServer({}, (socket) => {
-            const client = new TcpClient(socket, this, handler);
+            const client = new TcpClient(socket, this);
             client.log("Connected from", socket.remoteAddress);
             this.clients.set(client.id, client);
             socket.on("end", () => this.clients.delete(client.id));

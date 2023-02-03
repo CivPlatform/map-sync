@@ -91,13 +91,16 @@ export class RegionTimestampsPacket {
     public constructor(
         public readonly world: string,
         public readonly regions: RegionTimestamp[]
-    ) { }
+    ) {}
 
     public encode(writer: BufWriter) {
         writer.writeString(this.world);
         writer.writeInt16(this.regions.length);
-        if (this.regions.length > 32767) { // TODO: Remove this if it's not an issue
-            console.error("Attempting to send region timestamps, but the regions surpass the maximum value for a signed-short length!");
+        if (this.regions.length > 32767) {
+            // TODO: Remove this if it's not an issue
+            console.error(
+                "Attempting to send region timestamps, but the regions surpass the maximum value for a signed-short length!"
+            );
         }
         for (const region of this.regions) {
             writer.writeInt16(region.x);
@@ -148,7 +151,7 @@ export class RegionCatchupResponsePacket {
     public constructor(
         public readonly world: string,
         public readonly chunks: CatchupChunk[]
-    ) { }
+    ) {}
 
     public encode(writer: BufWriter) {
         writer.writeString(this.world);
@@ -207,11 +210,11 @@ export class ChunkDataPacket {
         public readonly z: number,
         public readonly timestamp: number,
         public readonly data: {
-            readonly version: number,
-            readonly hash: Buffer,
-            readonly data: Buffer
+            readonly version: number;
+            readonly hash: Buffer;
+            readonly data: Buffer;
         }
-    ) { }
+    ) {}
 
     public encode(writer: BufWriter) {
         writer.writeString(this.world);

@@ -28,6 +28,10 @@ export abstract class AbstractClientMode {
  */
 export class UnsupportedPacketException extends Error {
     public constructor(mode: AbstractClientMode, packet: ClientPacket) {
-        super(`ClientMode[${mode.constructor.name}] does not support packet [${packet.type}]: ${inspect(packet)}`);
+        super(
+            `ClientMode[${mode.constructor.name}] does not support packet [${
+                packet.type
+            }]: ${inspect(packet)}`
+        );
     }
 }

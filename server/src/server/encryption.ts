@@ -17,8 +17,8 @@ export function decrypt(buffer: Buffer): Buffer {
 }
 
 export type Ciphers = {
-    readonly encipher: crypto.Cipher,
-    readonly decipher: crypto.Decipher
+    readonly encipher: crypto.Cipher;
+    readonly decipher: crypto.Decipher;
 };
 
 export function generateCiphers(secret: Buffer): Ciphers {

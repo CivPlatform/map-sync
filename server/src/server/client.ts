@@ -141,6 +141,41 @@ export class TcpClient {
         };
     }
 
+    private setStage1PreAuthMode() {
+        const client = this;
+        this.mode = new class Stage1PreAuthMode extends AbstractClientMode {
+            async onPacketReceived(packet: ClientPacket) {
+                if (packet instanceof EncryptionResponsePacket) {
+                    const verifyToken = encryption.decrypt(packet.verifyToken);
+                    if (!verifyToken.equals(client.verifyToken!)) {
+                        throw new Error(
+                            `verifyToken mismatch: got ${verifyToken} expected ${client.verifyToken}`
+                        );
+                    }
+                    const sharedSecret = encryption.decrypt(packet.sharedSecret);
+                    const mojangAuth = await fetchHasJoined({
+                        username: client.claimedMojangName!,
+                        shaHex: encryption.generateShaHex(sharedSecret)
+                    });
+                    if (!mojangAuth?.uuid) {
+                        client.kick(`Mojang auth failed`);
+                        throw new Error(`Mojang auth failed`);
+                    }
+                    client.log("Authenticated as", mojangAuth);
+                    client.uuid = mojangAuth.uuid;
+                    client.mcName = mojangAuth.name;
+                    client.name += ":" + mojangAuth.name;
+                    client.cryptoPromise = Promise.resolve(encryption.generateCiphers(sharedSecret));
+                    await client.cryptoPromise.then(async () => {
+                        await client.handler.handleClientAuthenticated(client);
+                    });
+                    // TODO: Set authed mode here
+                }
+                throw new UnsupportedPacketException(this, packet);
+            }
+        };
+    }
+
     private async handlePacketReceived(pkt: ClientPacket) {
         if (!this.uuid) {
             // not authenticated yet
@@ -150,9 +185,9 @@ export class TcpClient {
                     await this.mode.onPacketReceived(pkt);
                     return;
                 case "EncryptionResponse":
-                    return await this.handleEncryptionResponsePacket(
-                        pkt as EncryptionResponsePacket
-                    );
+                    this.setStage1PreAuthMode();
+                    await this.mode.onPacketReceived(pkt);
+                    return;
             }
             throw new Error(
                 `Packet ${pkt.type} from unauth'd client ${this.id}`
@@ -198,47 +233,6 @@ export class TcpClient {
         }
 
         this.socket.write(buf);
-    }
-
-    private async handleEncryptionResponsePacket(
-        pkt: EncryptionResponsePacket
-    ) {
-        if (this.cryptoPromise) throw new Error(`Already authenticated`);
-        if (!this.claimedMojangName)
-            throw new Error(`Encryption has not started: no mojangName`);
-        if (!this.verifyToken)
-            throw new Error(`Encryption has not started: no verifyToken`);
-
-        const verifyToken = encryption.decrypt(pkt.verifyToken);
-        if (!this.verifyToken.equals(verifyToken)) {
-            throw new Error(
-                `verifyToken mismatch: got ${verifyToken} expected ${this.verifyToken}`
-            );
-        }
-
-        const secret = encryption.decrypt(pkt.sharedSecret);
-
-        this.cryptoPromise = fetchHasJoined({
-            username: this.claimedMojangName,
-            shaHex: encryption.generateShaHex(secret)
-        }).then(async (mojangAuth) => {
-            if (!mojangAuth?.uuid) {
-                this.kick(`Mojang auth failed`);
-                throw new Error(`Mojang auth failed`);
-            }
-
-            this.log("Authenticated as", mojangAuth);
-
-            this.uuid = mojangAuth.uuid;
-            this.mcName = mojangAuth.name;
-            this.name += ":" + mojangAuth.name;
-
-            return encryption.generateCiphers(secret);
-        });
-
-        await this.cryptoPromise.then(async () => {
-            await this.handler.handleClientAuthenticated(this);
-        });
     }
 
     public debug(...args: any[]) {

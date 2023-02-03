@@ -129,9 +129,8 @@ export class TcpClient {
                         client.kick("Unsupported mod version!");
                         return;
                     }
-                    client.world = packet.world;
                     const verifyToken = crypto.randomBytes(4);
-                    client.setStage1PreAuthMode(packet.mojangName, verifyToken);
+                    client.setStage1PreAuthMode(packet.mojangName, verifyToken, packet.world);
                     await client.send(
                         new EncryptionRequestPacket(
                             encryption.PUBLIC_KEY_BUFFER,
@@ -145,7 +144,9 @@ export class TcpClient {
         };
     }
 
-    private setStage1PreAuthMode(claimedUsername: string, verifyToken: Buffer) {
+    private setStage1PreAuthMode(claimedUsername: string,
+                                 verifyToken: Buffer,
+                                 world: string) {
         const client = this;
         this.mode = new class Stage1PreAuthMode extends AbstractClientMode {
             async onPacketReceived(packet: ClientPacket) {
@@ -182,7 +183,7 @@ export class TcpClient {
                     client.setPostAuthMode(encryption.generateCiphers(sharedSecret));
                     const timestamps = await PlayerChunkDB.getRegionTimestamps();
                     client.send(new RegionTimestampsPacket(
-                        client.world!,
+                        world,
                         timestamps.map((timestamp) => ({
                             x: timestamp.region_x,
                             z: timestamp.region_z,

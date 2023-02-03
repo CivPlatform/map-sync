@@ -14,6 +14,7 @@ import {
 import * as encryption from "./encryption";
 import { TcpServer } from "./server";
 import { AbstractClientMode, UnsupportedPacketException } from "./mode";
+import { MOD_VERSION } from "../const";
 
 /** prevent Out of Memory when client sends a large packet */
 const MAX_FRAME_SIZE = 2 ** 24;
@@ -27,7 +28,6 @@ export class TcpClient {
     public name = "Client" + this.id;
     public mode: AbstractClientMode = null!;
 
-    public modVersion: string | undefined;
     public gameAddress: string | undefined;
     public uuid: string | undefined;
     public mcName: string | undefined;
@@ -119,9 +119,11 @@ export class TcpClient {
         this.mode = new class Stage0PreAuthMode extends AbstractClientMode {
             async onPacketReceived(packet: ClientPacket) {
                 if (packet instanceof HandshakePacket) {
-                    client.modVersion = packet.modVersion;
-                    // TODO: Maybe disconnect the client here if the modVersion
-                    //       isn't supported
+                    if (packet.modVersion !== MOD_VERSION) {
+                        client.log(`Kicking for unsupported mod version [${packet.modVersion}]`);
+                        client.kick("Unsupported mod version!");
+                        return;
+                    }
                     client.gameAddress = packet.gameAddress;
                     // TODO: Likewise, maybe disconnect here if the gameAddress
                     //       isn't supported

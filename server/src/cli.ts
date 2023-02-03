@@ -2,6 +2,7 @@ import lib_readline from "readline";
 import lib_stream from "stream";
 
 import * as metadata from "./metadata";
+import * as whitelist from "./config/whitelist";
 
 //idk where these come from lol
 interface TerminalExtras {
@@ -97,12 +98,12 @@ async function handle_input(input: string): Promise<void> {
             break;
         }
         case "whitelist_load": {
-            metadata.whitelist_load();
+            whitelist.load();
             console.log("Whitelist loaded");
             break;
         }
         case "whitelist_save": {
-            metadata.whitelist_save();
+            whitelist.save();
             console.log("Whitelist saved");
             break;
         }
@@ -111,8 +112,8 @@ async function handle_input(input: string): Promise<void> {
                 console.warn("You did not provide a UUID to whitelist!");
                 break;
             }
-            metadata.whitelist.add(extras);
-            metadata.whitelist_save();
+            whitelist.entries.add(extras);
+            whitelist.save();
             console.log(`Added [${extras}] to whitelist and saved`);
             break;
         }
@@ -121,8 +122,8 @@ async function handle_input(input: string): Promise<void> {
                 console.warn("You did not provide a UUID to remove from the whitelist!");
                 break;
             }
-            metadata.whitelist.delete(extras);
-            metadata.whitelist_save();
+            whitelist.entries.delete(extras);
+            whitelist.save();
             console.log(`Removed [${extras}] from the whitelist and saved`);
             break;
         }
@@ -136,8 +137,8 @@ async function handle_input(input: string): Promise<void> {
                 console.warn(`Could not find UUID for IGN [${extras}]`);
                 break;
             }
-            metadata.whitelist.add(uuid);
-            metadata.whitelist_save();
+            whitelist.entries.add(uuid);
+            whitelist.save();
             console.log(`Added [${uuid}] to whitelist and saved`);
             break;
         }
@@ -151,8 +152,8 @@ async function handle_input(input: string): Promise<void> {
                 console.warn(`Could not find UUID for IGN [${extras}]`);
                 break;
             }
-            metadata.whitelist.delete(uuid);
-            metadata.whitelist_save();
+            whitelist.entries.delete(uuid);
+            whitelist.save();
             console.log(`Removed [${uuid}] from the whitelist and saved`);
             break;
         }

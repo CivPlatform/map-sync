@@ -13,33 +13,6 @@ try {
 }
 
 // ------------------------------------------------------------ //
-// Whitelist
-// ------------------------------------------------------------ //
-
-export const WHITELIST_FILENAME = "whitelist.json";
-export const WHITELIST_SCHEMA = z.array(z.string().uuid());
-export const whitelist = new Set<string>();
-
-/** Loads the whitelist from whitelist.json */
-export function whitelist_load() {
-    whitelist.clear();
-    const entries: string[] = parseConfigFile(
-        WHITELIST_FILENAME,
-        WHITELIST_SCHEMA.parse,
-        () => []
-    );
-    for (const entry of entries) {
-        whitelist.add(entry);
-    }
-}
-whitelist_load();
-
-/** Saves the whitelist to whitelist.json */
-export function whitelist_save() {
-    saveConfigFile(WHITELIST_FILENAME, Array.from(whitelist.values()));
-}
-
-// ------------------------------------------------------------ //
 // UUID Cache
 // ------------------------------------------------------------ //
 

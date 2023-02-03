@@ -28,8 +28,6 @@ Promise.resolve().then(async () => {
 export class Main {
     server: TcpServer = null!;
 
-    handleClientDisconnected(client: ProtocolClient) {}
-
     handleClientPacketReceived(client: ProtocolClient, pkt: ClientPacket) {
         client.debug(client.mcName + " <- " + pkt.type);
         switch (pkt.type) {

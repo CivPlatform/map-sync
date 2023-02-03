@@ -67,59 +67,98 @@ async function handle_input(input: string): Promise<void> {
     ).toLowerCase();
     const extras = command_end_i > -1 ? input.substring(command_end_i + 1) : "";
 
-    if (command === "") {
-    } else if (command === "ping") console.log("pong");
-    else if (command === "help") {
-        console.log('ping - Prints "pong" for my sanity. -SirAlador');
-        console.log(
-            "help - Prints info about commands, including the help command."
-        );
-        console.log("whitelist_load - Loads the whitelist from disk");
-        console.log("whitelist_save - Saves the whitelist to disk");
-        console.log(
-            "whitelist_add <uuid> - Adds the given account UUID to the\n    whitelist, and saves the whitelist to disk"
-        );
-        console.log(
-            "whitelist_add_ign <ign> - Adds the UUID cached with the\n    given IGN to the whitelist, and saves the whitelist to disk"
-        );
-        console.log(
-            "whitelist_remove <uuid> - Removes the given account UUID\n    from the whitelist, and saves the whitelist to disk"
-        );
-        console.log(
-            "whitelist_remove_ign <ign> - Removes the UUID cached with\n    the given IGN from the whitelist, and saves the whitelist to disk"
-        );
-    } else if (command === "whitelist_load") metadata.whitelist_load();
-    else if (command === "whitelist_save") metadata.whitelist_save();
-    else if (command === "whitelist_add") {
-        if (extras.length === 0)
-            throw new Error("Did not provide UUID to whitelist");
-        const uuid = extras;
-        metadata.whitelist.add(uuid);
-        metadata.whitelist_save();
-    } else if (command === "whitelist_add_ign") {
-        if (extras.length === 0)
-            throw new Error("Did not provide UUID to whitelist");
-        const ign = extras;
-        const uuid = metadata.uuid_cache.get(ign) ?? null;
-        if (uuid === null) throw new Error("No cached UUID for IGN " + ign);
-        metadata.whitelist.add(uuid);
-        metadata.whitelist_save();
-    } else if (command === "whitelist_remove") {
-        if (extras.length === 0)
-            throw new Error("Did not provide UUID to whitelist");
-        const uuid = extras;
-        metadata.whitelist.delete(uuid);
-        metadata.whitelist_save();
-    } else if (command === "whitelist_remove_ign") {
-        if (extras.length === 0)
-            throw new Error("Did not provide UUID to whitelist");
-        const ign = extras;
-        const uuid = metadata.uuid_cache.get(ign) ?? null;
-        if (uuid === null) throw new Error("No cached UUID for IGN " + ign);
-        metadata.whitelist.delete(uuid);
-        metadata.whitelist_save();
-    } else {
-        throw new Error(`Unknown command "${command}"`);
+    switch (command) {
+        case "": {
+            break;
+        }
+        case "ping": {
+            console.log("pong");
+            break;
+        }
+        case "help": {
+            console.log('ping - Prints "pong" for my sanity. -SirAlador');
+            console.log(
+                "help - Prints info about commands, including the help command."
+            );
+            console.log("whitelist_load - Loads the whitelist from disk");
+            console.log("whitelist_save - Saves the whitelist to disk");
+            console.log(
+                "whitelist_add <uuid> - Adds the given account UUID to the\n    whitelist, and saves the whitelist to disk"
+            );
+            console.log(
+                "whitelist_add_ign <ign> - Adds the UUID cached with the\n    given IGN to the whitelist, and saves the whitelist to disk"
+            );
+            console.log(
+                "whitelist_remove <uuid> - Removes the given account UUID\n    from the whitelist, and saves the whitelist to disk"
+            );
+            console.log(
+                "whitelist_remove_ign <ign> - Removes the UUID cached with\n    the given IGN from the whitelist, and saves the whitelist to disk"
+            );
+            break;
+        }
+        case "whitelist_load": {
+            metadata.whitelist_load();
+            console.log("Whitelist loaded");
+            break;
+        }
+        case "whitelist_save": {
+            metadata.whitelist_save();
+            console.log("Whitelist saved");
+            break;
+        }
+        case "whitelist_add": {
+            if (extras.length < 1) {
+                console.warn("You did not provide a UUID to whitelist!");
+                break;
+            }
+            metadata.whitelist.add(extras);
+            metadata.whitelist_save();
+            console.log(`Added [${extras}] to whitelist and saved`);
+            break;
+        }
+        case "whitelist_remove": {
+            if (extras.length < 1) {
+                console.warn("You did not provide a UUID to remove from the whitelist!");
+                break;
+            }
+            metadata.whitelist.delete(extras);
+            metadata.whitelist_save();
+            console.log(`Removed [${extras}] from the whitelist and saved`);
+            break;
+        }
+        case "whitelist_add_ign": {
+            if (extras.length < 1) {
+                console.warn("You did not provide a IGN to add!");
+                break;
+            }
+            const uuid = metadata.uuid_cache.get(extras) ?? null;
+            if (uuid === null) {
+                console.warn(`Could not find UUID for IGN [${extras}]`);
+                break;
+            }
+            metadata.whitelist.add(uuid);
+            metadata.whitelist_save();
+            console.log(`Added [${uuid}] to whitelist and saved`);
+            break;
+        }
+        case "whitelist_remove_ign": {
+            if (extras.length < 1) {
+                console.warn("You did not provide a IGN to remove!");
+                break;
+            }
+            const uuid = metadata.uuid_cache.get(extras) ?? null;
+            if (uuid === null) {
+                console.warn(`Could not find UUID for IGN [${extras}]`);
+                break;
+            }
+            metadata.whitelist.delete(uuid);
+            metadata.whitelist_save();
+            console.log(`Removed [${uuid}] from the whitelist and saved`);
+            break;
+        }
+        default: {
+            console.warn(`Unknown command "${command}"`);
+        }
     }
 }
 

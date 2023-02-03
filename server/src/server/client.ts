@@ -13,6 +13,7 @@ import {
 } from "../protocol/packets";
 import * as encryption from "./encryption";
 import { TcpServer } from "./server";
+import { AbstractClientMode } from "./mode";
 
 /** prevent Out of Memory when client sends a large packet */
 const MAX_FRAME_SIZE = 2 ** 24;
@@ -24,6 +25,7 @@ export class TcpClient {
     public readonly id = nextClientId++;
     /** contains mojang name once logged in */
     public name = "Client" + this.id;
+    public mode: AbstractClientMode = null!;
 
     public modVersion: string | undefined;
     public gameAddress: string | undefined;

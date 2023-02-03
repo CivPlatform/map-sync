@@ -80,6 +80,7 @@ export class TcpClient {
 
                     try {
                         const packet = decodePacket(reader);
+                        this.debug(`MapSync ← Client[${packet.type}]`);
                         await this.mode.onPacketReceived(packet);
                     } catch (err) {
                         this.warn(err);
@@ -131,7 +132,7 @@ export class TcpClient {
                     client.world = packet.world;
                     const verifyToken = crypto.randomBytes(4);
                     client.setStage1PreAuthMode(packet.mojangName, verifyToken);
-                    await client.INTERNAL_send(
+                    await client.send(
                         new EncryptionRequestPacket(
                             encryption.PUBLIC_KEY_BUFFER,
                             verifyToken
@@ -228,26 +229,13 @@ export class TcpClient {
     }
 
     public async send(pkt: ServerPacket) {
-        if (!this.uuid) {
-            this.debug("Not authenticated, dropping packet", pkt.type);
-            return;
-        }
-        this.debug(this.mcName + " -> " + pkt.type);
-        await this.INTERNAL_send(pkt, true);
-    }
-
-    private async INTERNAL_send(pkt: ServerPacket, doCrypto = false) {
-        if (!this.socket.writable)
-            return this.debug("Socket closed, dropping", pkt.type);
-
+        this.debug(`MapSync[${pkt.type}] → Client`);
         const writer = new BufWriter(); // TODO size hint
         writer.writeUInt32(0); // set later, but reserve space in buffer
         encodePacket(pkt, writer);
         let buf = writer.getBuffer();
         buf.writeUInt32BE(buf.length - 4, 0); // write into space reserved above
-
         buf = await this.mode.preSendBufferTransformer(buf);
-
         this.socket.write(buf);
     }
 

@@ -223,7 +223,31 @@ export class TcpClient {
                     return;
                 }
                 if (packet instanceof ChunkCatchupRequestPacket) {
-                    await client.handler.handleCatchupRequest(client, packet);
+                    for (const requestedChunk of packet.chunks) {
+                        // TODO: This feels like it could be heavily optimised
+                        //       with a raw batched query
+                        let chunk = await PlayerChunkDB.getChunkWithData({
+                            world: requestedChunk.world,
+                            chunk_x: requestedChunk.chunk_x,
+                            chunk_z: requestedChunk.chunk_z
+                        });
+                        if (!chunk) {
+                            console.error(
+                                `${client.name} requested unavailable chunk`,
+                                chunk
+                            );
+                            continue;
+                        }
+                        if (chunk.ts > requestedChunk.ts) continue; // someone sent a new chunk, which presumably got relayed to the client
+                        if (chunk.ts < requestedChunk.ts) continue; // the client already has a chunk newer than this
+                        client.send(new ChunkDataPacket(
+                            chunk.world,
+                            chunk.chunk_x,
+                            chunk.chunk_z,
+                            chunk.ts,
+                            chunk.data
+                        ));
+                    }
                     return;
                 }
                 if (packet instanceof ChunkDataPacket) {

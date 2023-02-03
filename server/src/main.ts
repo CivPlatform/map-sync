@@ -53,40 +53,4 @@ export class Main {
         // TODO queue tile render for web map
     }
 
-    async handleCatchupRequest(
-        client: ProtocolClient,
-        pkt: ChunkCatchupRequestPacket
-    ) {
-        if (!client.uuid)
-            throw new Error(`${client.name} is not authenticated`);
-
-        for (const req of pkt.chunks) {
-            const { world, chunk_x, chunk_z } = req;
-
-            let chunk = await PlayerChunkDB.getChunkWithData({
-                world,
-                chunk_x,
-                chunk_z
-            });
-            if (!chunk) {
-                console.error(
-                    `${client.name} requested unavailable chunk`,
-                    req
-                );
-                continue;
-            }
-
-            if (chunk.ts > req.ts) continue; // someone sent a new chunk, which presumably got relayed to the client
-            if (chunk.ts < req.ts) continue; // the client already has a chunk newer than this
-
-            client.send(new ChunkDataPacket(
-                world,
-                chunk_x,
-                chunk_z,
-                chunk.ts,
-                chunk.data
-            ));
-        }
-    }
-
 }

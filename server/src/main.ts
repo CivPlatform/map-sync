@@ -3,7 +3,7 @@ import { connectDB } from "./db";
 import { PlayerChunk, PlayerChunkDB } from "./MapChunk";
 import { uuid_cache, uuid_cache_save, getConfig, whitelist } from "./metadata";
 import { ClientPacket } from "./protocol";
-import { TcpClient } from "./server";
+import { TcpClient } from "./server/client";
 import { TcpServer } from "./server/server";
 import {
     RegionTimestampsPacket,

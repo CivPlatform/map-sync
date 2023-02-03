@@ -1,36 +1,35 @@
-import crypto from "crypto";
-import net from "net";
+import crypto from "node:crypto";
+import net from "node:net";
 import fetch from "node-fetch";
-import { ProtocolHandler } from "./main";
-import type { ClientPacket, ServerPacket } from "./protocol";
-import { decodePacket, encodePacket } from "./protocol";
-import { BufReader } from "./protocol/BufReader";
-import { BufWriter } from "./protocol/BufWriter";
+import { ProtocolHandler } from "../main";
+import type { ClientPacket, ServerPacket } from "../protocol";
+import { decodePacket, encodePacket } from "../protocol";
+import { BufReader } from "../protocol/BufReader";
+import { BufWriter } from "../protocol/BufWriter";
 import {
     HandshakePacket,
     EncryptionRequestPacket,
     EncryptionResponsePacket
-} from "./protocol/packets";
-import * as encryption from "./server/encryption";
-import { TcpServer } from "./server/server";
+} from "../protocol/packets";
+import * as encryption from "./encryption";
+import { TcpServer } from "./server";
 
+/** prevent Out of Memory when client sends a large packet */
+const MAX_FRAME_SIZE = 2 ** 24;
 let nextClientId = 1;
 
 /** Prefixes packets with their length (UInt32BE);
  * handles Mojang authentication */
 export class TcpClient {
-    readonly id = nextClientId++;
+    public readonly id = nextClientId++;
     /** contains mojang name once logged in */
-    name = "Client" + this.id;
+    public name = "Client" + this.id;
 
-    modVersion: string | undefined;
-    gameAddress: string | undefined;
-    uuid: string | undefined;
-    mcName: string | undefined;
-    world: string | undefined;
-
-    /** prevent Out of Memory when client sends a large packet */
-    maxFrameSize = 2 ** 24;
+    public modVersion: string | undefined;
+    public gameAddress: string | undefined;
+    public uuid: string | undefined;
+    public mcName: string | undefined;
+    public world: string | undefined;
 
     /** sent by client during handshake */
     private claimedMojangName?: string;
@@ -39,10 +38,10 @@ export class TcpClient {
      * before we can en/decrypt packets following the handshake */
     private cryptoPromise?: Promise<encryption.Ciphers>;
 
-    constructor(
-        private socket: net.Socket,
-        private server: TcpServer,
-        private handler: ProtocolHandler
+    public constructor(
+        public readonly socket: net.Socket,
+        public readonly server: TcpServer,
+        public readonly handler: ProtocolHandler
     ) {
         this.log("Connected from", socket.remoteAddress);
         handler.handleClientConnected(this);
@@ -66,7 +65,7 @@ export class TcpClient {
                     const frameSize = accBuf.readUInt32BE();
 
                     // prevent Out of Memory
-                    if (frameSize > this.maxFrameSize) {
+                    if (frameSize > MAX_FRAME_SIZE) {
                         return this.kick(
                             "Frame too large: " +
                                 frameSize +
@@ -137,12 +136,12 @@ export class TcpClient {
         }
     }
 
-    kick(internalReason: string) {
+    public kick(internalReason: string) {
         this.log(`Kicking:`, internalReason);
         this.socket.destroy();
     }
 
-    async send(pkt: ServerPacket) {
+    public async send(pkt: ServerPacket) {
         if (!this.cryptoPromise) {
             this.debug("Not encrypted, dropping packet", pkt.type);
             return;
@@ -152,10 +151,10 @@ export class TcpClient {
             return;
         }
         this.debug(this.mcName + " -> " + pkt.type);
-        await this.sendInternal(pkt, true);
+        await this.INTERNAL_send(pkt, true);
     }
 
-    private async sendInternal(pkt: ServerPacket, doCrypto = false) {
+    private async INTERNAL_send(pkt: ServerPacket, doCrypto = false) {
         if (!this.socket.writable)
             return this.debug("Socket closed, dropping", pkt.type);
         if (doCrypto && !this.cryptoPromise)
@@ -185,7 +184,7 @@ export class TcpClient {
         this.world = packet.world;
         this.verifyToken = crypto.randomBytes(4);
 
-        await this.sendInternal(
+        await this.INTERNAL_send(
             new EncryptionRequestPacket(
                 encryption.PUBLIC_KEY_BUFFER,
                 this.verifyToken
@@ -234,16 +233,16 @@ export class TcpClient {
         });
     }
 
-    debug(...args: any[]) {
+    public debug(...args: any[]) {
         if (process.env.NODE_ENV === "production") return;
         console.debug(`[${this.name}]`, ...args);
     }
 
-    log(...args: any[]) {
+    public log(...args: any[]) {
         console.log(`[${this.name}]`, ...args);
     }
 
-    warn(...args: any[]) {
+    public warn(...args: any[]) {
         console.error(`[${this.name}]`, ...args);
     }
 }

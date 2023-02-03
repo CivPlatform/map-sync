@@ -33,9 +33,6 @@ export class TcpClient {
     public mcName: string | undefined;
     public world: string | undefined;
 
-    /** sent by client during handshake */
-    private claimedMojangName?: string;
-    private verifyToken?: Buffer;
     /** we need to wait for the mojang auth response
      * before we can en/decrypt packets following the handshake */
     private cryptoPromise?: Promise<encryption.Ciphers>;
@@ -45,6 +42,7 @@ export class TcpClient {
         public readonly server: TcpServer,
         public readonly handler: ProtocolHandler
     ) {
+        this.setStage0PreAuthMode();
         /** Accumulates received data, containing none, one, or multiple frames; the last frame may be partial only. */
         let accBuf: Buffer = Buffer.alloc(0);
 
@@ -132,16 +130,15 @@ export class TcpClient {
                         client.kick("Unsupported mod version!");
                         return;
                     }
-                    client.claimedMojangName = packet.mojangName;
                     client.world = packet.world;
-                    client.verifyToken = crypto.randomBytes(4);
+                    const verifyToken = crypto.randomBytes(4);
                     await client.INTERNAL_send(
                         new EncryptionRequestPacket(
                             encryption.PUBLIC_KEY_BUFFER,
-                            client.verifyToken
+                            verifyToken
                         )
                     );
-                    // TODO: Set stage 1 mode here
+                    client.setStage1PreAuthMode(packet.mojangName, verifyToken);
                     return;
                 }
                 throw new UnsupportedPacketException(this, packet);
@@ -149,20 +146,20 @@ export class TcpClient {
         };
     }
 
-    private setStage1PreAuthMode() {
+    private setStage1PreAuthMode(claimedUsername: string, verifyToken: Buffer) {
         const client = this;
         this.mode = new class Stage1PreAuthMode extends AbstractClientMode {
             async onPacketReceived(packet: ClientPacket) {
                 if (packet instanceof EncryptionResponsePacket) {
-                    const verifyToken = encryption.decrypt(packet.verifyToken);
-                    if (!verifyToken.equals(client.verifyToken!)) {
+                    const parsedVerifyToken = encryption.decrypt(packet.verifyToken);
+                    if (!parsedVerifyToken.equals(verifyToken)) {
                         throw new Error(
-                            `verifyToken mismatch: got ${verifyToken} expected ${client.verifyToken}`
+                            `verifyToken mismatch: got ${parsedVerifyToken} expected ${verifyToken}`
                         );
                     }
                     const sharedSecret = encryption.decrypt(packet.sharedSecret);
                     const mojangAuth = await fetchHasJoined({
-                        username: client.claimedMojangName!,
+                        username: claimedUsername,
                         shaHex: encryption.generateShaHex(sharedSecret)
                     });
                     if (!mojangAuth?.uuid) {
@@ -187,20 +184,7 @@ export class TcpClient {
 
     private async handlePacketReceived(pkt: ClientPacket) {
         if (!this.uuid) {
-            // not authenticated yet
-            switch (pkt.type) {
-                case "Handshake":
-                    this.setStage0PreAuthMode();
-                    await this.mode.onPacketReceived(pkt);
-                    return;
-                case "EncryptionResponse":
-                    this.setStage1PreAuthMode();
-                    await this.mode.onPacketReceived(pkt);
-                    return;
-            }
-            throw new Error(
-                `Packet ${pkt.type} from unauth'd client ${this.id}`
-            );
+            await this.mode.onPacketReceived(pkt);
         } else {
             return await this.handler.handleClientPacketReceived(this, pkt);
         }

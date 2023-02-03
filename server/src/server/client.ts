@@ -13,7 +13,7 @@ import {
 } from "../protocol/packets";
 import * as encryption from "./encryption";
 import { TcpServer } from "./server";
-import { AbstractClientMode } from "./mode";
+import { AbstractClientMode, UnsupportedPacketException } from "./mode";
 
 /** prevent Out of Memory when client sends a large packet */
 const MAX_FRAME_SIZE = 2 ** 24;
@@ -114,14 +114,41 @@ export class TcpClient {
         });
     }
 
+    private setStage0PreAuthMode() {
+        const client = this;
+        this.mode = new class Stage0PreAuthMode extends AbstractClientMode {
+            async onPacketReceived(packet: ClientPacket) {
+                if (packet instanceof HandshakePacket) {
+                    client.modVersion = packet.modVersion;
+                    // TODO: Maybe disconnect the client here if the modVersion
+                    //       isn't supported
+                    client.gameAddress = packet.gameAddress;
+                    // TODO: Likewise, maybe disconnect here if the gameAddress
+                    //       isn't supported
+                    client.claimedMojangName = packet.mojangName;
+                    client.world = packet.world;
+                    client.verifyToken = crypto.randomBytes(4);
+                    await client.INTERNAL_send(
+                        new EncryptionRequestPacket(
+                            encryption.PUBLIC_KEY_BUFFER,
+                            client.verifyToken
+                        )
+                    );
+                    // TODO: Set stage 1 mode here
+                }
+                throw new UnsupportedPacketException(this, packet);
+            }
+        };
+    }
+
     private async handlePacketReceived(pkt: ClientPacket) {
         if (!this.uuid) {
             // not authenticated yet
             switch (pkt.type) {
                 case "Handshake":
-                    return await this.handleHandshakePacket(
-                        pkt as HandshakePacket
-                    );
+                    this.setStage0PreAuthMode();
+                    await this.mode.onPacketReceived(pkt);
+                    return;
                 case "EncryptionResponse":
                     return await this.handleEncryptionResponsePacket(
                         pkt as EncryptionResponsePacket
@@ -171,24 +198,6 @@ export class TcpClient {
         }
 
         this.socket.write(buf);
-    }
-
-    private async handleHandshakePacket(packet: HandshakePacket) {
-        if (this.cryptoPromise) throw new Error(`Already authenticated`);
-        if (this.verifyToken) throw new Error(`Encryption already started`);
-
-        this.modVersion = packet.modVersion;
-        this.gameAddress = packet.gameAddress;
-        this.claimedMojangName = packet.mojangName;
-        this.world = packet.world;
-        this.verifyToken = crypto.randomBytes(4);
-
-        await this.INTERNAL_send(
-            new EncryptionRequestPacket(
-                encryption.PUBLIC_KEY_BUFFER,
-                this.verifyToken
-            )
-        );
     }
 
     private async handleEncryptionResponsePacket(

@@ -28,35 +28,6 @@ Promise.resolve().then(async () => {
 export class Main {
     server: TcpServer = null!;
 
-    async handleClientAuthenticated(client: ProtocolClient) {
-        if (!client.uuid) throw new Error("Client not authenticated");
-
-        uuid_cache.set(client.mcName!, client.uuid);
-        uuid_cache_save();
-
-        if (getConfig().whitelist) {
-            if (!whitelist.has(client.uuid)) {
-                client.log(
-                    `Rejected unwhitelisted user ${client.mcName} (${client.uuid})`
-                );
-                client.kick(`Not whitelisted`);
-                return;
-            }
-        }
-
-        // TODO check version, mc server, user access
-
-        const timestamps = await PlayerChunkDB.getRegionTimestamps();
-        client.send(new RegionTimestampsPacket(
-            client.world!,
-            timestamps.map((timestamp) => ({
-                x: timestamp.region_x,
-                z: timestamp.region_z,
-                ts: timestamp.ts
-            }) as RegionTimestamp)
-        ));
-    }
-
     handleClientDisconnected(client: ProtocolClient) {}
 
     handleClientPacketReceived(client: ProtocolClient, pkt: ClientPacket) {

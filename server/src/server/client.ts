@@ -9,13 +9,15 @@ import { BufWriter } from "../protocol/BufWriter";
 import {
     HandshakePacket,
     EncryptionRequestPacket,
-    EncryptionResponsePacket
+    EncryptionResponsePacket, RegionTimestampsPacket
 } from "../protocol/packets";
 import * as encryption from "./encryption";
 import { TcpServer } from "./server";
 import { AbstractClientMode, UnsupportedPacketException } from "./mode";
 import { MOD_VERSION } from "../const";
-import { getConfig } from "../metadata";
+import { getConfig, uuid_cache, uuid_cache_save, whitelist } from "../metadata";
+import { PlayerChunkDB } from "../MapChunk";
+import { RegionTimestamp } from "../protocol/structs";
 
 /** prevent Out of Memory when client sends a large packet */
 const MAX_FRAME_SIZE = 2 ** 24;
@@ -170,11 +172,26 @@ export class TcpClient {
                     client.uuid = mojangAuth.uuid;
                     client.mcName = mojangAuth.name;
                     client.name += ":" + mojangAuth.name;
+                    uuid_cache.set(client.mcName!, client.uuid);
+                    uuid_cache_save();
+                    if (getConfig().whitelist) {
+                        if (!whitelist.has(client.uuid)) {
+                            client.log("Rejecting unwhitelisted user!");
+                            client.kick(`Not whitelisted`);
+                            return;
+                        }
+                    }
                     client.cryptoPromise = Promise.resolve(encryption.generateCiphers(sharedSecret));
                     // TODO: Set authed mode here
-                    await client.cryptoPromise.then(async () => {
-                        await client.handler.handleClientAuthenticated(client);
-                    });
+                    const timestamps = await PlayerChunkDB.getRegionTimestamps();
+                    client.send(new RegionTimestampsPacket(
+                        client.world!,
+                        timestamps.map((timestamp) => ({
+                            x: timestamp.region_x,
+                            z: timestamp.region_z,
+                            ts: timestamp.ts
+                        }) as RegionTimestamp)
+                    ));
                     return;
                 }
                 throw new UnsupportedPacketException(this, packet);

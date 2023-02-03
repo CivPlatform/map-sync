@@ -155,9 +155,9 @@ export class TcpClient {
                 if (packet instanceof EncryptionResponsePacket) {
                     const parsedVerifyToken = encryption.decrypt(packet.verifyToken);
                     if (!parsedVerifyToken.equals(verifyToken)) {
-                        throw new Error(
-                            `verifyToken mismatch: got ${parsedVerifyToken} expected ${verifyToken}`
-                        );
+                        client.log(`Incorrect verifyToken! Expected [${verifyToken}], got [${parsedVerifyToken}]`);
+                        client.kick("Incorrect verifyToken!");
+                        return;
                     }
                     const sharedSecret = encryption.decrypt(packet.sharedSecret);
                     const mojangAuth = await fetchHasJoined({
@@ -165,8 +165,9 @@ export class TcpClient {
                         shaHex: encryption.generateShaHex(sharedSecret)
                     });
                     if (!mojangAuth?.uuid) {
+                        client.log("Mojang auth failed");
                         client.kick(`Mojang auth failed`);
-                        throw new Error(`Mojang auth failed`);
+                        return;
                     }
                     client.log("Authenticated as", mojangAuth);
                     client.uuid = mojangAuth.uuid;

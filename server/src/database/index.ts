@@ -21,7 +21,3 @@ export async function connectDB() {
     }
     return db;
 }
-
-export async function closeDB() {
-    if (db) db.destroy();
-}

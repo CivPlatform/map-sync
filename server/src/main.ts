@@ -3,12 +3,14 @@ import { connectDB } from "./database";
 import { TcpServer } from "./server/server";
 import * as config from "./config/config";
 import * as whitelist from "./config/whitelist";
+import * as uuid_cache from "./config/uuid_cache";
 
 // Have to do this because node doesn't have top-level await for CommonJS
 Promise.resolve().then(async () => {
     // Initially load configs
     config.get();
     whitelist.load();
+    uuid_cache.load();
 
     await connectDB();
     const server = new TcpServer();

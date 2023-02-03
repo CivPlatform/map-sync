@@ -1,8 +1,8 @@
 import lib_readline from "readline";
 import lib_stream from "stream";
 
-import * as metadata from "./metadata";
 import * as whitelist from "./config/whitelist";
+import * as uuid_cache from "./config/uuid_cache";
 
 //idk where these come from lol
 interface TerminalExtras {
@@ -132,7 +132,7 @@ async function handle_input(input: string): Promise<void> {
                 console.warn("You did not provide a IGN to add!");
                 break;
             }
-            const uuid = metadata.uuid_cache.get(extras) ?? null;
+            const uuid = uuid_cache.entries.get(extras) ?? null;
             if (uuid === null) {
                 console.warn(`Could not find UUID for IGN [${extras}]`);
                 break;
@@ -147,7 +147,7 @@ async function handle_input(input: string): Promise<void> {
                 console.warn("You did not provide a IGN to remove!");
                 break;
             }
-            const uuid = metadata.uuid_cache.get(extras) ?? null;
+            const uuid = uuid_cache.entries.get(extras) ?? null;
             if (uuid === null) {
                 console.warn(`Could not find UUID for IGN [${extras}]`);
                 break;

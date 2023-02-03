@@ -20,7 +20,7 @@ import { TcpServer } from "./server";
 import { AbstractClientMode, UnsupportedPacketException } from "./mode";
 import * as config from "../config/config";
 import * as whitelist from "../config/whitelist";
-import { uuid_cache, uuid_cache_save } from "../metadata";
+import * as uuid_cache from "../config/uuid_cache";
 import { PlayerChunk, PlayerChunkDB } from "../database/entities";
 import { RegionTimestamp } from "../protocol/structs";
 
@@ -178,8 +178,8 @@ export class TcpClient {
                     client.uuid = mojangAuth.uuid;
                     client.mcName = mojangAuth.name;
                     client.name += ":" + mojangAuth.name;
-                    uuid_cache.set(mojangAuth.name, mojangAuth.uuid);
-                    uuid_cache_save();
+                    uuid_cache.entries.set(mojangAuth.name, mojangAuth.uuid);
+                    uuid_cache.save();
                     if (config.get().whitelist) {
                         if (!whitelist.entries.has(client.uuid)) {
                             client.log("Rejecting unwhitelisted user!");

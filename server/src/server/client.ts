@@ -43,9 +43,6 @@ export class TcpClient {
         public readonly server: TcpServer,
         public readonly handler: ProtocolHandler
     ) {
-        this.log("Connected from", socket.remoteAddress);
-        handler.handleClientConnected(this);
-
         /** Accumulates received data, containing none, one, or multiple frames; the last frame may be partial only. */
         let accBuf: Buffer = Buffer.alloc(0);
 

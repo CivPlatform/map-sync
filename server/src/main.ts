@@ -28,9 +28,6 @@ Promise.resolve().then(async () => {
 export class Main {
     server: TcpServer = null!;
 
-    //Cannot be async, as it's caled from a synchronous constructor
-    handleClientConnected(client: ProtocolClient) {}
-
     async handleClientAuthenticated(client: ProtocolClient) {
         if (!client.uuid) throw new Error("Client not authenticated");
 

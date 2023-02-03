@@ -119,11 +119,14 @@ export class TcpClient {
         this.mode = new class Stage0PreAuthMode extends AbstractClientMode {
             async onPacketReceived(packet: ClientPacket) {
                 if (packet instanceof HandshakePacket) {
-                    if (packet.modVersion !== MOD_VERSION) {
-                        client.log(`Kicking for unsupported mod version [${packet.modVersion}]`);
-                        client.kick("Unsupported mod version!");
-                        return;
-                    }
+                    // TODO: Uncomment this when the version is correctly
+                    //       filtered. Currently, the "packet.modVersion" will
+                    //       return "${version}+fabric" or similar.
+                    // if (packet.modVersion !== MOD_VERSION) {
+                    //     client.log(`Kicking for unsupported mod version [${packet.modVersion}]`);
+                    //     client.kick("Unsupported mod version!");
+                    //     return;
+                    // }
                     client.gameAddress = packet.gameAddress;
                     // TODO: Likewise, maybe disconnect here if the gameAddress
                     //       isn't supported

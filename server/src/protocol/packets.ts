@@ -209,11 +209,9 @@ export class ChunkDataPacket {
         public readonly x: number,
         public readonly z: number,
         public readonly timestamp: number,
-        public readonly data: {
-            readonly version: number;
-            readonly hash: Buffer;
-            readonly data: Buffer;
-        }
+        public readonly version: number,
+        public readonly hash: Buffer,
+        public readonly data: Buffer
     ) {}
 
     public encode(writer: BufWriter) {
@@ -221,9 +219,9 @@ export class ChunkDataPacket {
         writer.writeInt32(this.x);
         writer.writeInt32(this.z);
         writer.writeUInt64(this.timestamp);
-        writer.writeUInt16(this.data.version);
-        writer.writeBufWithLen(this.data.hash);
-        writer.writeBufRaw(this.data.data); // XXX do we need to prefix with length?
+        writer.writeUInt16(this.version);
+        writer.writeBufWithLen(this.hash);
+        writer.writeBufRaw(this.data); // XXX do we need to prefix with length?
     }
 
     public static decode(reader: BufReader): ChunkDataPacket {
@@ -232,11 +230,9 @@ export class ChunkDataPacket {
             reader.readInt32(),
             reader.readInt32(),
             reader.readUInt64(),
-            {
-                version: reader.readUInt16(),
-                hash: reader.readBufWithLen(),
-                data: reader.readRemainder()
-            }
+            reader.readUInt16(),
+            reader.readBufWithLen(),
+            reader.readRemainder()
         );
     }
 }

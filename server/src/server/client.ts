@@ -265,7 +265,9 @@ export class TcpClient {
                                 chunk.chunk_x,
                                 chunk.chunk_z,
                                 chunk.ts,
-                                chunk.data
+                                chunk.data.version,
+                                chunk.data.hash,
+                                chunk.data.data
                             )
                         );
                     }
@@ -279,7 +281,11 @@ export class TcpClient {
                         chunk_z: packet.z,
                         uuid: client.uuid!,
                         ts: packet.timestamp,
-                        data: packet.data
+                        data: {
+                            hash: packet.hash,
+                            version: packet.version,
+                            data: packet.data
+                        }
                     };
                     PlayerChunkDB.store(playerChunk).catch(console.error);
                     // TODO small timeout, then skip if other client already has it

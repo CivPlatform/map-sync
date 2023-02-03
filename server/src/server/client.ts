@@ -132,13 +132,13 @@ export class TcpClient {
                     }
                     client.world = packet.world;
                     const verifyToken = crypto.randomBytes(4);
+                    client.setStage1PreAuthMode(packet.mojangName, verifyToken);
                     await client.INTERNAL_send(
                         new EncryptionRequestPacket(
                             encryption.PUBLIC_KEY_BUFFER,
                             verifyToken
                         )
                     );
-                    client.setStage1PreAuthMode(packet.mojangName, verifyToken);
                     return;
                 }
                 throw new UnsupportedPacketException(this, packet);
@@ -171,10 +171,10 @@ export class TcpClient {
                     client.mcName = mojangAuth.name;
                     client.name += ":" + mojangAuth.name;
                     client.cryptoPromise = Promise.resolve(encryption.generateCiphers(sharedSecret));
+                    // TODO: Set authed mode here
                     await client.cryptoPromise.then(async () => {
                         await client.handler.handleClientAuthenticated(client);
                     });
-                    // TODO: Set authed mode here
                     return;
                 }
                 throw new UnsupportedPacketException(this, packet);

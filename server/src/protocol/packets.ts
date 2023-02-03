@@ -1,7 +1,7 @@
 import { BufReader } from "./BufReader";
 import { Packets } from "./index";
 import { BufWriter } from "./BufWriter";
-import { CatchupChunk, RegionPos, RegionTimestamp } from "./structs";
+import { CatchupChunk, Pos2D, RegionTimestamp } from "./structs";
 
 /**
  * The Minecraft client should send this packet IMMEDIATELY upon a successful
@@ -119,14 +119,14 @@ export class RegionCatchupRequestPacket {
 
     public constructor(
         public readonly world: string,
-        public readonly regions: RegionPos[]
+        public readonly regions: Pos2D[]
     ) {}
 
     public static decode(reader: BufReader): RegionCatchupRequestPacket {
         return new RegionCatchupRequestPacket(
             reader.readString(),
             (function (length) {
-                const regions: RegionPos[] = new Array(length);
+                const regions: Pos2D[] = new Array(length);
                 for (let i = 0; i < length; i++) {
                     regions[i] = {
                         x: reader.readInt16(),

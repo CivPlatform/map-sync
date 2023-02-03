@@ -275,7 +275,7 @@ export class TcpClient {
                 }
                 if (packet instanceof ChunkDataPacket) {
                     // TODO ignore if same chunk hash exists in db
-                    const playerChunk: PlayerChunk = {
+                    PlayerChunkDB.store({
                         world: packet.world,
                         chunk_x: packet.x,
                         chunk_z: packet.z,
@@ -286,8 +286,7 @@ export class TcpClient {
                             version: packet.version,
                             data: packet.data
                         }
-                    };
-                    PlayerChunkDB.store(playerChunk).catch(console.error);
+                    }).catch(console.error);
                     // TODO small timeout, then skip if other client already has it
                     for (const otherClient of client.server.clients.values()) {
                         if (client === otherClient) continue;

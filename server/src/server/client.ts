@@ -18,7 +18,8 @@ import {
 import * as encryption from "./encryption";
 import { TcpServer } from "./server";
 import { AbstractClientMode, UnsupportedPacketException } from "./mode";
-import { getConfig, uuid_cache, uuid_cache_save, whitelist } from "../metadata";
+import * as config from "../config/config";
+import { uuid_cache, uuid_cache_save, whitelist } from "../metadata";
 import { PlayerChunk, PlayerChunkDB } from "../database/entities";
 import { RegionTimestamp } from "../protocol/structs";
 
@@ -118,7 +119,7 @@ export class TcpClient {
                     //     client.kick(`Unsupported mod version [${packet.modVersion}]`);
                     //     return;
                     // }
-                    if (packet.gameAddress !== getConfig().gameAddress) {
+                    if (packet.gameAddress !== config.get().gameAddress) {
                         client.kick(
                             `Kicking for unsupported mod version [${packet.modVersion}]`
                         );
@@ -178,7 +179,7 @@ export class TcpClient {
                     client.name += ":" + mojangAuth.name;
                     uuid_cache.set(mojangAuth.name, mojangAuth.uuid);
                     uuid_cache_save();
-                    if (getConfig().whitelist) {
+                    if (config.get().whitelist) {
                         if (!whitelist.has(client.uuid)) {
                             client.log("Rejecting unwhitelisted user!");
                             client.kick(`Not whitelisted`);

@@ -1,9 +1,13 @@
 import "./cli";
 import { connectDB } from "./database";
 import { TcpServer } from "./server/server";
+import * as config from "./config/config";
 
 // Have to do this because node doesn't have top-level await for CommonJS
 Promise.resolve().then(async () => {
+    // Initially load configs
+    config.get();
+
     await connectDB();
     const server = new TcpServer();
 });

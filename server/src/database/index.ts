@@ -1,18 +1,11 @@
 import "reflect-metadata";
-import { BaseEntity, DataSource } from "typeorm";
+import { DataSource } from "typeorm";
+import { ChunkDataDB, PlayerChunkDB } from "./entities";
 
 import { DATA_FOLDER } from "../config/mod";
 const SQLITE_PATH = process.env["SQLITE_PATH"] ?? `${DATA_FOLDER}/db.sqlite`;
 
 let db: DataSource | null = null;
-
-// TODO accept any EntitySchema<any>[]
-const entities: Record<string, typeof BaseEntity> = {};
-export function registerEntity(entity: typeof BaseEntity) {
-    entities[entity.name] = entity;
-    if (db) db.destroy();
-    db = null; // require reconnecting to apply entity
-}
 
 export async function connectDB() {
     if (!db) {
@@ -20,7 +13,10 @@ export async function connectDB() {
             type: "sqlite",
             database: SQLITE_PATH,
             synchronize: true,
-            entities: entities
+            entities: [
+                ChunkDataDB,
+                PlayerChunkDB
+            ]
         }).initialize();
     }
     return db;

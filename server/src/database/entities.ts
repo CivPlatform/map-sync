@@ -6,7 +6,6 @@ import {
     ManyToOne,
     PrimaryColumn
 } from "typeorm";
-import { registerEntity } from "./index";
 
 export interface PlayerChunk {
     world: string;
@@ -38,8 +37,6 @@ export class ChunkDataDB extends BaseEntity implements ChunkData {
     @Column({ type: "blob" })
     data!: Buffer;
 }
-
-registerEntity(ChunkDataDB);
 
 /** A chunk as the player saw it at that time.
  * DB stores the one most recent entry per player. */
@@ -170,5 +167,3 @@ export class PlayerChunkDB extends BaseEntity implements PlayerChunk {
         });
     }
 }
-
-registerEntity(PlayerChunkDB);

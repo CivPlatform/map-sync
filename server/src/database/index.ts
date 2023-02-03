@@ -1,7 +1,7 @@
 import "reflect-metadata";
 import { BaseEntity, Connection, createConnection } from "typeorm";
 
-import { DATA_FOLDER } from "../metadata";
+import { DATA_FOLDER } from "../config/mod";
 const SQLITE_PATH = process.env["SQLITE_PATH"] ?? `${DATA_FOLDER}/db.sqlite`;
 
 let db: Promise<Connection> | null = null;

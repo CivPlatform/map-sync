@@ -6,7 +6,7 @@ import {
     ManyToOne,
     PrimaryColumn
 } from "typeorm";
-import { registerEntity } from "./db";
+import { registerEntity } from "./index";
 
 export interface PlayerChunk {
     world: string;

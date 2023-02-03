@@ -19,7 +19,7 @@ import * as encryption from "./encryption";
 import { TcpServer } from "./server";
 import { AbstractClientMode, UnsupportedPacketException } from "./mode";
 import { getConfig, uuid_cache, uuid_cache_save, whitelist } from "../metadata";
-import { PlayerChunk, PlayerChunkDB } from "../MapChunk";
+import { PlayerChunk, PlayerChunkDB } from "../database/entities";
 import { RegionTimestamp } from "../protocol/structs";
 
 /** prevent Out of Memory when client sends a large packet */

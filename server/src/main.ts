@@ -1,5 +1,5 @@
 import "./cli";
-import { connectDB } from "./db";
+import { connectDB } from "./database";
 import { TcpServer } from "./server/server";
 
 // Have to do this because node doesn't have top-level await for CommonJS

@@ -140,6 +140,7 @@ export class TcpClient {
                         )
                     );
                     // TODO: Set stage 1 mode here
+                    return;
                 }
                 throw new UnsupportedPacketException(this, packet);
             }
@@ -175,6 +176,7 @@ export class TcpClient {
                         await client.handler.handleClientAuthenticated(client);
                     });
                     // TODO: Set authed mode here
+                    return;
                 }
                 throw new UnsupportedPacketException(this, packet);
             }

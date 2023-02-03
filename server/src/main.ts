@@ -89,24 +89,4 @@ export class Main {
         }
     }
 
-    async handleRegionCatchupPacket(
-        client: ProtocolClient,
-        pkt: RegionCatchupRequestPacket
-    ) {
-        if (!client.uuid)
-            throw new Error(`${client.name} is not authenticated`);
-
-        const chunks = await PlayerChunkDB.getCatchupData(
-            pkt.world,
-            pkt.regions
-                .map((region) => [region.x, region.z])
-                .flat()
-        );
-        if (chunks.length > 0) {
-            client.send(new RegionCatchupResponsePacket(
-                pkt.world,
-                chunks
-            ));
-        }
-    }
 }

@@ -12,7 +12,7 @@ import {
     EncryptionResponsePacket,
     RegionTimestampsPacket,
     RegionCatchupRequestPacket,
-    ChunkCatchupRequestPacket, ChunkDataPacket
+    ChunkCatchupRequestPacket, ChunkDataPacket, RegionCatchupResponsePacket
 } from "../protocol/packets";
 import * as encryption from "./encryption";
 import { TcpServer } from "./server";
@@ -36,7 +36,6 @@ export class TcpClient {
 
     public uuid: string | undefined;
     public mcName: string | undefined;
-    public world: string | undefined;
 
     public constructor(
         public readonly socket: net.Socket,
@@ -116,6 +115,7 @@ export class TcpClient {
         this.mode = new class Stage0PreAuthMode extends AbstractClientMode {
             async onPacketReceived(packet: ClientPacket) {
                 if (packet instanceof HandshakePacket) {
+                    console.log("Handshake", packet);
                     // TODO: Uncomment this when the version is correctly
                     //       filtered. Currently, the "packet.modVersion" will
                     //       return "${version}+fabric" or similar.
@@ -208,7 +208,18 @@ export class TcpClient {
             }
             async onPacketReceived(packet: ClientPacket) {
                 if (packet instanceof RegionCatchupRequestPacket) {
-                    await client.handler.handleRegionCatchupPacket(client, packet);
+                    const chunks = await PlayerChunkDB.getCatchupData(
+                        packet.world,
+                        packet.regions
+                            .map((region) => [region.x, region.z])
+                            .flat()
+                    );
+                    if (chunks.length > 0) {
+                        client.send(new RegionCatchupResponsePacket(
+                            packet.world,
+                            chunks
+                        ));
+                    }
                     return;
                 }
                 if (packet instanceof ChunkCatchupRequestPacket) {

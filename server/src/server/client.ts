@@ -9,7 +9,10 @@ import { BufWriter } from "../protocol/BufWriter";
 import {
     HandshakePacket,
     EncryptionRequestPacket,
-    EncryptionResponsePacket, RegionTimestampsPacket
+    EncryptionResponsePacket,
+    RegionTimestampsPacket,
+    RegionCatchupRequestPacket,
+    ChunkCatchupRequestPacket, ChunkDataPacket
 } from "../protocol/packets";
 import * as encryption from "./encryption";
 import { TcpServer } from "./server";
@@ -35,10 +38,6 @@ export class TcpClient {
     public mcName: string | undefined;
     public world: string | undefined;
 
-    /** we need to wait for the mojang auth response
-     * before we can en/decrypt packets following the handshake */
-    private cryptoPromise?: Promise<encryption.Ciphers>;
-
     public constructor(
         public readonly socket: net.Socket,
         public readonly server: TcpServer,
@@ -50,10 +49,7 @@ export class TcpClient {
 
         socket.on("data", async (data: Buffer) => {
             try {
-                if (this.cryptoPromise) {
-                    const { decipher } = await this.cryptoPromise;
-                    data = decipher.update(data);
-                }
+                data = await this.mode.postReceiveBufferTransformer(data);
 
                 // creating a new buffer every time is fine in our case, because we expect most frames to be large
                 accBuf = Buffer.concat([accBuf, data]);
@@ -84,7 +80,7 @@ export class TcpClient {
 
                     try {
                         const packet = decodePacket(reader);
-                        await this.handlePacketReceived(packet);
+                        await this.mode.onPacketReceived(packet);
                     } catch (err) {
                         this.warn(err);
                         return this.kick("Error in packet handler");
@@ -182,8 +178,7 @@ export class TcpClient {
                             return;
                         }
                     }
-                    client.cryptoPromise = Promise.resolve(encryption.generateCiphers(sharedSecret));
-                    // TODO: Set authed mode here
+                    client.setPostAuthMode(encryption.generateCiphers(sharedSecret));
                     const timestamps = await PlayerChunkDB.getRegionTimestamps();
                     client.send(new RegionTimestampsPacket(
                         client.world!,
@@ -200,12 +195,31 @@ export class TcpClient {
         };
     }
 
-    private async handlePacketReceived(pkt: ClientPacket) {
-        if (!this.uuid) {
-            await this.mode.onPacketReceived(pkt);
-        } else {
-            return await this.handler.handleClientPacketReceived(this, pkt);
-        }
+    private setPostAuthMode(ciphers: encryption.Ciphers) {
+        const client = this;
+        this.mode = new class PostAuthMode extends AbstractClientMode {
+            async postReceiveBufferTransformer(buffer: Buffer): Promise<Buffer> {
+                return ciphers.decipher.update(buffer);
+            }
+            async preSendBufferTransformer(buffer: Buffer): Promise<Buffer> {
+                return ciphers.encipher.update(buffer);
+            }
+            async onPacketReceived(packet: ClientPacket) {
+                if (packet instanceof RegionCatchupRequestPacket) {
+                    await client.handler.handleRegionCatchupPacket(client, packet);
+                    return;
+                }
+                if (packet instanceof ChunkCatchupRequestPacket) {
+                    await client.handler.handleCatchupRequest(client, packet);
+                    return;
+                }
+                if (packet instanceof ChunkDataPacket) {
+                    await client.handler.handleChunkTilePacket(client, packet);
+                    return;
+                }
+                throw new UnsupportedPacketException(this, packet);
+            }
+        };
     }
 
     public kick(internalReason: string) {
@@ -214,10 +228,6 @@ export class TcpClient {
     }
 
     public async send(pkt: ServerPacket) {
-        if (!this.cryptoPromise) {
-            this.debug("Not encrypted, dropping packet", pkt.type);
-            return;
-        }
         if (!this.uuid) {
             this.debug("Not authenticated, dropping packet", pkt.type);
             return;
@@ -229,8 +239,6 @@ export class TcpClient {
     private async INTERNAL_send(pkt: ServerPacket, doCrypto = false) {
         if (!this.socket.writable)
             return this.debug("Socket closed, dropping", pkt.type);
-        if (doCrypto && !this.cryptoPromise)
-            throw new Error(`Can't encrypt: handshake not finished`);
 
         const writer = new BufWriter(); // TODO size hint
         writer.writeUInt32(0); // set later, but reserve space in buffer
@@ -238,10 +246,7 @@ export class TcpClient {
         let buf = writer.getBuffer();
         buf.writeUInt32BE(buf.length - 4, 0); // write into space reserved above
 
-        if (doCrypto) {
-            const { encipher } = await this.cryptoPromise!;
-            buf = encipher.update(buf);
-        }
+        buf = await this.mode.preSendBufferTransformer(buf);
 
         this.socket.write(buf);
     }

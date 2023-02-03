@@ -28,33 +28,6 @@ Promise.resolve().then(async () => {
 export class Main {
     server: TcpServer = null!;
 
-    handleClientPacketReceived(client: ProtocolClient, pkt: ClientPacket) {
-        client.debug(client.mcName + " <- " + pkt.type);
-        switch (pkt.type) {
-            case "ChunkTile":
-                return this.handleChunkTilePacket(
-                    client,
-                    pkt as ChunkDataPacket
-                );
-            case "CatchupRequest":
-                return this.handleCatchupRequest(
-                    client,
-                    pkt as ChunkCatchupRequestPacket
-                );
-            case "RegionCatchup":
-                return this.handleRegionCatchupPacket(
-                    client,
-                    pkt as RegionCatchupRequestPacket
-                );
-            default:
-                throw new Error(
-                    `Unknown packet '${(pkt as any).type}' from client ${
-                        client.id
-                    }`
-                );
-        }
-    }
-
     async handleChunkTilePacket(client: ProtocolClient, pkt: ChunkDataPacket) {
         if (!client.uuid)
             throw new Error(`${client.name} is not authenticated`);

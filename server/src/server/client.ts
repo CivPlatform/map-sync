@@ -19,7 +19,7 @@ import { TcpServer } from "./server";
 import { AbstractClientMode, UnsupportedPacketException } from "./mode";
 import { MOD_VERSION } from "../const";
 import { getConfig, uuid_cache, uuid_cache_save, whitelist } from "../metadata";
-import { PlayerChunkDB } from "../MapChunk";
+import { PlayerChunk, PlayerChunkDB } from "../MapChunk";
 import { RegionTimestamp } from "../protocol/structs";
 
 /** prevent Out of Memory when client sends a large packet */
@@ -251,7 +251,22 @@ export class TcpClient {
                     return;
                 }
                 if (packet instanceof ChunkDataPacket) {
-                    await client.handler.handleChunkTilePacket(client, packet);
+                    // TODO ignore if same chunk hash exists in db
+                    const playerChunk: PlayerChunk = {
+                        world: packet.world,
+                        chunk_x: packet.x,
+                        chunk_z: packet.z,
+                        uuid: client.uuid!,
+                        ts: packet.timestamp,
+                        data: packet.data
+                    };
+                    PlayerChunkDB.store(playerChunk).catch(console.error);
+                    // TODO small timeout, then skip if other client already has it
+                    for (const otherClient of client.server.clients.values()) {
+                        if (client === otherClient) continue;
+                        otherClient.send(packet);
+                    }
+                    // TODO queue tile render for web map
                     return;
                 }
                 throw new UnsupportedPacketException(this, packet);

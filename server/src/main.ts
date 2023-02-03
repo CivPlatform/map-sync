@@ -27,30 +27,4 @@ Promise.resolve().then(async () => {
 
 export class Main {
     server: TcpServer = null!;
-
-    async handleChunkTilePacket(client: ProtocolClient, pkt: ChunkDataPacket) {
-        if (!client.uuid)
-            throw new Error(`${client.name} is not authenticated`);
-
-        // TODO ignore if same chunk hash exists in db
-
-        const playerChunk: PlayerChunk = {
-            world: pkt.world,
-            chunk_x: pkt.x,
-            chunk_z: pkt.z,
-            uuid: client.uuid,
-            ts: pkt.timestamp,
-            data: pkt.data
-        };
-        PlayerChunkDB.store(playerChunk).catch(console.error);
-
-        // TODO small timeout, then skip if other client already has it
-        for (const otherClient of this.server.clients.values()) {
-            if (client === otherClient) continue;
-            otherClient.send(pkt);
-        }
-
-        // TODO queue tile render for web map
-    }
-
 }

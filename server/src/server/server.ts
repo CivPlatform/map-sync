@@ -5,7 +5,7 @@ const { PORT = "12312", HOST = "127.0.0.1" } = process.env;
 
 export class TcpServer {
     public readonly server: net.Server;
-    public readonly clients = new Map<number, TcpClient>();
+    public readonly clients = new Map<bigint, TcpClient>();
 
     public constructor() {
         this.server = net.createServer({}, (socket) => {

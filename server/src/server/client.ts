@@ -28,7 +28,7 @@ import { RegionTimestamp } from "../protocol/structs";
 const PACKET_LOGGER = util.debuglog("packets");
 /** prevent Out of Memory when client sends a large packet */
 const MAX_FRAME_SIZE = 2 ** 24;
-let nextClientId = 1;
+let nextClientId = 1n;
 
 /** Prefixes packets with their length (UInt32BE);
  * handles Mojang authentication */

@@ -36,8 +36,8 @@ export class TcpClient {
     public name = "Client" + this.id;
     public mode: AbstractClientMode = null!;
 
-    public uuid: string | undefined;
-    public mcName: string | undefined;
+    public uuid?: string;
+    public username?: string;
 
     public constructor(
         public readonly socket: net.Socket,
@@ -176,7 +176,7 @@ export class TcpClient {
                     }
                     client.log("Authenticated as", mojangAuth);
                     client.uuid = mojangAuth.uuid;
-                    client.mcName = mojangAuth.name;
+                    client.username = mojangAuth.name;
                     client.name += ":" + mojangAuth.name;
                     uuid_cache.entries.set(mojangAuth.name, mojangAuth.uuid);
                     uuid_cache.save();

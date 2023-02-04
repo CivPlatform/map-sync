@@ -122,7 +122,7 @@ export class TcpClient {
                     // }
                     if (packet.gameAddress !== config.get().gameAddress) {
                         client.kick(
-                            `Kicking for unsupported mod version [${packet.modVersion}]`
+                            `Client not playing on the correct Minecraft server [${packet.gameAddress}]`
                         );
                         return;
                     }

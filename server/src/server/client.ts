@@ -21,7 +21,7 @@ import { AbstractClientMode, UnsupportedPacketException } from "./mode";
 import * as config from "../config/config";
 import * as whitelist from "../config/whitelist";
 import * as uuid_cache from "../config/uuid_cache";
-import { PlayerChunk, PlayerChunkDB } from "../database/entities";
+import { PlayerChunkDB } from "../database/entities";
 import { RegionTimestamp } from "../protocol/structs";
 
 /** prevent Out of Memory when client sends a large packet */
@@ -182,8 +182,7 @@ export class TcpClient {
                     uuid_cache.save();
                     if (config.get().whitelist) {
                         if (!whitelist.entries.has(client.uuid)) {
-                            client.log("Rejecting unwhitelisted user!");
-                            client.kick(`Not whitelisted`);
+                            client.kick("Rejecting unwhitelisted user!");
                             return;
                         }
                     }

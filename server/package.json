@@ -9,7 +9,7 @@
         "build": "yarn tsc --build --clean && yarn tsc",
         "test": "true",
         "start": "node dist/main.js",
-        "start:dev": "yarn run build && node --inspect -r source-map-support/register dist/main.js"
+        "start:dev": "yarn run build && NODE_DEBUG=packets node --inspect -r source-map-support/register dist/main.js"
     },
     "dependencies": {
         "dotenv": "^16.0.3",

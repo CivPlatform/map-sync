@@ -1,5 +1,6 @@
 import crypto from "node:crypto";
 import net from "node:net";
+import util from "node:util";
 import fetch from "node-fetch";
 import type { ClientPacket, ServerPacket } from "../protocol";
 import { decodePacket, encodePacket } from "../protocol";
@@ -24,6 +25,7 @@ import * as uuid_cache from "../config/uuid_cache";
 import { PlayerChunkDB } from "../database/entities";
 import { RegionTimestamp } from "../protocol/structs";
 
+const PACKET_LOGGER = util.debuglog("packets");
 /** prevent Out of Memory when client sends a large packet */
 const MAX_FRAME_SIZE = 2 ** 24;
 let nextClientId = 1;
@@ -79,7 +81,7 @@ export class TcpClient {
                     const reader = new BufReader(packetBuffer);
                     try {
                         const packet = decodePacket(reader);
-                        this.debug(`MapSync ← Client[${packet.type}]`);
+                        PACKET_LOGGER(`MapSync ← ${this.name}[${packet.type}]`);
                         await this.mode.onPacketReceived(packet);
                     } catch (err) {
                         this.warn(err);
@@ -305,7 +307,7 @@ export class TcpClient {
     }
 
     public async send(pkt: ServerPacket) {
-        this.debug(`MapSync[${pkt.type}] → Client`);
+        PACKET_LOGGER(`MapSync[${pkt.type}] → ${this.name}`);
         const writer = new BufWriter(); // TODO size hint
         writer.writeUInt32(0); // set later, but reserve space in buffer
         encodePacket(pkt, writer);
@@ -313,11 +315,6 @@ export class TcpClient {
         buf.writeUInt32BE(buf.length - 4, 0); // write into space reserved above
         buf = await this.mode.preSendBufferTransformer(buf);
         this.socket.write(buf);
-    }
-
-    public debug(...args: any[]) {
-        if (process.env.NODE_ENV === "production") return;
-        console.debug(`[${this.name}]`, ...args);
     }
 
     public log(...args: any[]) {

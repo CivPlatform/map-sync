@@ -1,7 +1,7 @@
 import { BufReader } from "./BufReader";
 import { Packets } from "./index";
 import { BufWriter } from "./BufWriter";
-import { CatchupChunk, Pos2D, RegionTimestamp } from "./structs";
+import { CatchupChunk, Pos2D, Timestamped } from "./structs";
 
 /**
  * The Minecraft client should send this packet IMMEDIATELY upon a successful
@@ -90,7 +90,7 @@ export class RegionTimestampsPacket {
 
     public constructor(
         public readonly world: string,
-        public readonly regions: RegionTimestamp[]
+        public readonly regions: (Pos2D & Timestamped)[]
     ) {}
 
     public encode(writer: BufWriter) {
@@ -105,7 +105,7 @@ export class RegionTimestampsPacket {
         for (const region of this.regions) {
             writer.writeInt16(region.x);
             writer.writeInt16(region.z);
-            writer.writeInt64(region.ts);
+            writer.writeInt64(Number(region.timestamp)); // TODO: Make it bigint
         }
     }
 }

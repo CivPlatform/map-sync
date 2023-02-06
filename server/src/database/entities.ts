@@ -1,3 +1,24 @@
+import * as kysely from "kysely";
+import * as database from "./index";
+
+/**
+ * Converts the entire database of player chunks into regions, with each region
+ * having the highest (aka newest) timestamp.
+ */
+export function getRegionTimestamps() {
+    // computing region coordinates in SQL requires truncating, not rounding
+    return database.get()
+        .selectFrom("player_chunk")
+        .select([
+            (eb) => kysely.sql<number>`floor(${eb.ref("chunk_x")} / 32.0)`.as("x"),
+            (eb) => kysely.sql<number>`floor(${eb.ref("chunk_z")} / 32.0)`.as("z"),
+            (eb) => eb.fn.max("ts").as("timestamp")
+        ])
+        .groupBy(["x", "z"])
+        .orderBy("x", "desc")
+        .execute();
+}
+
 import {
     BaseEntity,
     Column,
@@ -71,33 +92,6 @@ export class PlayerChunkDB extends BaseEntity implements PlayerChunk {
             skipUpdateIfNoValuesChanged: true
         });
         await PlayerChunkDB.upsert(map_chunk, PlayerChunkDB.primaryCols);
-    }
-
-    static async getRegionTimestamps() {
-        // computing region coordinates in SQL requires truncating, not rounding
-        return await PlayerChunkDB.query(`
-			WITH region_real AS (SELECT
-				chunk_x / 32.0 AS region_x_real,
-				chunk_z / 32.0 AS region_z_real,
-				ts
-				FROM player_chunk
-			) SELECT
-				cast (region_x_real as int) - (region_x_real < cast (region_x_real as int)) AS region_x,
-				cast (region_z_real as int) - (region_z_real < cast (region_z_real as int)) AS region_z,
-				MAX(ts) AS ts
-			FROM region_real
-			GROUP BY region_x, region_z
-			ORDER BY region_x DESC`);
-        /*
-		return await PlayerChunkDB.createQueryBuilder()
-				.select("chunk_x / 32", "region_x")
-				.addSelect("chunk_z / 32", "region_z")
-				.addSelect("max(ts) as ts")
-				.groupBy("region_x")
-				.addGroupBy("region_z")
-				.orderBy("region_x", "DESC")
-				.getRawMany();
-*/
     }
 
     static async getCatchupData(world: string, regions: number[]) {

@@ -22,8 +22,7 @@ import { AbstractClientMode, UnsupportedPacketException } from "./mode";
 import * as config from "../config/config";
 import * as whitelist from "../config/whitelist";
 import * as uuid_cache from "../config/uuid_cache";
-import { PlayerChunkDB } from "../database/entities";
-import { RegionTimestamp } from "../protocol/structs";
+import { getRegionTimestamps, PlayerChunkDB } from "../database/entities";
 
 const PACKET_LOGGER = util.debuglog("packets");
 /** prevent Out of Memory when client sends a large packet */
@@ -191,21 +190,10 @@ export class TcpClient {
                     client.setPostAuthMode(
                         encryption.generateCiphers(sharedSecret)
                     );
-                    const timestamps =
-                        await PlayerChunkDB.getRegionTimestamps();
-                    client.send(
-                        new RegionTimestampsPacket(
-                            world,
-                            timestamps.map(
-                                (timestamp) =>
-                                    ({
-                                        x: timestamp.region_x,
-                                        z: timestamp.region_z,
-                                        ts: timestamp.ts
-                                    } as RegionTimestamp)
-                            )
-                        )
-                    );
+                    client.send(new RegionTimestampsPacket(
+                        world,
+                        await getRegionTimestamps()
+                    ));
                     return;
                 }
                 throw new UnsupportedPacketException(this, packet);

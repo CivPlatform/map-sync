@@ -623,6 +623,11 @@ js-yaml@^4.1.0:
   dependencies:
     argparse "^2.0.1"
 
+kysely@^0.23.4:
+  version "0.23.4"
+  resolved "https://registry.yarnpkg.com/kysely/-/kysely-0.23.4.tgz#1975bfc37fb5074d60a415e8db73d5698528199a"
+  integrity sha512-3icLnj1fahUtZsP9zzOvF4DcdhekGsLX4ZaoBaIz0ZeHegyRDdbwpJD7zezAJ+KwQZNDeKchel6MikFNLsSZIA==
+
 lru-cache@^6.0.0:
   version "6.0.0"
   resolved "https://registry.npmjs.org/lru-cache/-/lru-cache-6.0.0.tgz"

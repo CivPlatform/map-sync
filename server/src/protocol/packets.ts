@@ -1,7 +1,7 @@
 import { BufReader } from "./BufReader";
 import { Packets } from "./index";
 import { BufWriter } from "./BufWriter";
-import { CatchupChunk, Pos2D, Timestamped } from "./structs";
+import { Pos2D, Timestamped } from "./structs";
 
 /**
  * The Minecraft client should send this packet IMMEDIATELY upon a successful
@@ -173,7 +173,7 @@ export class ChunkCatchupRequestPacket {
 
     public constructor(
         public readonly world: string,
-        public readonly chunks: CatchupChunk[]
+        public readonly chunks: (Pos2D & Timestamped)[]
     ) {}
 
     public static decode(reader: BufReader): ChunkCatchupRequestPacket {
@@ -181,13 +181,12 @@ export class ChunkCatchupRequestPacket {
         return new ChunkCatchupRequestPacket(
             world,
             (function (length) {
-                const chunks: CatchupChunk[] = new Array(length);
+                const chunks: (Pos2D & Timestamped)[] = new Array(length);
                 for (let i = 0; i < length; i++) {
                     chunks[i] = {
-                        world: world,
-                        chunk_x: reader.readInt32(),
-                        chunk_z: reader.readInt32(),
-                        ts: reader.readUInt64()
+                        x: reader.readInt32(),
+                        z: reader.readInt32(),
+                        timestamp: BigInt(reader.readUInt64()) // TODO: Make it bigint
                     };
                 }
                 return chunks;
@@ -208,7 +207,7 @@ export class ChunkDataPacket {
         public readonly world: string,
         public readonly x: number,
         public readonly z: number,
-        public readonly timestamp: number,
+        public readonly timestamp: bigint,
         public readonly version: number,
         public readonly hash: Buffer,
         public readonly data: Buffer
@@ -218,7 +217,7 @@ export class ChunkDataPacket {
         writer.writeString(this.world);
         writer.writeInt32(this.x);
         writer.writeInt32(this.z);
-        writer.writeUInt64(this.timestamp);
+        writer.writeUInt64(Number(this.timestamp)); // TODO: Make it bigint
         writer.writeUInt16(this.version);
         writer.writeBufWithLen(this.hash);
         writer.writeBufRaw(this.data); // XXX do we need to prefix with length?
@@ -229,7 +228,7 @@ export class ChunkDataPacket {
             reader.readString(),
             reader.readInt32(),
             reader.readInt32(),
-            reader.readUInt64(),
+            BigInt(reader.readUInt64()), // TODO: Make it bigint
             reader.readUInt16(),
             reader.readBufWithLen(),
             reader.readRemainder()

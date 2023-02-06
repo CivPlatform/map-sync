@@ -22,7 +22,7 @@ import { AbstractClientMode, UnsupportedPacketException } from "./mode";
 import * as config from "../config/config";
 import * as whitelist from "../config/whitelist";
 import * as uuid_cache from "../config/uuid_cache";
-import { getRegionTimestamps, getChunkTimestamps, PlayerChunkDB } from "../database/entities";
+import { getRegionTimestamps, getChunkTimestamps, getChunkData, PlayerChunkDB } from "../database/entities";
 
 const PACKET_LOGGER = util.debuglog("packets");
 /** prevent Out of Memory when client sends a large packet */
@@ -230,31 +230,29 @@ export class TcpClient {
                 }
                 if (packet instanceof ChunkCatchupRequestPacket) {
                     for (const requestedChunk of packet.chunks) {
-                        // TODO: This feels like it could be heavily optimised
-                        //       with a raw batched query
-                        let chunk = await PlayerChunkDB.getChunkWithData({
-                            world: requestedChunk.world,
-                            chunk_x: requestedChunk.chunk_x,
-                            chunk_z: requestedChunk.chunk_z
-                        });
+                        const chunk = await getChunkData(
+                            packet.world,
+                            requestedChunk.x,
+                            requestedChunk.z,
+                            requestedChunk.timestamp
+                        );
                         if (!chunk) {
-                            console.error(
-                                `${client.name} requested unavailable chunk`,
-                                chunk
+                            client.warn(
+                                `Requested unavailable chunk! [${util.inspect(
+                                    requestedChunk
+                                )}]`
                             );
                             continue;
                         }
-                        if (chunk.ts > requestedChunk.ts) continue; // someone sent a new chunk, which presumably got relayed to the client
-                        if (chunk.ts < requestedChunk.ts) continue; // the client already has a chunk newer than this
                         client.send(
                             new ChunkDataPacket(
-                                chunk.world,
-                                chunk.chunk_x,
-                                chunk.chunk_z,
-                                chunk.ts,
-                                chunk.data.version,
-                                chunk.data.hash,
-                                chunk.data.data
+                                packet.world,
+                                requestedChunk.x,
+                                requestedChunk.z,
+                                requestedChunk.timestamp,
+                                chunk.version,
+                                chunk.hash,
+                                chunk.data
                             )
                         );
                     }
@@ -267,7 +265,7 @@ export class TcpClient {
                         chunk_x: packet.x,
                         chunk_z: packet.z,
                         uuid: client.uuid!,
-                        ts: packet.timestamp,
+                        ts: Number(packet.timestamp), // TODO: Make it bigint
                         data: {
                             hash: packet.hash,
                             version: packet.version,

@@ -56,6 +56,35 @@ export async function getChunkTimestamps(world: string, regions: Pos2D[]) {
     });
 }
 
+/**
+ * Retrieves the data for a given chunk's world, x, z, and timestamp.
+ *
+ * TODO: May want to consider making world, x, z, and timestamp a unique in the
+ *       database table... may help performance.
+ */
+export async function getChunkData(
+    world: string,
+    x: number,
+    z: number,
+    timestamp: bigint
+) {
+    return database.get()
+        .selectFrom("player_chunk")
+        .innerJoin("chunk_data", "chunk_data.hash", "player_chunk.hash")
+        .select([
+            "chunk_data.hash as hash",
+            "chunk_data.version as version",
+            "chunk_data.data as data"
+        ])
+        .where("player_chunk.world", "=", world)
+        .where("player_chunk.chunk_x", "=", x)
+        .where("player_chunk.chunk_z", "=", z)
+        .where("player_chunk.ts", "=", timestamp)
+        .orderBy("player_chunk.ts", "desc")
+        .limit(1)
+        .executeTakeFirst();
+}
+
 import {
     BaseEntity,
     Column,
@@ -131,20 +160,4 @@ export class PlayerChunkDB extends BaseEntity implements PlayerChunk {
         await PlayerChunkDB.upsert(map_chunk, PlayerChunkDB.primaryCols);
     }
 
-    /** latest chunk at that location */
-    static async getChunkWithData(chunk: {
-        world: string;
-        chunk_x: number;
-        chunk_z: number;
-    }) {
-        return await PlayerChunkDB.findOne({
-            where: {
-                world: chunk.world,
-                chunk_x: chunk.chunk_x,
-                chunk_z: chunk.chunk_z
-            },
-            relations: ["data"], // include chunk data stored in other table
-            order: { ts: "DESC" } // get latest among all players that sent this chunk
-        });
-    }
 }

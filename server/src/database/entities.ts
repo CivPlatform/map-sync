@@ -1,5 +1,6 @@
 import * as kysely from "kysely";
 import * as database from "./index";
+import { Pos2D } from "../protocol/structs";
 
 /**
  * Converts the entire database of player chunks into regions, with each region
@@ -17,6 +18,42 @@ export function getRegionTimestamps() {
         .groupBy(["x", "z"])
         .orderBy("x", "desc")
         .execute();
+}
+
+/**
+ * Converts an array of region coords into an array of timestamped chunk coords.
+ */
+export async function getChunkTimestamps(world: string, regions: Pos2D[]) {
+    const chunks = await database.get()
+        .with("regions", (db) => db
+            .selectFrom("player_chunk")
+            .select([
+                "world",
+                (eb) => kysely.sql<string>`(cast(floor(${eb.ref("chunk_x")} / 32.0) as int) || '_' || cast(floor(${eb.ref("chunk_z")} / 32.0) as int))`.as("region"),
+                "chunk_x as x",
+                "chunk_z as z",
+                "ts as timestamp",
+            ])
+        )
+        .selectFrom("regions")
+        .select([
+            "x",
+            "z",
+            "timestamp"
+        ])
+        .where("world", "=", world)
+        .where("region", "in", regions.map((region) => region.x + "_" + region.z))
+        .orderBy("timestamp", "desc")
+        .execute();
+    const seenChunks = new Set<string>();
+    return chunks.filter((chunk) => {
+        const chunkKey = chunk.x + "," + chunk.z;
+        if (seenChunks.has(chunkKey)) {
+            return false;
+        }
+        seenChunks.add(chunkKey);
+        return true;
+    });
 }
 
 import {
@@ -92,56 +129,6 @@ export class PlayerChunkDB extends BaseEntity implements PlayerChunk {
             skipUpdateIfNoValuesChanged: true
         });
         await PlayerChunkDB.upsert(map_chunk, PlayerChunkDB.primaryCols);
-    }
-
-    static async getCatchupData(world: string, regions: number[]) {
-        // TODO use TypeORM's API instead of building our own query string
-        let regionsAsString: string[] = [];
-        let list: string = "";
-        for (let i = 0; i < regions.length; i += 2) {
-            regionsAsString.push("" + regions[i] + "_" + regions[i + 1] + "");
-            if (i > 0) {
-                list += ",";
-            }
-            list += "?";
-        }
-
-        /*let chunks = await PlayerChunkDB.query("WITH region_real AS (SELECT chunk_x, chunk_z, world, uuid, ts, hash, chunk_x / 32.0 AS region_x_real, chunk_z / 32.0 AS region_z_real FROM player_chunk) " +
-				"SELECT chunk_x, chunk_z, world, uuid, ts, hash AS data FROM region_real WHERE (cast (region_x_real as int) - (region_x_real < cast (region_x_real as int))) || \"_\" || (cast (region_z_real as int) - (region_z_real < cast (region_z_real as int))) IN (?) " +
-				"AND world = ? ORDER BY ts DESC",
-				[regionsAsString.join(","), world]);*/
-        let chunks = await PlayerChunkDB.query(
-            `WITH region_real AS (SELECT
-				chunk_x, chunk_z, world, uuid, ts, hash,
-				chunk_x / 32.0 AS region_x_real,
-				chunk_z / 32.0 AS region_z_real
-				FROM player_chunk
-			) SELECT
-				(
-					cast (region_x_real as int) - (region_x_real < cast (region_x_real as int))
-				) || "_" || (
-					cast (region_z_real as int) - (region_z_real < cast (region_z_real as int))
-				) AS region,
-				chunk_x, chunk_z, world, uuid, ts,
-				hash AS data
-			FROM region_real
-			WHERE region IN (${list}) AND world = ?
-			ORDER BY ts DESC`,
-            [...regionsAsString, world]
-        );
-        /*let chunks = await PlayerChunkDB.createQueryBuilder()
-			.where('(chunk_x/32) || "_" || (chunk_z/32) IN (:...regions)', { regions: regionsAsString })
-			.andWhere("world = :world", { world: world })
-			.orderBy('ts', 'DESC')
-			.getMany()*/
-
-        const seenChunks: Record<string, PlayerChunkDB> = {};
-        for (const chunk of chunks) {
-            const chunkPos = `${chunk.chunk_x},${chunk.chunk_z}`;
-            if (seenChunks[chunkPos]) continue;
-            seenChunks[chunkPos] = chunk;
-        }
-        return Object.values(seenChunks);
     }
 
     /** latest chunk at that location */

@@ -150,16 +150,16 @@ export class RegionCatchupResponsePacket {
 
     public constructor(
         public readonly world: string,
-        public readonly chunks: CatchupChunk[]
+        public readonly chunks: (Pos2D & Timestamped)[]
     ) {}
 
     public encode(writer: BufWriter) {
         writer.writeString(this.world);
         writer.writeUInt32(this.chunks.length);
         for (const region of this.chunks) {
-            writer.writeInt32(region.chunk_x);
-            writer.writeInt32(region.chunk_z);
-            writer.writeUInt64(region.ts);
+            writer.writeInt32(region.x);
+            writer.writeInt32(region.z);
+            writer.writeUInt64(Number(region.timestamp)); // TODO: Make it bigint
         }
     }
 }

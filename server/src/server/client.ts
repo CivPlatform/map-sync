@@ -22,7 +22,7 @@ import { AbstractClientMode, UnsupportedPacketException } from "./mode";
 import * as config from "../config/config";
 import * as whitelist from "../config/whitelist";
 import * as uuid_cache from "../config/uuid_cache";
-import { getRegionTimestamps, PlayerChunkDB } from "../database/entities";
+import { getRegionTimestamps, getChunkTimestamps, PlayerChunkDB } from "../database/entities";
 
 const PACKET_LOGGER = util.debuglog("packets");
 /** prevent Out of Memory when client sends a large packet */
@@ -214,11 +214,9 @@ export class TcpClient {
             }
             async onPacketReceived(packet: ClientPacket) {
                 if (packet instanceof RegionCatchupRequestPacket) {
-                    const chunks = await PlayerChunkDB.getCatchupData(
+                    const chunks = await getChunkTimestamps(
                         packet.world,
                         packet.regions
-                            .map((region) => [region.x, region.z])
-                            .flat()
                     );
                     if (chunks.length > 0) {
                         client.send(

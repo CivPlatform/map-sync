@@ -24,7 +24,7 @@ export function getRegionTimestamps() {
  * Converts an array of region coords into an array of timestamped chunk coords.
  */
 export async function getChunkTimestamps(world: string, regions: Pos2D[]) {
-    const chunks = await database.get()
+    return database.get()
         .with("regions", (db) => db
             .selectFrom("player_chunk")
             .select([
@@ -32,8 +32,9 @@ export async function getChunkTimestamps(world: string, regions: Pos2D[]) {
                 (eb) => kysely.sql<string>`(cast(floor(${eb.ref("chunk_x")} / 32.0) as int) || '_' || cast(floor(${eb.ref("chunk_z")} / 32.0) as int))`.as("region"),
                 "chunk_x as x",
                 "chunk_z as z",
-                "ts as timestamp",
+                (eb) => eb.fn.max("ts").as("timestamp")
             ])
+            .groupBy(["world", "x", "z"])
         )
         .selectFrom("regions")
         .select([
@@ -45,15 +46,6 @@ export async function getChunkTimestamps(world: string, regions: Pos2D[]) {
         .where("region", "in", regions.map((region) => region.x + "_" + region.z))
         .orderBy("timestamp", "desc")
         .execute();
-    const seenChunks = new Set<string>();
-    return chunks.filter((chunk) => {
-        const chunkKey = chunk.x + "," + chunk.z;
-        if (seenChunks.has(chunkKey)) {
-            return false;
-        }
-        seenChunks.add(chunkKey);
-        return true;
-    });
 }
 
 /**

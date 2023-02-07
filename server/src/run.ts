@@ -1,4 +1,3 @@
-import "./cli";
 import lib_fs from "node:fs";
 import { ErrorType, getErrorType } from "./deps/errors";
 import { DATA_FOLDER } from "./config/mod";
@@ -30,3 +29,5 @@ Promise.resolve().then(async () => {
 // TODO: Fix mod resource filtering so the version is correctly set
 
 // TODO: Fix mod not disconnecting from MapSync when disconnected from MC server
+
+// TODO: Re-add runtime commands in some capacity

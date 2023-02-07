@@ -259,6 +259,11 @@ export class TcpClient {
                     return;
                 }
                 if (packet instanceof ChunkDataPacket) {
+                    const hash = encryption.generateShaHash(packet.data);
+                    if (!hash.equals(packet.hash)) {
+                        client.kick(`Client sent mismatching hash: sent[${packet.hash.toString("hex")}] received[${hash.toString("hex")}]`);
+                        return;
+                    }
                     await storeChunkData(
                         packet.world,
                         packet.x,

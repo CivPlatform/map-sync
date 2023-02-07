@@ -29,6 +29,13 @@ export function generateCiphers(secret: Buffer): Ciphers {
     };
 }
 
+export function generateShaHash(data: Buffer): Buffer {
+    return crypto
+        .createHash("sha1")
+        .update(data)
+        .digest();
+}
+
 export function generateShaHex(secret: Buffer): string {
     return crypto
         .createHash("sha1")

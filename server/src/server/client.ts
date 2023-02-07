@@ -22,8 +22,7 @@ import { AbstractClientMode, UnsupportedPacketException } from "./mode";
 import * as config from "../config/config";
 import * as whitelist from "../config/whitelist";
 import * as uuid_cache from "../config/uuid_cache";
-import { PlayerChunkDB } from "../database/entities";
-import { RegionTimestamp } from "../protocol/structs";
+import { getRegionTimestamps, getChunkTimestamps, getChunkData, storeChunkData } from "../database/data";
 
 const PACKET_LOGGER = util.debuglog("packets");
 /** prevent Out of Memory when client sends a large packet */
@@ -191,21 +190,10 @@ export class TcpClient {
                     client.setPostAuthMode(
                         encryption.generateCiphers(sharedSecret)
                     );
-                    const timestamps =
-                        await PlayerChunkDB.getRegionTimestamps();
-                    client.send(
-                        new RegionTimestampsPacket(
-                            world,
-                            timestamps.map(
-                                (timestamp) =>
-                                    ({
-                                        x: timestamp.region_x,
-                                        z: timestamp.region_z,
-                                        ts: timestamp.ts
-                                    } as RegionTimestamp)
-                            )
-                        )
-                    );
+                    client.send(new RegionTimestampsPacket(
+                        world,
+                        await getRegionTimestamps()
+                    ));
                     return;
                 }
                 throw new UnsupportedPacketException(this, packet);
@@ -226,11 +214,9 @@ export class TcpClient {
             }
             async onPacketReceived(packet: ClientPacket) {
                 if (packet instanceof RegionCatchupRequestPacket) {
-                    const chunks = await PlayerChunkDB.getCatchupData(
+                    const chunks = await getChunkTimestamps(
                         packet.world,
                         packet.regions
-                            .map((region) => [region.x, region.z])
-                            .flat()
                     );
                     if (chunks.length > 0) {
                         client.send(
@@ -244,50 +230,45 @@ export class TcpClient {
                 }
                 if (packet instanceof ChunkCatchupRequestPacket) {
                     for (const requestedChunk of packet.chunks) {
-                        // TODO: This feels like it could be heavily optimised
-                        //       with a raw batched query
-                        let chunk = await PlayerChunkDB.getChunkWithData({
-                            world: requestedChunk.world,
-                            chunk_x: requestedChunk.chunk_x,
-                            chunk_z: requestedChunk.chunk_z
-                        });
+                        const chunk = await getChunkData(
+                            packet.world,
+                            requestedChunk.x,
+                            requestedChunk.z,
+                            requestedChunk.timestamp
+                        );
                         if (!chunk) {
-                            console.error(
-                                `${client.name} requested unavailable chunk`,
-                                chunk
+                            client.warn(
+                                `Requested unavailable chunk! [${util.inspect(
+                                    requestedChunk
+                                )}]`
                             );
                             continue;
                         }
-                        if (chunk.ts > requestedChunk.ts) continue; // someone sent a new chunk, which presumably got relayed to the client
-                        if (chunk.ts < requestedChunk.ts) continue; // the client already has a chunk newer than this
                         client.send(
                             new ChunkDataPacket(
-                                chunk.world,
-                                chunk.chunk_x,
-                                chunk.chunk_z,
-                                chunk.ts,
-                                chunk.data.version,
-                                chunk.data.hash,
-                                chunk.data.data
+                                packet.world,
+                                requestedChunk.x,
+                                requestedChunk.z,
+                                requestedChunk.timestamp,
+                                chunk.version,
+                                chunk.hash,
+                                chunk.data
                             )
                         );
                     }
                     return;
                 }
                 if (packet instanceof ChunkDataPacket) {
-                    // TODO ignore if same chunk hash exists in db
-                    PlayerChunkDB.store({
-                        world: packet.world,
-                        chunk_x: packet.x,
-                        chunk_z: packet.z,
-                        uuid: client.uuid!,
-                        ts: packet.timestamp,
-                        data: {
-                            hash: packet.hash,
-                            version: packet.version,
-                            data: packet.data
-                        }
-                    }).catch(console.error);
+                    await storeChunkData(
+                        packet.world,
+                        packet.x,
+                        packet.z,
+                        client.uuid!,
+                        packet.timestamp,
+                        packet.hash,
+                        packet.version,
+                        packet.data
+                    ).catch(console.error);
                     // TODO small timeout, then skip if other client already has it
                     for (const otherClient of client.server.clients.values()) {
                         if (client === otherClient) continue;

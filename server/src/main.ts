@@ -2,7 +2,7 @@ import "./cli";
 import lib_fs from "node:fs";
 import { ErrorType, getErrorType } from "./deps/errors";
 import { DATA_FOLDER } from "./config/mod";
-import { connectDB } from "./database";
+import * as database from "./database";
 import { TcpServer } from "./server/server";
 import * as config from "./config/config";
 import * as whitelist from "./config/whitelist";
@@ -23,7 +23,7 @@ Promise.resolve().then(async () => {
     whitelist.load();
     uuid_cache.load();
 
-    await connectDB();
+    await database.setup();
     const server = new TcpServer();
 });
 

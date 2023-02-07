@@ -105,7 +105,7 @@ export class RegionTimestampsPacket {
         for (const region of this.regions) {
             writer.writeInt16(region.x);
             writer.writeInt16(region.z);
-            writer.writeInt64(Number(region.timestamp)); // TODO: Make it bigint
+            writer.writeInt64(region.timestamp);
         }
     }
 }
@@ -159,7 +159,7 @@ export class RegionCatchupResponsePacket {
         for (const region of this.chunks) {
             writer.writeInt32(region.x);
             writer.writeInt32(region.z);
-            writer.writeUInt64(Number(region.timestamp)); // TODO: Make it bigint
+            writer.writeUInt64(region.timestamp);
         }
     }
 }
@@ -186,7 +186,7 @@ export class ChunkCatchupRequestPacket {
                     chunks[i] = {
                         x: reader.readInt32(),
                         z: reader.readInt32(),
-                        timestamp: BigInt(reader.readUInt64()) // TODO: Make it bigint
+                        timestamp: reader.readUInt64()
                     };
                 }
                 return chunks;
@@ -217,7 +217,7 @@ export class ChunkDataPacket {
         writer.writeString(this.world);
         writer.writeInt32(this.x);
         writer.writeInt32(this.z);
-        writer.writeUInt64(Number(this.timestamp)); // TODO: Make it bigint
+        writer.writeUInt64(this.timestamp);
         writer.writeUInt16(this.version);
         writer.writeBufWithLen(this.hash);
         writer.writeBufRaw(this.data); // XXX do we need to prefix with length?
@@ -228,7 +228,7 @@ export class ChunkDataPacket {
             reader.readString(),
             reader.readInt32(),
             reader.readInt32(),
-            BigInt(reader.readUInt64()), // TODO: Make it bigint
+            reader.readUInt64(),
             reader.readUInt16(),
             reader.readBufWithLen(),
             reader.readRemainder()

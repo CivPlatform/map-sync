@@ -22,7 +22,7 @@ import { AbstractClientMode, UnsupportedPacketException } from "./mode";
 import * as config from "../config/config";
 import * as whitelist from "../config/whitelist";
 import * as uuid_cache from "../config/uuid_cache";
-import { getRegionTimestamps, getChunkTimestamps, getChunkData, storeChunkData } from "../database/entities";
+import { getRegionTimestamps, getChunkTimestamps, getChunkData, storeChunkData } from "../database/data";
 
 const PACKET_LOGGER = util.debuglog("packets");
 /** prevent Out of Memory when client sends a large packet */

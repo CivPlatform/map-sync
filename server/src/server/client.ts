@@ -22,7 +22,7 @@ import { AbstractClientMode, UnsupportedPacketException } from "./mode";
 import * as config from "../config/config";
 import * as whitelist from "../config/whitelist";
 import * as uuid_cache from "../config/uuid_cache";
-import { getRegionTimestamps, getChunkTimestamps, getChunkData, PlayerChunkDB } from "../database/entities";
+import { getRegionTimestamps, getChunkTimestamps, getChunkData, storeChunkData } from "../database/entities";
 
 const PACKET_LOGGER = util.debuglog("packets");
 /** prevent Out of Memory when client sends a large packet */
@@ -259,19 +259,16 @@ export class TcpClient {
                     return;
                 }
                 if (packet instanceof ChunkDataPacket) {
-                    // TODO ignore if same chunk hash exists in db
-                    PlayerChunkDB.store({
-                        world: packet.world,
-                        chunk_x: packet.x,
-                        chunk_z: packet.z,
-                        uuid: client.uuid!,
-                        ts: Number(packet.timestamp), // TODO: Make it bigint
-                        data: {
-                            hash: packet.hash,
-                            version: packet.version,
-                            data: packet.data
-                        }
-                    }).catch(console.error);
+                    await storeChunkData(
+                        packet.world,
+                        packet.x,
+                        packet.z,
+                        client.uuid!,
+                        packet.timestamp,
+                        packet.hash,
+                        packet.version,
+                        packet.data
+                    ).catch(console.error);
                     // TODO small timeout, then skip if other client already has it
                     for (const otherClient of client.server.clients.values()) {
                         if (client === otherClient) continue;

@@ -85,6 +85,37 @@ export async function getChunkData(
         .executeTakeFirst();
 }
 
+/**
+ * Stores a player's chunk data.
+ */
+export async function storeChunkData(
+    world: string,
+    x: number,
+    z: number,
+    uuid: string,
+    timestamp: bigint,
+    hash: Buffer,
+    version: number,
+    data: Buffer
+) {
+    await database.get()
+        .insertInto("chunk_data")
+        .values({ hash, version, data })
+        .onConflict((oc) => oc.column("hash").doNothing())
+        .execute();
+    await database.get()
+        .replaceInto("player_chunk")
+        .values({
+            world,
+            chunk_x: x,
+            chunk_z: z,
+            uuid,
+            ts: timestamp,
+            hash
+        })
+        .execute();
+}
+
 import {
     BaseEntity,
     Column,
@@ -150,14 +181,5 @@ export class PlayerChunkDB extends BaseEntity implements PlayerChunk {
     @ManyToOne(() => ChunkDataDB)
     @JoinColumn({ name: "hash" })
     data!: ChunkData;
-
-    static async store(map_chunk: PlayerChunk) {
-        // TODO if PlayerChunk exists, and holds last reference to old hash, delete ChunkData at old hash
-        await ChunkDataDB.upsert(map_chunk.data, {
-            conflictPaths: ChunkDataDB.primaryCols,
-            skipUpdateIfNoValuesChanged: true
-        });
-        await PlayerChunkDB.upsert(map_chunk, PlayerChunkDB.primaryCols);
-    }
 
 }

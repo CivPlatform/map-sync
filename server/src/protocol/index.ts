@@ -10,7 +10,7 @@ import {
     ChunkCatchupRequestPacket,
     ChunkDataPacket
 } from "./packets";
-import { inspect } from "util";
+import { inspect } from "node:util";
 
 export type ClientPacket =
     | ChunkDataPacket

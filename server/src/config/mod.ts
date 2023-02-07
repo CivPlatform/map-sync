@@ -1,5 +1,5 @@
-import lib_path from "path";
-import lib_fs from "fs";
+import lib_path from "node:path";
+import lib_fs from "node:fs";
 import * as errors from "../deps/errors";
 import type { JSONValue } from "../deps/json";
 

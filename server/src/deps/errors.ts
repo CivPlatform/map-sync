@@ -1,4 +1,4 @@
-import std_os from "os";
+import std_os from "node:os";
 
 export enum ErrorType {
     FileExists,

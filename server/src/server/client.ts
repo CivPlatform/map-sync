@@ -167,10 +167,10 @@ export class TcpClient {
                     const sharedSecret = await encryption.decrypt(
                         packet.sharedSecret
                     );
-                    const mojangAuth = await fetchHasJoined({
-                        username: claimedUsername,
-                        shaHex: await encryption.generateShaHex(sharedSecret)
-                    });
+                    const mojangAuth = await fetchHasJoined(
+                        claimedUsername,
+                        await encryption.generateShaHex(sharedSecret)
+                    );
                     if (!mojangAuth?.uuid) {
                         client.kick(`Mojang auth failed`);
                         return;
@@ -312,13 +312,11 @@ export class TcpClient {
     }
 }
 
-async function fetchHasJoined(args: {
-    username: string;
-    shaHex: string;
-    clientIp?: string;
-}) {
-    const { username, shaHex, clientIp } = args;
-
+async function fetchHasJoined(
+    username: string,
+    shaHex: string,
+    clientIp?: string
+) {
     // if auth is disabled, return a "usable" item
     if ('DISABLE_AUTH' in process.env)
         return { name: username, uuid: `AUTH-DISABLED-${username}` }

@@ -6,7 +6,7 @@ export const PUBLIC_KEY_BUFFER = KEY_PAIR.publicKey.export({
     format: "der"
 });
 
-export function decrypt(buffer: Buffer): Buffer {
+export async function decrypt(buffer: Buffer): Promise<Buffer> {
     return crypto.privateDecrypt(
         {
             key: KEY_PAIR.privateKey,
@@ -21,7 +21,7 @@ export type Ciphers = {
     readonly decipher: crypto.Decipher;
 };
 
-export function generateCiphers(secret: Buffer): Ciphers {
+export async function generateCiphers(secret: Buffer): Promise<Ciphers> {
     const algorithm = "aes-128-cfb8";
     return {
         encipher: crypto.createCipheriv(algorithm, secret, secret),
@@ -29,14 +29,14 @@ export function generateCiphers(secret: Buffer): Ciphers {
     };
 }
 
-export function generateShaHash(data: Buffer): Buffer {
+export async function generateShaHash(data: Buffer): Promise<Buffer> {
     return crypto
         .createHash("sha1")
         .update(data)
         .digest();
 }
 
-export function generateShaHex(secret: Buffer): string {
+export async function generateShaHex(secret: Buffer): Promise<string> {
     return crypto
         .createHash("sha1")
         .update(secret)

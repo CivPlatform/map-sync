@@ -155,7 +155,7 @@ export class TcpClient {
         this.mode = new (class Stage1PreAuthMode extends AbstractClientMode {
             async onPacketReceived(packet: ClientPacket) {
                 if (packet instanceof EncryptionResponsePacket) {
-                    const parsedVerifyToken = encryption.decrypt(
+                    const parsedVerifyToken = await encryption.decrypt(
                         packet.verifyToken
                     );
                     if (!parsedVerifyToken.equals(verifyToken)) {
@@ -164,12 +164,12 @@ export class TcpClient {
                         );
                         return;
                     }
-                    const sharedSecret = encryption.decrypt(
+                    const sharedSecret = await encryption.decrypt(
                         packet.sharedSecret
                     );
                     const mojangAuth = await fetchHasJoined({
                         username: claimedUsername,
-                        shaHex: encryption.generateShaHex(sharedSecret)
+                        shaHex: await encryption.generateShaHex(sharedSecret)
                     });
                     if (!mojangAuth?.uuid) {
                         client.kick(`Mojang auth failed`);
@@ -188,7 +188,7 @@ export class TcpClient {
                         }
                     }
                     client.setPostAuthMode(
-                        encryption.generateCiphers(sharedSecret)
+                        await encryption.generateCiphers(sharedSecret)
                     );
                     client.send(new RegionTimestampsPacket(
                         world,
@@ -259,7 +259,7 @@ export class TcpClient {
                     return;
                 }
                 if (packet instanceof ChunkDataPacket) {
-                    const hash = encryption.generateShaHash(packet.data);
+                    const hash = await encryption.generateShaHash(packet.data);
                     if (!hash.equals(packet.hash)) {
                         client.kick(`Client sent mismatching hash: sent[${packet.hash.toString("hex")}] received[${hash.toString("hex")}]`);
                         return;

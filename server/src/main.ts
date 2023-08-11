@@ -1,6 +1,5 @@
 import './cli'
-import { connectDB } from './db'
-import { PlayerChunk, PlayerChunkDB } from './MapChunk'
+import * as database from "./database";
 import { uuid_cache_store, getConfig, whitelist_check } from './metadata'
 import { ClientPacket } from './protocol'
 import { CatchupRequestPacket } from './protocol/CatchupRequestPacket'
@@ -8,7 +7,7 @@ import { ChunkTilePacket } from './protocol/ChunkTilePacket'
 import { TcpClient, TcpServer } from './server'
 import {RegionCatchupPacket} from "./protocol/RegionCatchupPacket";
 
-connectDB().then(() => new Main())
+database.setup().then(() => new Main())
 
 type ProtocolClient = TcpClient // TODO cleanup
 
@@ -35,7 +34,7 @@ export class Main {
 
 		// TODO check version, mc server, user access
 
-		const timestamps = await PlayerChunkDB.getRegionTimestamps();
+		const timestamps = await database.getRegionTimestamps(client.world!);
 		client.send({ type: 'RegionTimestamps', world: client.world!, regions: timestamps });
 	}
 
@@ -62,15 +61,16 @@ export class Main {
 
 		// TODO ignore if same chunk hash exists in db
 
-		const playerChunk: PlayerChunk = {
-			world: pkt.world,
-			chunk_x: pkt.chunk_x,
-			chunk_z: pkt.chunk_z,
-			uuid: client.uuid,
-			ts: pkt.ts,
-			data: pkt.data,
-		}
-		PlayerChunkDB.store(playerChunk).catch(console.error)
+		await database.storeChunkData(
+			pkt.world,
+			pkt.chunk_x,
+			pkt.chunk_z,
+			client.uuid,
+			pkt.ts,
+			pkt.data.version,
+			pkt.data.hash,
+			pkt.data.data
+		).catch(console.error);
 
 		// TODO small timeout, then skip if other client already has it
 		for (const otherClient of Object.values(this.server.clients)) {
@@ -90,11 +90,11 @@ export class Main {
 		for (const req of pkt.chunks) {
 			const { world, chunk_x, chunk_z } = req
 
-			let chunk = await PlayerChunkDB.getChunkWithData({
+			let chunk = await database.getChunkData(
 				world,
 				chunk_x,
 				chunk_z,
-			})
+			);
 			if (!chunk) {
 				console.error(`${client.name} requested unavailable chunk`, req)
 				continue
@@ -103,14 +103,25 @@ export class Main {
 			if (chunk.ts > req.ts) continue // someone sent a new chunk, which presumably got relayed to the client
 			if (chunk.ts < req.ts) continue // the client already has a chunk newer than this
 
-			client.send({ type: 'ChunkTile', ...chunk })
+			client.send({
+				type: "ChunkTile",
+				world,
+				chunk_x,
+				chunk_z,
+				ts: req.ts,
+				data: {
+					hash: chunk.hash,
+					data: chunk.data,
+					version: chunk.version
+				}
+			});
 		}
 	}
 
 	async handleRegionCatchupPacket(client: ProtocolClient, pkt: RegionCatchupPacket) {
 		if (!client.uuid) throw new Error(`${client.name} is not authenticated`)
 
-		const chunks = await PlayerChunkDB.getCatchupData(pkt.world, pkt.regions)
+		const chunks = await database.getChunkTimestamps(pkt.world, pkt.regions)
 		if (chunks.length) client.send({ type: 'Catchup', chunks })
 	}
 }

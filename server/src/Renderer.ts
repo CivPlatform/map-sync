@@ -1,26 +1,17 @@
 import { spawn } from 'child_process'
-import { Between } from 'typeorm'
 import { promisify } from 'util'
-import { PlayerChunkDB } from './MapChunk'
+import * as database from "./database";
 
-export async function renderTile(tileX: number, tileZ: number) {
-	const allChunks = await PlayerChunkDB.find({
-		where: {
-			chunk_x: Between(tileX - 1, tileX + 16 - 1),
-			chunk_z: Between(tileZ - 1, tileZ + 16 - 1),
-		},
-		order: { ts: 'DESC' }, // newest first
-		relations: ['data'],
-	})
-
-	// skip old chunks at same pos (from different players)
-	const newestChunks = new Map<string, PlayerChunkDB>()
-	for (const chunk of allChunks) {
-		const chunkPos = `${chunk.chunk_x},${chunk.chunk_z}`
-		if (newestChunks.has(chunkPos)) continue
-		newestChunks.set(chunkPos, chunk)
-	}
-	const chunksList = Array.from(newestChunks.values())
+export async function renderTile(
+	dimension: string,
+	tileX: number,
+	tileZ: number
+) {
+	const allChunks = await database.getRegionChunks(
+		dimension,
+		tileX,
+		tileZ
+	);
 
 	const proc = spawn(
 		'../render/target/release/civmap-render',
@@ -32,16 +23,16 @@ export async function renderTile(tileX: number, tileZ: number) {
 
 	const write = promisify<Buffer, void>(proc.stdin.write.bind(proc.stdin))
 
-	const numBuf = Buffer.alloc(4)
-	numBuf.writeUInt32BE(chunksList.length)
+	const numBuf = Buffer.allocUnsafe(4)
+	numBuf.writeUInt32BE(allChunks.length)
 	await write(numBuf)
 
-	const chunkHeaderBuf = Buffer.alloc(4 + 4 + 2) // reused. 32+32+16 bit
-	for (const chunk of chunksList) {
+	const chunkHeaderBuf = Buffer.allocUnsafe(4 + 4 + 2) // reused. 32+32+16 bit
+	for (const chunk of allChunks) {
 		chunkHeaderBuf.writeInt32BE(chunk.chunk_x, 0)
 		chunkHeaderBuf.writeInt32BE(chunk.chunk_z, 4)
-		chunkHeaderBuf.writeUInt16BE(chunk.data.version, 8)
+		chunkHeaderBuf.writeUInt16BE(chunk.version, 8)
 		await write(chunkHeaderBuf)
-		await write(chunk.data.data)
+		await write(chunk.data)
 	}
 }

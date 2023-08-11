@@ -10,18 +10,13 @@ import { promises as fs_promises } from "fs";
  *
  * @author Protonull
  */
-export async function loadOrSaveDefaultStringFile(
-    path: string,
-    fallback: string
-): Promise<string> {
+export async function loadOrSaveDefaultStringFile(path: string, fallback: string): Promise<string> {
     try {
         return await fs_promises.readFile(path, { encoding: "utf8" });
-    }
-    catch (thrown) { }
+    } catch (thrown) {}
     try {
         await fs_promises.writeFile(path, fallback, { encoding: "utf8" });
-    }
-    catch (thrown) {
+    } catch (thrown) {
         console.warn("Could not create default file for [" + path + "]");
     }
     return fallback;

@@ -4,3 +4,8 @@ export interface CatchupChunk {
 	chunk_z: number
 	ts: number
 }
+
+export interface Pos2D {
+	readonly x: number;
+	readonly z: number;
+}

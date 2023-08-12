@@ -1,11 +1,11 @@
 import './cli'
-import * as database from "./database";
+import * as database from './database'
 import { uuid_cache_store, getConfig, whitelist_check } from './metadata'
 import { ClientPacket } from './protocol'
 import { CatchupRequestPacket } from './protocol/CatchupRequestPacket'
 import { ChunkTilePacket } from './protocol/ChunkTilePacket'
 import { TcpClient, TcpServer } from './server'
-import {RegionCatchupPacket} from "./protocol/RegionCatchupPacket";
+import { RegionCatchupPacket } from './protocol/RegionCatchupPacket'
 
 database.setup().then(() => new Main())
 
@@ -28,27 +28,31 @@ export class Main {
 					`Rejected unwhitelisted user ${client.mcName} (${client.uuid})`,
 				)
 				client.kick(`Not whitelisted`)
-				return;
+				return
 			}
 		}
 
 		// TODO check version, mc server, user access
 
-		const timestamps = await database.getRegionTimestamps(client.world!);
-		client.send({ type: 'RegionTimestamps', world: client.world!, regions: timestamps });
+		const timestamps = await database.getRegionTimestamps(client.world!)
+		client.send({
+			type: 'RegionTimestamps',
+			world: client.world!,
+			regions: timestamps,
+		})
 	}
 
 	handleClientDisconnected(client: ProtocolClient) {}
 
 	handleClientPacketReceived(client: ProtocolClient, pkt: ClientPacket) {
-		client.debug(client.mcName + " <- " + pkt.type);
+		client.debug(client.mcName + ' <- ' + pkt.type)
 		switch (pkt.type) {
 			case 'ChunkTile':
 				return this.handleChunkTilePacket(client, pkt)
 			case 'CatchupRequest':
 				return this.handleCatchupRequest(client, pkt)
 			case 'RegionCatchup':
-				return this.handleRegionCatchupPacket(client, pkt);
+				return this.handleRegionCatchupPacket(client, pkt)
 			default:
 				throw new Error(
 					`Unknown packet '${(pkt as any).type}' from client ${client.id}`,
@@ -61,16 +65,18 @@ export class Main {
 
 		// TODO ignore if same chunk hash exists in db
 
-		await database.storeChunkData(
-			pkt.world,
-			pkt.chunk_x,
-			pkt.chunk_z,
-			client.uuid,
-			pkt.ts,
-			pkt.data.version,
-			pkt.data.hash,
-			pkt.data.data
-		).catch(console.error);
+		await database
+			.storeChunkData(
+				pkt.world,
+				pkt.chunk_x,
+				pkt.chunk_z,
+				client.uuid,
+				pkt.ts,
+				pkt.data.version,
+				pkt.data.hash,
+				pkt.data.data,
+			)
+			.catch(console.error)
 
 		// TODO small timeout, then skip if other client already has it
 		for (const otherClient of Object.values(this.server.clients)) {
@@ -90,11 +96,7 @@ export class Main {
 		for (const req of pkt.chunks) {
 			const { world, chunk_x, chunk_z } = req
 
-			let chunk = await database.getChunkData(
-				world,
-				chunk_x,
-				chunk_z,
-			);
+			let chunk = await database.getChunkData(world, chunk_x, chunk_z)
 			if (!chunk) {
 				console.error(`${client.name} requested unavailable chunk`, req)
 				continue
@@ -104,7 +106,7 @@ export class Main {
 			if (chunk.ts < req.ts) continue // the client already has a chunk newer than this
 
 			client.send({
-				type: "ChunkTile",
+				type: 'ChunkTile',
 				world,
 				chunk_x,
 				chunk_z,
@@ -112,13 +114,16 @@ export class Main {
 				data: {
 					hash: chunk.hash,
 					data: chunk.data,
-					version: chunk.version
-				}
-			});
+					version: chunk.version,
+				},
+			})
 		}
 	}
 
-	async handleRegionCatchupPacket(client: ProtocolClient, pkt: RegionCatchupPacket) {
+	async handleRegionCatchupPacket(
+		client: ProtocolClient,
+		pkt: RegionCatchupPacket,
+	) {
 		if (!client.uuid) throw new Error(`${client.name} is not authenticated`)
 
 		const chunks = await database.getChunkTimestamps(pkt.world, pkt.regions)

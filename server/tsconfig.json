@@ -5,10 +5,7 @@
 		"experimentalDecorators": true,
 		"forceConsistentCasingInFileNames": true,
 		"isolatedModules": true,
-		"lib": [
-			"esnext",
-			"webworker"
-		],
+		"lib": ["esnext", "webworker"],
 		"module": "CommonJS",
 		"moduleResolution": "node",
 		"noImplicitReturns": true,
@@ -21,7 +18,5 @@
 		"strict": true,
 		"target": "ESNext"
 	},
-	"include": [
-		"src"
-	]
+	"include": ["src"]
 }

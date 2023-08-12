@@ -184,7 +184,7 @@ export class TcpClient {
 			this.debug('Not authenticated, dropping packet', pkt.type)
 			return
 		}
-		this.debug(this.mcName + " -> " + pkt.type);
+		this.debug(this.mcName + ' -> ' + pkt.type)
 		await this.sendInternal(pkt, true)
 	}
 

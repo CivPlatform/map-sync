@@ -4,23 +4,23 @@ import { ChunkTilePacket } from './ChunkTilePacket'
 import { EncryptionRequestPacket } from './EncryptionRequestPacket'
 import { EncryptionResponsePacket } from './EncryptionResponsePacket'
 import { HandshakePacket } from './HandshakePacket'
-import {CatchupPacket} from "./CatchupPacket";
-import {CatchupRequestPacket} from "./CatchupRequestPacket";
-import {RegionTimestampsPacket} from "./RegionTimestampsPacket";
-import {RegionCatchupPacket} from "./RegionCatchupPacket";
+import { CatchupPacket } from './CatchupPacket'
+import { CatchupRequestPacket } from './CatchupRequestPacket'
+import { RegionTimestampsPacket } from './RegionTimestampsPacket'
+import { RegionCatchupPacket } from './RegionCatchupPacket'
 
 export type ClientPacket =
 	| ChunkTilePacket
 	| EncryptionResponsePacket
 	| HandshakePacket
 	| CatchupRequestPacket
-  | RegionCatchupPacket
+	| RegionCatchupPacket
 
 export type ServerPacket =
 	| ChunkTilePacket
 	| EncryptionRequestPacket
 	| CatchupPacket
-  | RegionTimestampsPacket
+	| RegionTimestampsPacket
 
 export const packetIds = [
 	'ERROR:pkt0',
@@ -31,7 +31,7 @@ export const packetIds = [
 	'Catchup',
 	'CatchupRequest',
 	'RegionTimestamps',
-	'RegionCatchup'
+	'RegionCatchup',
 ]
 
 export function getPacketId(type: ServerPacket['type']) {

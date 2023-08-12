@@ -16,7 +16,7 @@ export namespace HandshakePacket {
 			modVersion: reader.readString(),
 			mojangName: reader.readString(),
 			gameAddress: reader.readString(),
-			world: reader.readString()
+			world: reader.readString(),
 		}
 	}
 }

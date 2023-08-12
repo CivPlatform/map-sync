@@ -4,6 +4,7 @@ import { Mutex } from 'async-mutex'
 import * as errors from './deps/errors'
 import * as json from './deps/json'
 import * as z from 'zod'
+import { fromZodError } from 'zod-validation-error'
 
 export const DATA_FOLDER = process.env['MAPSYNC_DATA_DIR'] ?? './mapsync'
 try {
@@ -40,7 +41,14 @@ function parseConfigFile<T>(
 		node_fs.writeFileSync(file, JSON.stringify(defaultContent, null, 2), 'utf8')
 		return defaultContent
 	}
-	return parser(json.parse(fileContents))
+	try {
+		return parser(json.parse(fileContents))
+	} catch (e) {
+		if (e instanceof z.ZodError) {
+			throw 'Could not parse ' + file + ': ' + fromZodError(e)
+		}
+		throw e
+	}
 }
 
 /**

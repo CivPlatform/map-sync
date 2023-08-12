@@ -1,17 +1,13 @@
 import { spawn } from 'child_process'
 import { promisify } from 'util'
-import * as database from "./database";
+import * as database from './database'
 
 export async function renderTile(
 	dimension: string,
 	tileX: number,
-	tileZ: number
+	tileZ: number,
 ) {
-	const allChunks = await database.getRegionChunks(
-		dimension,
-		tileX,
-		tileZ
-	);
+	const allChunks = await database.getRegionChunks(dimension, tileX, tileZ)
 
 	const proc = spawn(
 		'../render/target/release/civmap-render',

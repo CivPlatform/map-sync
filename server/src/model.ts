@@ -6,6 +6,6 @@ export interface CatchupChunk {
 }
 
 export interface Pos2D {
-	readonly x: number;
-	readonly z: number;
+	readonly x: number
+	readonly z: number
 }

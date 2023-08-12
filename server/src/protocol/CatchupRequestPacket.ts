@@ -1,4 +1,4 @@
-import { type CatchupChunk } from "../model";
+import { type CatchupChunk } from '../model'
 import { BufReader } from './BufReader'
 
 export interface CatchupRequestPacket {

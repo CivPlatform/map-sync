@@ -1,16 +1,25 @@
 name: Build+Test Server
 
-on: [ push, pull_request ]
+on:
+  push:
+    paths:
+      - "server/**/*"
+  pull_request:
+    paths:
+      - "server/**/*"
 
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v2
-    - name: Use Node.js 18
-      uses: actions/setup-node@v1
-      with:
-        node-version: 18
-    - run: cd server && yarn
-    - run: cd server && yarn build
-    - run: cd server && yarn test
+      - uses: actions/checkout@v2
+      - name: Use Node.js 18
+        uses: actions/setup-node@v1
+        with:
+          node-version: 18
+      - run: yarn
+        working-directory: ./server
+      - run: yarn build
+        working-directory: ./server
+      - run: yarn test
+        working-directory: ./server

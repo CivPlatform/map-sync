@@ -24,7 +24,7 @@
 		"@types/node-fetch": "^2.6.1",
 		"dotenv": "^16.0.1",
 		"prettier": "^3.0.1",
-		"typescript": "^4.7.2"
+		"typescript": "^5.1.6"
 	},
 	"prettier": {
 		"useTabs": true,

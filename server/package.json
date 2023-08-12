@@ -6,6 +6,7 @@
 	"license": "GPL-3.0-only",
 	"scripts": {
 		"build": "tsc",
+		"format": "prettier -w .",
 		"test": "true",
 		"start": "node -r source-map-support/register dist/main.js",
 		"start:dev": "tsc && node -r source-map-support/register dist/main.js"

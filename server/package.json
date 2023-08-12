@@ -20,7 +20,7 @@
 	},
 	"devDependencies": {
 		"@types/better-sqlite3": "^7.6.4",
-		"@types/node": "^16.11.38",
+		"@types/node": "^18.17.4",
 		"@types/node-fetch": "^2.6.1",
 		"dotenv": "^16.0.1",
 		"prettier": "^3.0.1",

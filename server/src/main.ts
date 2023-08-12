@@ -1,13 +1,25 @@
 import './cli'
 import * as database from './database'
-import { uuid_cache_store, getConfig, whitelist_check } from './metadata'
+import * as metadata from './metadata'
 import { ClientPacket } from './protocol'
 import { CatchupRequestPacket } from './protocol/CatchupRequestPacket'
 import { ChunkTilePacket } from './protocol/ChunkTilePacket'
 import { TcpClient, TcpServer } from './server'
 import { RegionCatchupPacket } from './protocol/RegionCatchupPacket'
 
-database.setup().then(() => new Main())
+let config: metadata.Config = null!
+Promise.resolve().then(async () => {
+	await database.setup()
+
+	config = metadata.getConfig()
+
+	// These two are only used if whitelist is enabled... but best to load them
+	// anyway lest there be a modification to them that is then saved.
+	await metadata.loadWhitelist()
+	await metadata.loadUuidCache()
+
+	new Main()
+})
 
 type ProtocolClient = TcpClient // TODO cleanup
 
@@ -20,10 +32,11 @@ export class Main {
 	async handleClientAuthenticated(client: ProtocolClient) {
 		if (!client.uuid) throw new Error('Client not authenticated')
 
-		uuid_cache_store(client.mcName!, client.uuid)
+		metadata.cachePlayerUuid(client.mcName!, client.uuid!)
+		await metadata.saveUuidCache()
 
-		if ((await getConfig()).whitelist) {
-			if (!whitelist_check(client.uuid)) {
+		if (config.whitelist) {
+			if (!metadata.whitelist.has(client.uuid)) {
 				client.log(
 					`Rejected unwhitelisted user ${client.mcName} (${client.uuid})`,
 				)

@@ -88,36 +88,36 @@ async function handle_input(input: string): Promise<void> {
 		console.log(
 			'whitelist_remove_ign <ign> - Removes the UUID cached with\n    the given IGN from the whitelist, and saves the whitelist to disk',
 		)
-	} else if (command === 'whitelist_load') await metadata.whitelist_load()
-	else if (command === 'whitelist_save') await metadata.whitelist_save()
+	} else if (command === 'whitelist_load') await metadata.loadWhitelist()
+	else if (command === 'whitelist_save') await metadata.saveWhitelist()
 	else if (command === 'whitelist_add') {
 		if (extras.length === 0)
 			throw new Error('Did not provide UUID to whitelist')
 		const uuid = extras
-		await metadata.whitelist_add(uuid)
-		await metadata.whitelist_save()
+		metadata.whitelist.add(uuid)
+		await metadata.saveWhitelist()
 	} else if (command === 'whitelist_add_ign') {
 		if (extras.length === 0)
 			throw new Error('Did not provide UUID to whitelist')
 		const ign = extras
-		const uuid = metadata.uuid_cache_lookup(ign)
+		const uuid = metadata.getCachedPlayerUuid(ign)
 		if (uuid == null) throw new Error('No cached UUID for IGN ' + ign)
-		await metadata.whitelist_add(uuid)
-		await metadata.whitelist_save()
+		metadata.whitelist.add(uuid)
+		await metadata.saveWhitelist()
 	} else if (command === 'whitelist_remove') {
 		if (extras.length === 0)
 			throw new Error('Did not provide UUID to whitelist')
 		const uuid = extras
-		await metadata.whitelist_remove(uuid)
-		await metadata.whitelist_save()
+		metadata.whitelist.delete(uuid)
+		await metadata.saveWhitelist()
 	} else if (command === 'whitelist_remove_ign') {
 		if (extras.length === 0)
 			throw new Error('Did not provide UUID to whitelist')
 		const ign = extras
-		const uuid = metadata.uuid_cache_lookup(ign)
+		const uuid = metadata.getCachedPlayerUuid(ign)
 		if (uuid == null) throw new Error('No cached UUID for IGN ' + ign)
-		await metadata.whitelist_remove(uuid)
-		await metadata.whitelist_save()
+		metadata.whitelist.delete(uuid)
+		await metadata.saveWhitelist()
 	} else {
 		throw new Error(`Unknown command "${command}"`)
 	}

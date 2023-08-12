@@ -15,13 +15,11 @@
 		"async-mutex": "^0.4.0",
 		"better-sqlite3": "^8.5.0",
 		"kysely": "^0.26.1",
-		"node-fetch": "^2.6.7",
 		"source-map-support": "^0.5.21"
 	},
 	"devDependencies": {
 		"@types/better-sqlite3": "^7.6.4",
 		"@types/node": "^18.17.4",
-		"@types/node-fetch": "^2.6.1",
 		"dotenv": "^16.0.1",
 		"prettier": "^3.0.1",
 		"typescript": "^5.1.6"

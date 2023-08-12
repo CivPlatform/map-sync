@@ -1,6 +1,12 @@
 name: Build Mod
 
-on: [push, pull_request]
+on:
+  push:
+    paths:
+      - "mod/**/*"
+  pull_request:
+    paths:
+      - "mod/**/*"
 
 jobs:
   build:
@@ -12,7 +18,8 @@ jobs:
         with:
           java-version: "17"
           distribution: "adopt"
-      - run: cd mod && ./gradlew build
+      - run: ./gradlew build
+        working-directory: ./mod
 
       - name: Upload Forge Build
         uses: actions/upload-artifact@v3

@@ -1,6 +1,5 @@
 import crypto from 'crypto'
 import net from 'net'
-import fetch from 'node-fetch'
 import { Main } from './main'
 import type { ClientPacket, ServerPacket } from './protocol'
 import { decodePacket, encodePacket } from './protocol'

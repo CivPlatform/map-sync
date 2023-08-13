@@ -293,6 +293,11 @@ async function fetchHasJoined(args: {
 	clientIp?: string
 }) {
 	const { username, shaHex, clientIp } = args
+
+	// if auth is disabled, return a "usable" item
+	if ('DISABLE_AUTH' in process.env)
+		return { name: username, uuid: `AUTH-DISABLED-${username}` }
+
 	let url = `https://sessionserver.mojang.com/session/minecraft/hasJoined?username=${username}&serverId=${shaHex}`
 	if (clientIp) url += `&ip=${clientIp}`
 	const res = await fetch(url)

@@ -20,7 +20,7 @@ jobs:
         uses: actions/setup-node@v3
         with:
           node-version: ${{ matrix.version }}
-          cache: "yarn"
+          # cache: "yarn"
       - run: yarn
         working-directory: ./server
       - run: yarn build

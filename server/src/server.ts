@@ -68,7 +68,7 @@ export class TcpClient {
 	world: string | undefined
 
 	/** prevent Out of Memory when client sends a large packet */
-	maxFrameSize = 2 ** 24
+	maxFrameSize = 2 ** 15
 
 	/** sent by client during handshake */
 	private claimedMojangName?: string

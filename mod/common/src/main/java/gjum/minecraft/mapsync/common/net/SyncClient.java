@@ -112,7 +112,7 @@ public class SyncClient {
 				public void initChannel(SocketChannel ch) {
 					ch.pipeline().addLast(
 							new LengthFieldPrepender(4),
-							new LengthFieldBasedFrameDecoder(1 << 24, 0, 4, 0, 4),
+							new LengthFieldBasedFrameDecoder(1 << 15, 0, 4, 0, 4),
 							new ServerPacketDecoder(),
 							new ClientPacketEncoder(),
 							new ClientHandler(SyncClient.this));

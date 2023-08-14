@@ -27,7 +27,6 @@ export class TcpServer {
 		this.server = net.createServer({}, (socket) => {
 			const client = new TcpClient(socket, this, handler)
 			this.clients[client.id] = client
-			socket.on('end', () => delete this.clients[client.id])
 			socket.on('close', () => delete this.clients[client.id])
 		})
 
@@ -141,11 +140,16 @@ export class TcpClient {
 		})
 
 		socket.on('end', () => {
-			this.log('Ended')
+			// This event is called when the other end signals the end of transmission, meaning this client is
+			// still writeable, but no longer readable. In this situation we just want to close the socket.
+			// https://nodejs.org/dist/latest-v18.x/docs/api/net.html#event-end
+			this.kick('Ended')
 		})
 
 		socket.on('timeout', () => {
-			this.warn('Timeout')
+			// As per the docs, the socket needs to be manually closed.
+			// https://nodejs.org/dist/latest-v18.x/docs/api/net.html#event-timeout
+			this.kick('Timed out')
 		})
 
 		socket.on('error', (err: Error) => {

@@ -5,10 +5,9 @@ export interface CatchupRegion {
 }
 
 export interface CatchupChunk {
-	world: string
-	chunk_x: number
-	chunk_z: number
-	ts: number
+	readonly chunkX: number
+	readonly chunkZ: number
+	readonly timestamp: number
 }
 
 export interface Pos2D {

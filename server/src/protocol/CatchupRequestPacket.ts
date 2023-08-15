@@ -3,22 +3,21 @@ import { BufReader } from './BufReader'
 
 export interface CatchupRequestPacket {
 	type: 'CatchupRequest'
+	world: string
 	chunks: CatchupChunk[]
 }
 
 export namespace CatchupRequestPacket {
 	export function decode(reader: BufReader): CatchupRequestPacket {
 		const world = reader.readString()
-		const numChunks = reader.readUInt32()
-		const chunks: CatchupChunk[] = []
-		for (let i = 0; i < numChunks; i++) {
-			chunks.push({
-				world,
-				chunk_x: reader.readInt32(),
-				chunk_z: reader.readInt32(),
-				ts: reader.readUInt64(),
-			})
+		const chunks: CatchupChunk[] = new Array(reader.readUInt32())
+		for (let i = 0; i < chunks.length; i++) {
+			chunks[i] = {
+				chunkX: reader.readInt32(),
+				chunkZ: reader.readInt32(),
+				timestamp: reader.readUInt64(),
+			}
 		}
-		return { type: 'CatchupRequest', chunks }
+		return { type: 'CatchupRequest', world, chunks }
 	}
 }

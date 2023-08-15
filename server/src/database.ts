@@ -96,7 +96,6 @@ export async function getChunkTimestamps(dimension: string, regions: Pos2D[]) {
 			db
 				.selectFrom('player_chunk')
 				.select([
-					'world',
 					(eb) =>
 						kysely.sql<string>`(cast(floor(${eb.ref(
 							'chunk_x',
@@ -107,11 +106,11 @@ export async function getChunkTimestamps(dimension: string, regions: Pos2D[]) {
 					'chunk_z as z',
 					(eb) => eb.fn.max('ts').as('timestamp'),
 				])
-				.groupBy(['world', 'x', 'z']),
+				.where('world', '=', dimension)
+				.groupBy(['x', 'z']),
 		)
 		.selectFrom('regions')
-		.select(['world', 'x as chunk_x', 'z as chunk_z', 'timestamp as ts'])
-		.where('world', '=', dimension)
+		.select(['x as chunkX', 'z as chunkZ', 'timestamp'])
 		.where(
 			'region',
 			'in',

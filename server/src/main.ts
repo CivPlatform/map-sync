@@ -107,23 +107,24 @@ export class Main {
 		if (!client.uuid) throw new Error(`${client.name} is not authenticated`)
 
 		for (const req of pkt.chunks) {
-			const { world, chunk_x, chunk_z } = req
-
-			let chunk = await database.getChunkData(world, chunk_x, chunk_z)
+			let chunk = await database.getChunkData(pkt.world, req.chunkX, req.chunkZ)
 			if (!chunk) {
-				console.error(`${client.name} requested unavailable chunk`, req)
+				console.error(`${client.name} requested unavailable chunk`, {
+					world: pkt.world,
+					...req,
+				})
 				continue
 			}
 
-			if (chunk.ts > req.ts) continue // someone sent a new chunk, which presumably got relayed to the client
-			if (chunk.ts < req.ts) continue // the client already has a chunk newer than this
+			if (chunk.ts > req.timestamp) continue // someone sent a new chunk, which presumably got relayed to the client
+			if (chunk.ts < req.timestamp) continue // the client already has a chunk newer than this
 
 			client.send({
 				type: 'ChunkTile',
-				world,
-				chunk_x,
-				chunk_z,
-				ts: req.ts,
+				world: pkt.world,
+				chunk_x: req.chunkX,
+				chunk_z: req.chunkX,
+				ts: req.timestamp,
 				data: {
 					hash: chunk.hash,
 					data: chunk.data,
@@ -140,6 +141,7 @@ export class Main {
 		if (!client.uuid) throw new Error(`${client.name} is not authenticated`)
 
 		const chunks = await database.getChunkTimestamps(pkt.world, pkt.regions)
-		if (chunks.length) client.send({ type: 'Catchup', chunks })
+		if (chunks.length)
+			client.send({ type: 'Catchup', world: pkt.world, chunks })
 	}
 }

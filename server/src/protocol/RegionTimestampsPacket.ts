@@ -1,9 +1,10 @@
 import { BufWriter } from './BufWriter'
+import { CatchupRegion } from '../model'
 
 export interface RegionTimestampsPacket {
 	type: 'RegionTimestamps'
 	world: string
-	regions: any[]
+	regions: Array<CatchupRegion>
 }
 
 export namespace RegionTimestampsPacket {
@@ -13,10 +14,9 @@ export namespace RegionTimestampsPacket {
 		console.log('Sending regions ' + JSON.stringify(pkt.regions))
 		for (let i = 0; i < pkt.regions.length; i++) {
 			let region = pkt.regions[i]
-			writer.writeInt16(region.region_x)
-			writer.writeInt16(region.region_z)
-
-			writer.writeInt64(pkt.regions[i].ts)
+			writer.writeInt16(region.regionX)
+			writer.writeInt16(region.regionZ)
+			writer.writeInt64(region.timestamp)
 		}
 	}
 }

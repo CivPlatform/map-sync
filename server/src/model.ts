@@ -1,3 +1,9 @@
+export interface CatchupRegion {
+	readonly regionX: number
+	readonly regionZ: number
+	readonly timestamp: number
+}
+
 export interface CatchupChunk {
 	world: string
 	chunk_x: number

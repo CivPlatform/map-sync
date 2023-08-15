@@ -75,13 +75,15 @@ export function getRegionTimestamps(dimension: string) {
 	return get()
 		.selectFrom('player_chunk')
 		.select([
-			(eb) => kysely.sql<number>`floor(${eb.ref('chunk_x')} / 32.0)`.as('x'),
-			(eb) => kysely.sql<number>`floor(${eb.ref('chunk_z')} / 32.0)`.as('z'),
+			(eb) =>
+				kysely.sql<number>`floor(${eb.ref('chunk_x')} / 32.0)`.as('regionX'),
+			(eb) =>
+				kysely.sql<number>`floor(${eb.ref('chunk_z')} / 32.0)`.as('regionZ'),
 			(eb) => eb.fn.max('ts').as('timestamp'),
 		])
 		.where('world', '=', dimension)
-		.groupBy(['x', 'z'])
-		.orderBy('x', 'desc')
+		.groupBy(['regionX', 'regionZ'])
+		.orderBy('regionX', 'desc')
 		.execute()
 }
 

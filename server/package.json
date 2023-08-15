@@ -9,7 +9,7 @@
 		"format": "prettier -w .",
 		"test": "true",
 		"start": "node -r source-map-support/register dist/main.js",
-		"start:dev": "tsc && node -r source-map-support/register dist/main.js"
+		"start:dev": "tsc && node --inspect -r source-map-support/register dist/main.js"
 	},
 	"dependencies": {
 		"async-mutex": "^0.4.0",

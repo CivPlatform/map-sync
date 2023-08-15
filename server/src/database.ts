@@ -110,7 +110,7 @@ export async function getChunkTimestamps(dimension: string, regions: Pos2D[]) {
 				.groupBy(['world', 'x', 'z']),
 		)
 		.selectFrom('regions')
-		.select(['world', 'x as chunk_x', 'z as chunk_z', 'timestamp as ts'])
+		.select(['world', 'x as chunkX', 'z as chunkZ', 'timestamp'])
 		.where('world', '=', dimension)
 		.where(
 			'region',

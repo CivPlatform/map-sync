@@ -216,7 +216,7 @@ export class TcpClient {
 		if (this.cryptoPromise) throw new Error(`Already authenticated`)
 		if (this.verifyToken) throw new Error(`Encryption already started`)
 
-		if (!SUPPORTED_VERSIONS.includes(packet.modVersion)) {
+		if (!SUPPORTED_VERSIONS.has(packet.modVersion)) {
 			this.kick(
 				'Connected with unsupported version [' + packet.modVersion + ']',
 			)

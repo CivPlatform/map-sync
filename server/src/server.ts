@@ -7,6 +7,7 @@ import { BufReader } from './protocol/BufReader'
 import { BufWriter } from './protocol/BufWriter'
 import { EncryptionResponsePacket } from './protocol/EncryptionResponsePacket'
 import { HandshakePacket } from './protocol/HandshakePacket'
+import { SUPPORTED_VERSIONS } from './constants'
 
 const { PORT = '12312', HOST = '127.0.0.1' } = process.env
 
@@ -215,7 +216,13 @@ export class TcpClient {
 		if (this.cryptoPromise) throw new Error(`Already authenticated`)
 		if (this.verifyToken) throw new Error(`Encryption already started`)
 
-		this.modVersion = packet.modVersion
+		if (!SUPPORTED_VERSIONS.has(packet.modVersion)) {
+			this.kick(
+				'Connected with unsupported version [' + packet.modVersion + ']',
+			)
+			return
+		}
+
 		this.gameAddress = packet.gameAddress
 		this.claimedMojangName = packet.mojangName
 		this.world = packet.world

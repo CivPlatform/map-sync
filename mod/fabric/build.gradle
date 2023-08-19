@@ -25,11 +25,12 @@ dependencies {
 	minecraft "com.mojang:minecraft:${rootProject.minecraft_version}"
 	mappings loom.officialMojangMappings()
 
-	modCompileOnly "curse.maven:journeymap-32274:3796377" // version 1.18.2-5.8.4-fabric
-	modCompileOnly files("../libs/voxelmap-1.18.2-1.11.2.jar")
-	//Xaero's Minimap version - v22.8.2 for Fabric 1.18.2
-	//https://www.curseforge.com/minecraft/mc-mods/xaeros-minimap/files/3798916
-	modCompileOnly "curse.maven:xaeros-minimap-263420:3798916"
+
+
+	// https://modrinth.com/mod/voxelmap-updated/version/1.18.2-1.11.2 (1.11.2 fabric)
+	modCompileOnly "maven.modrinth:voxelmap-updated:SDVTG1wT"
+	// https://modrinth.com/mod/journeymap/version/1.18.2-5.9.7-fabric (5.9.7 fabric)
+	modCompileOnly "maven.modrinth:journeymap:5JbcGXLn"
 }
 
 processResources {

@@ -31,9 +31,9 @@ allprojects {
 		// See https://docs.gradle.org/current/userguide/declaring_repositories.html
 		// for more information about repositories.
 		maven {
-			url "https://cursemaven.com"
+			url "https://api.modrinth.com/maven"
 			content {
-				includeGroup "curse.maven"
+				includeGroup "maven.modrinth"
 			}
 		}
 	}

@@ -30,7 +30,10 @@ dependencies {
 	minecraft "com.mojang:minecraft:${rootProject.minecraft_version}"
 	mappings loom.officialMojangMappings()
 
-	modCompileOnly "curse.maven:journeymap-32274:3796379" // version 1.18.2-5.8.4-forge
+
+
+	// https://modrinth.com/mod/journeymap/version/1.18.2-5.9.7-forge (5.9.7 forge)
+	modCompileOnly "maven.modrinth:journeymap:2G6aMzKY"
 }
 
 processResources {

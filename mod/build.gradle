@@ -1,3 +1,6 @@
+// Update Gradle Wrapper using: ./gradlew wrapper --distribution-type bin --gradle-version <version>
+// See Gradle's releases here: https://gradle.org/releases/
+
 plugins {
 	id "architectury-plugin" version "3.4-SNAPSHOT"
 	id "dev.architectury.loom" version "0.11.0-SNAPSHOT" apply false

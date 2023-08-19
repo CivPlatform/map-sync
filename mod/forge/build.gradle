@@ -34,6 +34,8 @@ dependencies {
 
 	// https://modrinth.com/mod/journeymap/version/1.18.2-5.9.7-forge (5.9.7 forge)
 	modCompileOnly "maven.modrinth:journeymap:2G6aMzKY"
+	// https://modrinth.com/mod/xaeros-minimap/version/23.6.2_Forge_1.18.2 (23.6.2 forge)
+	modCompileOnly "maven.modrinth:xaeros-minimap:yFuICfIq"
 }
 
 processResources {

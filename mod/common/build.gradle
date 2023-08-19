@@ -8,9 +8,6 @@ dependencies {
 	// Do NOT use other classes from fabric loader
 	modImplementation "net.fabricmc:fabric-loader:${rootProject.fabric_loader_version}"
 
-	minecraft "com.mojang:minecraft:${rootProject.minecraft_version}"
-	mappings loom.officialMojangMappings()
-
 
 
 	// https://modrinth.com/mod/voxelmap-updated/version/1.18.2-1.11.2 (1.11.2 fabric)
@@ -22,8 +19,7 @@ dependencies {
 }
 
 architectury {
-	injectInjectables = false
-	common()
+	common(rootProject.enabled_platforms.split(","))
 }
 
 tasks {

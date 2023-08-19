@@ -1,5 +1,5 @@
 plugins {
-	id "com.github.johnrengelman.shadow" version "7.0.0"
+	id "com.github.johnrengelman.shadow" version "7.1.2"
 }
 
 architectury {
@@ -22,13 +22,10 @@ configurations {
 }
 
 dependencies {
-	forge "net.minecraftforge:forge:${rootProject.minecraft_version}-${rootProject.forge_version}"
+	forge "net.minecraftforge:forge:${rootProject.forge_version}"
 
 	common(project(path: ":common", configuration: "namedElements")) { transitive false }
 	shadowCommon(project(path: ":common", configuration: "transformProductionForge")) { transitive = false }
-
-	minecraft "com.mojang:minecraft:${rootProject.minecraft_version}"
-	mappings loom.officialMojangMappings()
 
 
 
@@ -89,13 +86,13 @@ publishing {
 	}
 }
 
-task cleanJar(type: Delete) {
+tasks.register('cleanJar', Delete) {
 	delete fileTree('../dist') {
 		include "*-forge.jar"
 	}
 }
 
-task copyJar(type: Copy) {
+tasks.register('copyJar', Copy) {
 	from remapJar
 	into '../dist'
 }

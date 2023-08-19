@@ -9,6 +9,7 @@ import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.event.lifecycle.FMLClientSetupEvent;
 import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
+import net.minecraftforge.fml.loading.FMLLoader;
 
 @Mod("mapsync")
 public class ForgeMapSyncMod extends MapSyncMod {
@@ -20,6 +21,11 @@ public class ForgeMapSyncMod extends MapSyncMod {
 	@Override
 	public String getVersion() {
 		return VERSION + "+forge";
+	}
+
+	@Override
+	protected boolean isDevMode() {
+		return !FMLLoader.isProduction();
 	}
 
 	public void clientSetup(FMLClientSetupEvent event) {

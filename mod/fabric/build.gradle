@@ -31,6 +31,8 @@ dependencies {
 	modCompileOnly "maven.modrinth:voxelmap-updated:SDVTG1wT"
 	// https://modrinth.com/mod/journeymap/version/1.18.2-5.9.7-fabric (5.9.7 fabric)
 	modCompileOnly "maven.modrinth:journeymap:5JbcGXLn"
+	// https://modrinth.com/mod/xaeros-minimap/version/23.6.2_Fabric_1.18.2 (23.6.2 fabric)
+	modCompileOnly "maven.modrinth:xaeros-minimap:Jwydpps9"
 }
 
 processResources {

@@ -5,13 +5,13 @@ import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.MessageToByteEncoder;
 
-public class ClientPacketEncoder extends MessageToByteEncoder<Packet> {
+public class ServerboundPacketEncoder extends MessageToByteEncoder<Packet> {
 	public static int getClientPacketId(Packet packet) {
 		if (packet instanceof ChunkTilePacket) return ChunkTilePacket.PACKET_ID;
-		if (packet instanceof CHandshake) return CHandshake.PACKET_ID;
-		if (packet instanceof CEncryptionResponse) return CEncryptionResponse.PACKET_ID;
-		if (packet instanceof CCatchupRequest) return CCatchupRequest.PACKET_ID;
-		if (packet instanceof CRegionCatchup) return CRegionCatchup.PACKET_ID;
+		if (packet instanceof ServerboundHandshakePacket) return ServerboundHandshakePacket.PACKET_ID;
+		if (packet instanceof ServerboundEncryptionResponsePacket) return ServerboundEncryptionResponsePacket.PACKET_ID;
+		if (packet instanceof ServerboundCatchupRequestPacket) return ServerboundCatchupRequestPacket.PACKET_ID;
+		if (packet instanceof ServerboundChunkTimestampsRequestPacket) return ServerboundChunkTimestampsRequestPacket.PACKET_ID;
 		throw new IllegalArgumentException("Unknown client packet class " + packet);
 	}
 

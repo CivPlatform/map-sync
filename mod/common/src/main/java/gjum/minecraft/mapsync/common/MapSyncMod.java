@@ -219,7 +219,7 @@ public abstract class MapSyncMod {
 		// TODO tell server our current dimension
 	}
 
-	public void handleRegionTimestamps(SRegionTimestamps packet, SyncClient client) {
+	public void handleRegionTimestamps(ClientboundRegionTimestampsPacket packet, SyncClient client) {
 		DimensionState dimension = getDimensionState();
 		if (dimension == null) return;
 		if (!dimension.dimension.location().toString().equals(packet.getDimension())) {
@@ -241,7 +241,7 @@ public abstract class MapSyncMod {
 			}
 		}
 
-		client.send(new CRegionCatchup(packet.getDimension(), outdatedRegions));
+		client.send(new ServerboundChunkTimestampsRequestPacket(packet.getDimension(), outdatedRegions));
 	}
 
 	public void handleSharedChunk(ChunkTile chunkTile) {
@@ -255,7 +255,7 @@ public abstract class MapSyncMod {
 		dimensionState.processSharedChunk(chunkTile);
 	}
 
-	public void handleCatchupData(SCatchup packet) {
+	public void handleCatchupData(ClientboundChunkTimestampsResponsePacket packet) {
 		var dimensionState = getDimensionState();
 		if (dimensionState == null) return;
 		debugLog("received catchup: " + packet.chunks.size() + " " + packet.chunks.get(0).syncClient.address);
@@ -276,7 +276,7 @@ public abstract class MapSyncMod {
 		}
 		for (List<CatchupChunk> chunksForServer : byServer.values()) {
 			SyncClient client = chunksForServer.get(0).syncClient;
-			client.send(new CCatchupRequest(chunksForServer));
+			client.send(new ServerboundCatchupRequestPacket(chunksForServer));
 		}
 	}
 

@@ -13,7 +13,12 @@ import java.util.List;
 
 import static gjum.minecraft.mapsync.common.Utils.readStringFromBuf;
 
-public class SCatchup extends Packet {
+/**
+ * You'll receive this in response to a sent {@link ServerboundChunkTimestampsRequestPacket},
+ * containing an elaboration of chunk timestamps of all the regions you listed.
+ * You should respond with a {@link ServerboundCatchupRequestPacket}.
+ */
+public class ClientboundChunkTimestampsResponsePacket extends Packet {
 	public static final int PACKET_ID = 5;
 
 	/**
@@ -21,7 +26,7 @@ public class SCatchup extends Packet {
 	 */
 	public final @Nonnull List<CatchupChunk> chunks;
 
-	public SCatchup(@Nonnull List<CatchupChunk> chunks) {
+	public ClientboundChunkTimestampsResponsePacket(@Nonnull List<CatchupChunk> chunks) {
 		this.chunks = chunks;
 	}
 
@@ -39,7 +44,7 @@ public class SCatchup extends Packet {
 					dimension, chunk_x, chunk_z, timestamp);
 			chunks.add(chunk);
 		}
-		return new SCatchup(chunks);
+		return new ClientboundChunkTimestampsResponsePacket(chunks);
 	}
 
 	@Override

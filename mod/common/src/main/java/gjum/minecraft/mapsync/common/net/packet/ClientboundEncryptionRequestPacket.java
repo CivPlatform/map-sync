@@ -8,7 +8,11 @@ import java.security.*;
 import java.security.spec.InvalidKeySpecException;
 import java.security.spec.X509EncodedKeySpec;
 
-public class SEncryptionRequest extends Packet {
+/**
+ * You will receive this in response to {@link ServerboundHandshakePacket}, and
+ * will expect a {@link ServerboundEncryptionResponsePacket} in response.
+ */
+public class ClientboundEncryptionRequestPacket extends Packet {
 	public static final int PACKET_ID = 2;
 
 	@Nonnull
@@ -16,13 +20,13 @@ public class SEncryptionRequest extends Packet {
 	@Nonnull
 	public final byte[] verifyToken;
 
-	public SEncryptionRequest(@Nonnull PublicKey publicKey, @Nonnull byte[] verifyToken) {
+	public ClientboundEncryptionRequestPacket(@Nonnull PublicKey publicKey, @Nonnull byte[] verifyToken) {
 		this.publicKey = publicKey;
 		this.verifyToken = verifyToken;
 	}
 
 	public static Packet read(ByteBuf buf) {
-		return new SEncryptionRequest(
+		return new ClientboundEncryptionRequestPacket(
 				readKey(buf),
 				readByteArray(buf));
 	}

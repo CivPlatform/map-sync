@@ -11,7 +11,13 @@ import java.util.List;
 
 import static gjum.minecraft.mapsync.common.Utils.writeStringToBuf;
 
-public class CCatchupRequest extends Packet {
+/**
+ * This is the final stage in the synchronisation process, sent in response to
+ * a received {@link ClientboundChunkTimestampsResponsePacket}. Here you list
+ * what chunks you'd like to receive from the server, who'll then respond with
+ * a bunch of {@link ChunkTilePacket}.
+ */
+public class ServerboundCatchupRequestPacket extends Packet {
 	public static final int PACKET_ID = 6;
 
 	/**
@@ -22,7 +28,7 @@ public class CCatchupRequest extends Packet {
 	/**
 	 * Chunks must all be in the same dimension
 	 */
-	public CCatchupRequest(@Nonnull List<CatchupChunk> chunks) {
+	public ServerboundCatchupRequestPacket(@Nonnull List<CatchupChunk> chunks) {
 		if (chunks.isEmpty()) throw new Error("Chunks list must not be empty");
 		ResourceKey<Level> dim = null;
 		for (CatchupChunk chunk : chunks) {

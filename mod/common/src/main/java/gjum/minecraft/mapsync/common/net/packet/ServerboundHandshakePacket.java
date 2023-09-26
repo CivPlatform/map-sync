@@ -4,10 +4,13 @@ import gjum.minecraft.mapsync.common.net.Packet;
 import io.netty.buffer.ByteBuf;
 import org.jetbrains.annotations.NotNull;
 
-import static gjum.minecraft.mapsync.common.Utils.readStringFromBuf;
 import static gjum.minecraft.mapsync.common.Utils.writeStringToBuf;
 
-public class CHandshake extends Packet {
+/**
+ * This should be sent to the server <i>IMMEDIATELY</i> upon connection. If the
+ * server accepts the connection, you will receive a {@link ClientboundEncryptionRequestPacket}.
+ */
+public class ServerboundHandshakePacket extends Packet {
 	public static final int PACKET_ID = 1;
 
 	public final @NotNull String modVersion;
@@ -15,7 +18,7 @@ public class CHandshake extends Packet {
 	public final @NotNull String gameAddress;
 	public final @NotNull String world;
 
-	public CHandshake(@NotNull String modVersion, @NotNull String username, @NotNull String gameAddress, @NotNull String world) {
+	public ServerboundHandshakePacket(@NotNull String modVersion, @NotNull String username, @NotNull String gameAddress, @NotNull String world) {
 		this.modVersion = modVersion;
 		this.username = username;
 		this.gameAddress = gameAddress;

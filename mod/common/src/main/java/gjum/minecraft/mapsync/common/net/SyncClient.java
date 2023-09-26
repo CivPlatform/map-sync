@@ -113,8 +113,8 @@ public class SyncClient {
 					ch.pipeline().addLast(
 							new LengthFieldPrepender(4),
 							new LengthFieldBasedFrameDecoder(1 << 15, 0, 4, 0, 4),
-							new ServerPacketDecoder(),
-							new ClientPacketEncoder(),
+							new ClientboundPacketDecoder(),
+							new ServerboundPacketEncoder(),
 							new ClientHandler(SyncClient.this));
 				}
 			});
@@ -127,7 +127,7 @@ public class SyncClient {
 			channelFuture.addListener(future -> {
 				if (future.isSuccess()) {
 					logger.info("[map-sync] Connected to " + address);
-					channelFuture.channel().writeAndFlush(new CHandshake(
+					channelFuture.channel().writeAndFlush(new ServerboundHandshakePacket(
 							getMod().getVersion(),
 							Minecraft.getInstance().getUser().getName(),
 							gameAddress,
@@ -239,7 +239,7 @@ public class SyncClient {
 		}
 	}
 
-	void setUpEncryption(ChannelHandlerContext ctx, SEncryptionRequest packet) {
+	void setUpEncryption(ChannelHandlerContext ctx, ClientboundEncryptionRequestPacket packet) {
 		try {
 			byte[] sharedSecret = new byte[16];
 			ThreadLocalRandom.current().nextBytes(sharedSecret);
@@ -260,7 +260,7 @@ public class SyncClient {
 					session.getGameProfile(), session.getAccessToken(), shaHex);
 
 			try {
-				ctx.channel().writeAndFlush(new CEncryptionResponse(
+				ctx.channel().writeAndFlush(new ServerboundEncryptionResponsePacket(
 						encrypt(packet.publicKey, sharedSecret),
 						encrypt(packet.publicKey, packet.verifyToken)));
 			} catch (NoSuchAlgorithmException | InvalidKeyException | NoSuchPaddingException | BadPaddingException |

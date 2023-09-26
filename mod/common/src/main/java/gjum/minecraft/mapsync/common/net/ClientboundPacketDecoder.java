@@ -8,12 +8,12 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.List;
 
-public class ServerPacketDecoder extends ReplayingDecoder<Void> {
+public class ClientboundPacketDecoder extends ReplayingDecoder<Void> {
 	public static @Nullable Packet constructServerPacket(int id, ByteBuf buf) {
 		if (id == ChunkTilePacket.PACKET_ID) return ChunkTilePacket.read(buf);
-		if (id == SEncryptionRequest.PACKET_ID) return SEncryptionRequest.read(buf);
-		if (id == SCatchup.PACKET_ID) return SCatchup.read(buf);
-		if (id == SRegionTimestamps.PACKET_ID) return SRegionTimestamps.read(buf);
+		if (id == ClientboundEncryptionRequestPacket.PACKET_ID) return ClientboundEncryptionRequestPacket.read(buf);
+		if (id == ClientboundChunkTimestampsResponsePacket.PACKET_ID) return ClientboundChunkTimestampsResponsePacket.read(buf);
+		if (id == ClientboundRegionTimestampsPacket.PACKET_ID) return ClientboundRegionTimestampsPacket.read(buf);
 		return null;
 	}
 

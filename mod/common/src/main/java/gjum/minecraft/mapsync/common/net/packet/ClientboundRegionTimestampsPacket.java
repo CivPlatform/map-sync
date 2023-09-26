@@ -5,14 +5,19 @@ import gjum.minecraft.mapsync.common.data.RegionTimestamp;
 import gjum.minecraft.mapsync.common.net.Packet;
 import io.netty.buffer.ByteBuf;
 
-public class SRegionTimestamps extends Packet {
+/**
+ * This is the packet for the first-stage of the synchronisation process. It's
+ * sent immediately after you've been authenticated. You should respond with a
+ * {@link ServerboundChunkTimestampsRequestPacket}.
+ */
+public class ClientboundRegionTimestampsPacket extends Packet {
   public static final int PACKET_ID = 7;
 
   private final String dimension;
 
   private final RegionTimestamp[] timestamps;
 
-  public SRegionTimestamps(String dimension, RegionTimestamp[] timestamps) {
+  public ClientboundRegionTimestampsPacket(String dimension, RegionTimestamp[] timestamps) {
     this.dimension = dimension;
     this.timestamps = timestamps;
   }
@@ -39,7 +44,7 @@ public class SRegionTimestamps extends Packet {
       timestamps[i] = new RegionTimestamp(regionX, regionZ, timestamp);
     }
 
-    return new SRegionTimestamps(dimension, timestamps);
+    return new ClientboundRegionTimestampsPacket(dimension, timestamps);
   }
 
   @Override

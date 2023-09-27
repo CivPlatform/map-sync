@@ -3,6 +3,7 @@ package gjum.minecraft.mapsync.common.net.packet;
 import gjum.minecraft.mapsync.common.data.ChunkTile;
 import gjum.minecraft.mapsync.common.net.Packet;
 import io.netty.buffer.ByteBuf;
+import org.jetbrains.annotations.NotNull;
 
 import javax.annotation.Nonnull;
 
@@ -13,7 +14,7 @@ import javax.annotation.Nonnull;
  *
  * 2. You have requested synchronisation via {@link ServerboundCatchupRequestPacket}.
  */
-public class ChunkTilePacket extends Packet {
+public class ChunkTilePacket implements Packet {
 	public static final int PACKET_ID = 4;
 
 	public final ChunkTile chunkTile;
@@ -28,7 +29,7 @@ public class ChunkTilePacket extends Packet {
 	}
 
 	@Override
-	public void write(ByteBuf buf) {
+	public void write(@NotNull ByteBuf buf) {
 		chunkTile.write(buf);
 	}
 }

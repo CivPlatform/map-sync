@@ -5,11 +5,10 @@ import gjum.minecraft.mapsync.common.net.Packet;
 import io.netty.buffer.ByteBuf;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.level.Level;
+import org.jetbrains.annotations.NotNull;
 
 import javax.annotation.Nonnull;
 import java.util.List;
-
-import static gjum.minecraft.mapsync.common.Utils.writeStringToBuf;
 
 /**
  * This is the final stage in the synchronisation process, sent in response to
@@ -17,7 +16,7 @@ import static gjum.minecraft.mapsync.common.Utils.writeStringToBuf;
  * what chunks you'd like to receive from the server, who'll then respond with
  * a bunch of {@link ChunkTilePacket}.
  */
-public class ServerboundCatchupRequestPacket extends Packet {
+public class ServerboundCatchupRequestPacket implements Packet {
 	public static final int PACKET_ID = 6;
 
 	/**
@@ -41,8 +40,8 @@ public class ServerboundCatchupRequestPacket extends Packet {
 	}
 
 	@Override
-	public void write(ByteBuf buf) {
-		writeStringToBuf(buf, chunks.get(0).dimension().location().toString());
+	public void write(@NotNull ByteBuf buf) {
+		Packet.writeResourceKey(buf, chunks.get(0).dimension());
 		buf.writeInt(chunks.size());
 		for (CatchupChunk chunk : chunks) {
 			buf.writeInt(chunk.chunk_x());

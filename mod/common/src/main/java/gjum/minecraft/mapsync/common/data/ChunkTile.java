@@ -1,17 +1,14 @@
 package gjum.minecraft.mapsync.common.data;
 
+import gjum.minecraft.mapsync.common.net.Packet;
 import io.netty.buffer.ByteBuf;
 import net.minecraft.core.Registry;
 import net.minecraft.resources.ResourceKey;
-import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.Level;
 
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
-
-import static gjum.minecraft.mapsync.common.Utils.readStringFromBuf;
-import static gjum.minecraft.mapsync.common.Utils.writeStringToBuf;
 
 public record ChunkTile(
 		ResourceKey<Level> dimension,
@@ -34,7 +31,7 @@ public record ChunkTile(
 	 * without columns
 	 */
 	public void writeMetadata(ByteBuf buf) {
-		writeStringToBuf(buf, dimension.location().toString());
+		Packet.writeResourceKey(buf, dimension);
 		buf.writeInt(x);
 		buf.writeInt(z);
 		buf.writeLong(timestamp);
@@ -51,8 +48,7 @@ public record ChunkTile(
 	}
 
 	public static ChunkTile fromBuf(ByteBuf buf) {
-		String dimensionStr = readStringFromBuf(buf);
-		var dimension = ResourceKey.create(Registry.DIMENSION_REGISTRY, new ResourceLocation(dimensionStr));
+		var dimension = Packet.readResourceKey(buf, Registry.DIMENSION_REGISTRY);
 		int x = buf.readInt();
 		int z = buf.readInt();
 		long timestamp = buf.readLong();

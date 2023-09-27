@@ -1,6 +1,5 @@
 package gjum.minecraft.mapsync.common.net.packet;
 
-import gjum.minecraft.mapsync.common.Utils;
 import gjum.minecraft.mapsync.common.data.RegionTimestamp;
 import gjum.minecraft.mapsync.common.net.Packet;
 import io.netty.buffer.ByteBuf;
@@ -10,7 +9,7 @@ import io.netty.buffer.ByteBuf;
  * sent immediately after you've been authenticated. You should respond with a
  * {@link ServerboundChunkTimestampsRequestPacket}.
  */
-public class ClientboundRegionTimestampsPacket extends Packet {
+public class ClientboundRegionTimestampsPacket implements Packet {
   public static final int PACKET_ID = 7;
 
   private final String dimension;
@@ -31,7 +30,7 @@ public class ClientboundRegionTimestampsPacket extends Packet {
   }
 
   public static Packet read(ByteBuf buf) {
-    String dimension = Utils.readStringFromBuf(buf);
+    String dimension = Packet.readUtf8String(buf);
 
     short totalRegions = buf.readShort();
     RegionTimestamp[] timestamps = new RegionTimestamp[totalRegions];
@@ -45,10 +44,5 @@ public class ClientboundRegionTimestampsPacket extends Packet {
     }
 
     return new ClientboundRegionTimestampsPacket(dimension, timestamps);
-  }
-
-  @Override
-  public void write(ByteBuf buf) {
-    throw new IllegalStateException();
   }
 }

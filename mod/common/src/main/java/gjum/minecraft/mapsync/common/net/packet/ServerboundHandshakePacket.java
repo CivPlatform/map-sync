@@ -4,13 +4,11 @@ import gjum.minecraft.mapsync.common.net.Packet;
 import io.netty.buffer.ByteBuf;
 import org.jetbrains.annotations.NotNull;
 
-import static gjum.minecraft.mapsync.common.Utils.writeStringToBuf;
-
 /**
  * This should be sent to the server <i>IMMEDIATELY</i> upon connection. If the
  * server accepts the connection, you will receive a {@link ClientboundEncryptionRequestPacket}.
  */
-public class ServerboundHandshakePacket extends Packet {
+public class ServerboundHandshakePacket implements Packet {
 	public static final int PACKET_ID = 1;
 
 	public final @NotNull String modVersion;
@@ -26,11 +24,11 @@ public class ServerboundHandshakePacket extends Packet {
 	}
 
 	@Override
-	public void write(ByteBuf out) {
-		writeStringToBuf(out, modVersion);
-		writeStringToBuf(out, username);
-		writeStringToBuf(out, gameAddress);
-		writeStringToBuf(out, world);
+	public void write(@NotNull ByteBuf out) {
+		Packet.writeUtf8String(out, modVersion);
+		Packet.writeUtf8String(out, username);
+		Packet.writeUtf8String(out, gameAddress);
+		Packet.writeUtf8String(out, world);
 	}
 
 	@Override

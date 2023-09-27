@@ -12,7 +12,7 @@ import java.security.spec.X509EncodedKeySpec;
  * You will receive this in response to {@link ServerboundHandshakePacket}, and
  * will expect a {@link ServerboundEncryptionResponsePacket} in response.
  */
-public class ClientboundEncryptionRequestPacket extends Packet {
+public class ClientboundEncryptionRequestPacket implements Packet {
 	public static final int PACKET_ID = 2;
 
 	@Nonnull
@@ -28,18 +28,12 @@ public class ClientboundEncryptionRequestPacket extends Packet {
 	public static Packet read(ByteBuf buf) {
 		return new ClientboundEncryptionRequestPacket(
 				readKey(buf),
-				readByteArray(buf));
-	}
-
-	@Override
-	public void write(ByteBuf buf) {
-		writeByteArray(buf, publicKey.getEncoded());
-		writeByteArray(buf, verifyToken);
+				Packet.readIntLengthByteArray(buf));
 	}
 
 	protected static PublicKey readKey(ByteBuf in) {
 		try {
-			byte[] encodedKey = readByteArray(in);
+			byte[] encodedKey = Packet.readIntLengthByteArray(in);
 			X509EncodedKeySpec keySpec = new X509EncodedKeySpec(encodedKey);
 			KeyFactory keyFactory = KeyFactory.getInstance("RSA");
 			return keyFactory.generatePublic(keySpec);

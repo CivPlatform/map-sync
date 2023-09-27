@@ -1,9 +1,9 @@
 package gjum.minecraft.mapsync.common.net.packet;
 
-import gjum.minecraft.mapsync.common.Utils;
 import gjum.minecraft.mapsync.common.data.RegionPos;
 import gjum.minecraft.mapsync.common.net.Packet;
 import io.netty.buffer.ByteBuf;
+import org.jetbrains.annotations.NotNull;
 
 import java.util.List;
 
@@ -12,7 +12,7 @@ import java.util.List;
  * listing all the regions you'd like the server to elaborate on. You should
  * expect a {@link ClientboundChunkTimestampsResponsePacket}.
  */
-public class ServerboundChunkTimestampsRequestPacket extends Packet {
+public class ServerboundChunkTimestampsRequestPacket implements Packet {
   public static final int PACKET_ID = 8;
 
   private final String dimension;
@@ -24,8 +24,8 @@ public class ServerboundChunkTimestampsRequestPacket extends Packet {
   }
 
   @Override
-  public void write(ByteBuf buf) {
-    Utils.writeStringToBuf(buf, dimension);
+  public void write(@NotNull ByteBuf buf) {
+    Packet.writeUtf8String(buf, dimension);
     buf.writeShort(regions.size());
     for (var region : regions) {
       buf.writeShort(region.x());

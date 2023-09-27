@@ -2,13 +2,14 @@ package gjum.minecraft.mapsync.common.net.packet;
 
 import gjum.minecraft.mapsync.common.net.Packet;
 import io.netty.buffer.ByteBuf;
+import org.jetbrains.annotations.NotNull;
 
 /**
  * This is sent to the server in response to a {@link ClientboundEncryptionRequestPacket},
  * after which, if the connection persists, you are considered authenticated
  * with the server. You should then receive a {@link ClientboundRegionTimestampsPacket}.
  */
-public class ServerboundEncryptionResponsePacket extends Packet {
+public class ServerboundEncryptionResponsePacket implements Packet {
 	public static final int PACKET_ID = 3;
 
 	/**
@@ -25,13 +26,9 @@ public class ServerboundEncryptionResponsePacket extends Packet {
 		this.verifyToken = verifyToken;
 	}
 
-	public static Packet read(ByteBuf buf) {
-		return new ServerboundEncryptionResponsePacket(readByteArray(buf), readByteArray(buf));
-	}
-
 	@Override
-	public void write(ByteBuf out) {
-		writeByteArray(out, sharedSecret);
-		writeByteArray(out, verifyToken);
+	public void write(@NotNull ByteBuf out) {
+		Packet.writeIntLengthByteArray(out, sharedSecret);
+		Packet.writeIntLengthByteArray(out, verifyToken);
 	}
 }

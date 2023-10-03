@@ -1,6 +1,8 @@
 package gjum.minecraft.mapsync.common.data;
 
 import gjum.minecraft.mapsync.common.net.Packet;
+import gjum.minecraft.mapsync.common.utils.Arguments;
+import gjum.minecraft.mapsync.common.utils.MagicValues;
 import io.netty.buffer.ByteBuf;
 import net.minecraft.core.Registry;
 import net.minecraft.resources.ResourceKey;
@@ -18,6 +20,11 @@ public record ChunkTile(
 		byte[] dataHash,
 		BlockColumn[] columns
 ) {
+	public ChunkTile {
+		Arguments.checkNotNull("dataHash", dataHash);
+		Arguments.checkLength("dataHash", dataHash.length, MagicValues.SHA1_HASH_LENGTH);
+	}
+
 	public ChunkPos chunkPos() {
 		return new ChunkPos(x, z);
 	}
@@ -36,7 +43,6 @@ public record ChunkTile(
 		buf.writeInt(z);
 		buf.writeLong(timestamp);
 		buf.writeShort(dataVersion);
-		buf.writeInt(dataHash.length); // TODO could be Short as hash length is known to be small
 		buf.writeBytes(dataHash);
 	}
 
@@ -53,8 +59,7 @@ public record ChunkTile(
 		int z = buf.readInt();
 		long timestamp = buf.readLong();
 		int dataVersion = buf.readUnsignedShort();
-		byte[] hash = new byte[buf.readInt()];
-		buf.readBytes(hash);
+		byte[] hash = Packet.readByteArrayOfSize(buf, MagicValues.SHA1_HASH_LENGTH);
 		var columns = new BlockColumn[256];
 		for (int i = 0; i < 256; i++) {
 			columns[i] = BlockColumn.fromBuf(buf);

@@ -1,5 +1,6 @@
 import { BufReader } from './BufReader'
 import { BufWriter } from './BufWriter'
+import { SHA1_HASH_LENGTH } from '../constants'
 
 export interface ChunkTilePacket {
 	type: 'ChunkTile'
@@ -20,7 +21,7 @@ export namespace ChunkTilePacket {
 			ts: reader.readUInt64(),
 			data: {
 				version: reader.readUInt16(),
-				hash: reader.readBufWithLen(),
+				hash: reader.readBufLen(SHA1_HASH_LENGTH),
 				data: reader.readRemainder(),
 			},
 		}
@@ -32,7 +33,7 @@ export namespace ChunkTilePacket {
 		writer.writeInt32(pkt.chunk_z)
 		writer.writeUInt64(pkt.ts)
 		writer.writeUInt16(pkt.data.version)
-		writer.writeBufWithLen(pkt.data.hash)
+		writer.writeBufRaw(pkt.data.hash)
 		writer.writeBufRaw(pkt.data.data) // XXX do we need to prefix with length?
 	}
 }

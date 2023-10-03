@@ -13,14 +13,21 @@ public interface Packet {
 		throw new NotImplementedException();
 	}
 
+	static byte @NotNull [] readByteArrayOfSize(
+			final @NotNull ByteBuf in,
+			final int size
+	) {
+		final var bytes = new byte[size];
+		if (size > 0) {
+			in.readBytes(bytes);
+		}
+		return bytes;
+	}
+
 	static byte @NotNull [] readIntLengthByteArray(
 			final @NotNull ByteBuf in
 	) {
-		final var array = new byte[in.readInt()];
-		if (array.length > 0) {
-			in.readBytes(array);
-		}
-		return array;
+		return readByteArrayOfSize(in, in.readInt());
 	}
 
 	static void writeIntLengthByteArray(

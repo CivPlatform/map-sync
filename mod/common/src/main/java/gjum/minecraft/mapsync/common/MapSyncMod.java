@@ -4,6 +4,7 @@ import com.mojang.blaze3d.platform.InputConstants;
 import gjum.minecraft.mapsync.common.config.ModConfig;
 import gjum.minecraft.mapsync.common.config.ServerConfig;
 import gjum.minecraft.mapsync.common.data.*;
+import gjum.minecraft.mapsync.common.gui.list.ServerListScreen;
 import gjum.minecraft.mapsync.common.net.SyncClient;
 import gjum.minecraft.mapsync.common.net.packet.*;
 import net.minecraft.client.KeyMapping;
@@ -81,7 +82,7 @@ public abstract class MapSyncMod {
 
 	public void handleTick() {
 		while (openGuiKey.consumeClick()) {
-			mc.setScreen(new ModGui(mc.screen));
+			mc.setScreen(new ServerListScreen(mc.screen));
 		}
 
 		var dimensionState = getDimensionState();

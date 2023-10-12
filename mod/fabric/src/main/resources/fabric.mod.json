@@ -17,6 +17,9 @@
 	"entrypoints": {
 		"client": [
 			"gjum.minecraft.mapsync.fabric.FabricMapSyncMod"
+		],
+		"modmenu": [
+			"gjum.minecraft.mapsync.fabric.integrations.modmenu.ModMenuIntegration"
 		]
 	},
 	"depends": {

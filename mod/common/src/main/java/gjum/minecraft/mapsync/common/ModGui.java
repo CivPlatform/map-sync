@@ -26,7 +26,7 @@ public class ModGui extends Screen {
 	EditBox syncServerAddressField;
 	Button syncServerConnectBtn;
 
-	protected ModGui(Screen parentScreen) {
+	public ModGui(Screen parentScreen) {
 		super(new TextComponent("Map-Sync"));
 		this.parentScreen = parentScreen;
 	}

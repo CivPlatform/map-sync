@@ -9,9 +9,6 @@ import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.Level;
 
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
-
 public record ChunkTile(
 		ResourceKey<Level> dimension,
 		int x, int z,
@@ -65,17 +62,5 @@ public record ChunkTile(
 			columns[i] = BlockColumn.fromBuf(buf);
 		}
 		return new ChunkTile(dimension, x, z, timestamp, dataVersion, hash, columns);
-	}
-
-	public static byte[] computeDataHash(ByteBuf columns) {
-		try {
-			// SHA-1 is faster than SHA-256, and other algorithms are not required to be implemented in every JVM
-			MessageDigest md = MessageDigest.getInstance("SHA-1");
-			md.update(columns.array());
-			return md.digest();
-		} catch (NoSuchAlgorithmException e) {
-			e.printStackTrace();
-			return new byte[]{};
-		}
 	}
 }

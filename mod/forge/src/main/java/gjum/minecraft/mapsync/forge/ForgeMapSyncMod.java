@@ -24,7 +24,7 @@ public class ForgeMapSyncMod extends MapSyncMod {
 	}
 
 	@Override
-	protected boolean isDevMode() {
+	public boolean isDevMode() {
 		return !FMLLoader.isProduction();
 	}
 

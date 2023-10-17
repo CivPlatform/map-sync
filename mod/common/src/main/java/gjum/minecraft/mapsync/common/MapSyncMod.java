@@ -68,7 +68,7 @@ public abstract class MapSyncMod {
 	 */
 	public abstract String getVersion();
 
-	protected abstract boolean isDevMode();
+	public abstract boolean isDevMode();
 
 	public abstract void registerKeyBinding(KeyMapping mapping);
 

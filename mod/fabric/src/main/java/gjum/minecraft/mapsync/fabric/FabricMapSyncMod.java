@@ -26,7 +26,7 @@ public class FabricMapSyncMod extends MapSyncMod implements ClientModInitializer
 	}
 
 	@Override
-	protected boolean isDevMode() {
+	public boolean isDevMode() {
 		return FabricLoader.getInstance().isDevelopmentEnvironment();
 	}
 

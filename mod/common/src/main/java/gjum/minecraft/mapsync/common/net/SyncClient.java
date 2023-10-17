@@ -1,6 +1,7 @@
 package gjum.minecraft.mapsync.common.net;
 
 import com.mojang.authlib.exceptions.AuthenticationException;
+import gjum.minecraft.mapsync.common.MapSyncMod;
 import gjum.minecraft.mapsync.common.data.ChunkTile;
 import gjum.minecraft.mapsync.common.net.encryption.EncryptionDecoder;
 import gjum.minecraft.mapsync.common.net.encryption.EncryptionEncoder;
@@ -245,16 +246,21 @@ public class SyncClient {
 			byte[] sharedSecret = new byte[16];
 			ThreadLocalRandom.current().nextBytes(sharedSecret);
 
-			// note that this is different from minecraft (we get no negative hashes)
-			final String shaHex = HexFormat.of().formatHex(Hasher.sha1()
-					.update(sharedSecret)
-					.update(packet.publicKey.getEncoded())
-					.generateHash()
-			);
+			if (!MapSyncMod.getMod().isDevMode()) {
+				// note that this is different from minecraft (we get no negative hashes)
+				final String shaHex = HexFormat.of().formatHex(Hasher.sha1()
+						.update(sharedSecret)
+						.update(packet.publicKey.getEncoded())
+						.generateHash()
+				);
 
-			User session = Minecraft.getInstance().getUser();
-			Minecraft.getInstance().getMinecraftSessionService().joinServer(
-					session.getGameProfile(), session.getAccessToken(), shaHex);
+				final User session = Minecraft.getInstance().getUser();
+				Minecraft.getInstance().getMinecraftSessionService().joinServer(
+						session.getGameProfile(),
+						session.getAccessToken(),
+						shaHex
+				);
+			}
 
 			try {
 				ctx.channel().writeAndFlush(new ServerboundEncryptionResponsePacket(

@@ -1,0 +1,14 @@
+{
+	"required": true,
+	"minVersion": "0.8",
+	"package": "gjum.minecraft.mapsync.forge.mixins",
+	"compatibilityLevel": "JAVA_17",
+	"mixins": [],
+	"client": [
+
+	],
+	"server": [],
+	"injectors": {
+		"defaultRequire": 1
+	}
+}

@@ -1,16 +1,15 @@
 modLoader = "javafml"
 loaderVersion = "[40,)"
-issueTrackerURL = "https://github.com/CivPlatform/map-sync/issues"
-license = "GPL-3.0-only"
+issueTrackerURL = "${mod_issues_url}"
+license = "${copyright_licence}"
 
 [[mods]]
 modId = "mapsync"
-version = "${version}"
-displayName = "Map Sync"
-authors = "Gjum"
-description = '''
-Sync map data with others instantly.
-'''
+version = "${mod_version}"
+displayName = "MapSync"
+description = "${mod_description}"
+displayURL = "${mod_home_url}"
+authors = "Gjum,Protonull"
 #logoFile = ""
 
 [[dependencies.mapsync]]
@@ -23,6 +22,6 @@ side = "CLIENT"
 [[dependencies.mapsync]]
 modId = "minecraft"
 mandatory = true
-versionRange = "[1.18.2,)"
+versionRange = "[${minecraft_version},)"
 ordering = "NONE"
 side = "CLIENT"

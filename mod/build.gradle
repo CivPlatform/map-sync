@@ -44,6 +44,9 @@ allprojects {
 				includeGroup "maven.modrinth"
 			}
 		}
+		maven {
+			url "https://www.jitpack.io"
+		}
 	}
 
 	tasks.withType(JavaCompile) {

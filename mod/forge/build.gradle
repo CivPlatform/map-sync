@@ -9,7 +9,7 @@ architectury {
 
 loom {
 	forge {
-		mixinConfig "mixin.map-sync.json"
+		mixinConfig "mapsync.common.mixins.json", "mapsync.forge.mixins.json"
 	}
 }
 
@@ -22,24 +22,24 @@ configurations {
 }
 
 dependencies {
-	forge "net.minecraftforge:forge:${rootProject.forge_version}"
+	forge("net.minecraftforge:forge:${rootProject.forge_version}")
 
 	common(project(path: ":common", configuration: "namedElements")) { transitive false }
-	shadowCommon(project(path: ":common", configuration: "transformProductionForge")) { transitive = false }
-
+	shadowCommon(project(path: ":common", configuration: "transformProductionForge")) { transitive false }
 
 
 	// https://modrinth.com/mod/journeymap/version/1.18.2-5.9.7-forge (5.9.7 forge)
-	modCompileOnly "maven.modrinth:journeymap:2G6aMzKY"
+	modCompileOnly("maven.modrinth:journeymap:2G6aMzKY")
 	// https://modrinth.com/mod/xaeros-minimap/version/23.6.2_Forge_1.18.2 (23.6.2 forge)
-	modCompileOnly "maven.modrinth:xaeros-minimap:yFuICfIq"
+	modCompileOnly("maven.modrinth:xaeros-minimap:yFuICfIq")
 }
 
 processResources {
-	inputs.property "version", project.version
-
 	filesMatching("META-INF/mods.toml") {
-		expand "version": project.version
+		expand(rootProject.properties)
+	}
+	filesMatching("pack.mcmeta") {
+		expand(rootProject.properties)
 	}
 }
 
@@ -51,7 +51,7 @@ shadowJar {
 }
 
 remapJar {
-	input.set shadowJar.archiveFile
+	inputFile.set(shadowJar.archiveFile)
 	dependsOn shadowJar
 	classifier "forge"
 }
@@ -72,30 +72,16 @@ components.java {
 	}
 }
 
-publishing {
-	publications {
-		mavenForge(MavenPublication) {
-			artifactId = rootProject.archives_base_name + "-" + project.name
-			from components.java
-		}
-	}
-
-	// See https://docs.gradle.org/current/userguide/publishing_maven.html for information on how to set up publishing.
-	repositories {
-		// Add repositories to publish to here.
-	}
-}
-
-tasks.register('cleanJar', Delete) {
-	delete fileTree('../dist') {
+tasks.register("cleanJar", Delete) {
+	delete fileTree("../dist") {
 		include "*-forge.jar"
 	}
 }
 
-tasks.register('copyJar', Copy) {
+tasks.register("copyJar", Copy) {
+	dependsOn cleanJar
 	from remapJar
-	into '../dist'
+	into "../dist"
 }
 
 build.dependsOn copyJar
-copyJar.dependsOn cleanJar

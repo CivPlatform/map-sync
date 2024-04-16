@@ -1,6 +1,6 @@
 {
 	"pack": {
-		"description": "Map Sync",
+		"description": "${mod_display_name}",
 		"pack_format": 6
 	}
 }

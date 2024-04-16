@@ -16,32 +16,28 @@ configurations {
 }
 
 dependencies {
-	modImplementation "net.fabricmc:fabric-loader:${rootProject.fabric_loader_version}"
-	modApi "net.fabricmc.fabric-api:fabric-api:${rootProject.fabric_api_version}"
+	modImplementation("net.fabricmc:fabric-loader:${rootProject.fabric_loader_version}")
+	modApi("net.fabricmc.fabric-api:fabric-api:${rootProject.fabric_api_version}")
 
 	common(project(path: ":common", configuration: "namedElements")) { transitive false }
 	shadowCommon(project(path: ":common", configuration: "transformProductionFabric")) { transitive false }
 
 
-
 	// https://modrinth.com/mod/voxelmap-updated/version/1.18.2-1.11.2 (1.11.2 fabric)
-	modCompileOnly "maven.modrinth:voxelmap-updated:SDVTG1wT"
+	modCompileOnly("maven.modrinth:voxelmap-updated:SDVTG1wT")
 	// https://modrinth.com/mod/journeymap/version/1.18.2-5.9.7-fabric (5.9.7 fabric)
-	modCompileOnly "maven.modrinth:journeymap:5JbcGXLn"
+	modCompileOnly("maven.modrinth:journeymap:5JbcGXLn")
 	// https://modrinth.com/mod/xaeros-minimap/version/23.6.2_Fabric_1.18.2 (23.6.2 fabric)
-	modCompileOnly "maven.modrinth:xaeros-minimap:Jwydpps9"
-
+	modCompileOnly("maven.modrinth:xaeros-minimap:Jwydpps9")
 
 
 	// https://modrinth.com/mod/modmenu/version/3.2.5 (3.2.5 fabric)
-	modCompileOnly "maven.modrinth:modmenu:nVxObSbX"
+	modCompileOnly("maven.modrinth:modmenu:nVxObSbX")
 }
 
 processResources {
-	inputs.property "version", project.version
-
 	filesMatching("fabric.mod.json") {
-		expand "version": project.version
+		expand(rootProject.properties)
 	}
 }
 
@@ -51,7 +47,7 @@ shadowJar {
 }
 
 remapJar {
-	input.set shadowJar.archiveFile
+	inputFile.set(shadowJar.archiveFile)
 	dependsOn shadowJar
 	classifier "fabric"
 }
@@ -72,30 +68,16 @@ components.java {
 	}
 }
 
-publishing {
-	publications {
-		mavenFabric(MavenPublication) {
-			artifactId = rootProject.archives_base_name + "-" + project.name
-			from components.java
-		}
-	}
-
-	// See https://docs.gradle.org/current/userguide/publishing_maven.html for information on how to set up publishing.
-	repositories {
-		// Add repositories to publish to here.
-	}
-}
-
-tasks.register('cleanJar', Delete) {
-	delete fileTree('../dist') {
+tasks.register("cleanJar", Delete) {
+	delete fileTree("../dist") {
 		include "*-fabric.jar"
 	}
 }
 
-tasks.register('copyJar', Copy) {
+tasks.register("copyJar", Copy) {
+	dependsOn cleanJar
 	from remapJar
-	into '../dist'
+	into "../dist"
 }
 
 build.dependsOn copyJar
-copyJar.dependsOn cleanJar

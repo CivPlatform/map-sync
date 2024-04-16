@@ -1,18 +1,20 @@
 {
 	"schemaVersion": 1,
-	"id": "map-sync",
-	"version": "${version}",
-	"name": "Map Sync",
-	"description": "Sync map data with others instantly.",
+	"id": "mapsync",
+	"version": "${mod_version}",
+	"name": "${mod_display_name}",
+	"description": "${mod_description}",
 	"authors": [
-		"Gjum"
+		"Gjum",
+		"Protonull"
 	],
 	"contact": {
-		"homepage": "https://github.com/Gjum/map-sync",
-		"sources": "https://github.com/Gjum/map-sync"
+		"homepage": "${mod_home_url}",
+		"sources": "${mod_source_url}",
+		"issues": "${mod_issues_url}"
 	},
-	"license": "GPL-3.0-only",
-	"icon": "assets/map-sync/icon.png",
+	"license": "${copyright_licence}",
+	"icon": "assets/mapsync/icon.png",
 	"environment": "client",
 	"entrypoints": {
 		"client": [
@@ -23,11 +25,12 @@
 		]
 	},
 	"depends": {
-		"fabricloader": ">=0.7.4",
-		"fabric": "*",
-		"minecraft": "1.18.x"
+		"minecraft": "${minecraft_version}",
+		"fabricloader": ">=${fabric_loader_version}",
+		"fabric": "*"
 	},
 	"mixins": [
-		"mixin.map-sync.json"
+		"mapsync.common.mixins.json",
+		"mapsync.fabric.mixins.json"
 	]
 }

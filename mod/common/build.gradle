@@ -3,45 +3,37 @@ plugins {
 	id("net.kyori.blossom") version "1.3.1"
 }
 
+architectury {
+	injectInjectables = false
+	common(rootProject.enabled_platforms.split(","))
+}
+
 dependencies {
 	// We depend on fabric loader here to use the fabric @Environment annotations and get the mixin dependencies
 	// Do NOT use other classes from fabric loader
 	modImplementation "net.fabricmc:fabric-loader:${rootProject.fabric_loader_version}"
 
 
-
 	// https://modrinth.com/mod/voxelmap-updated/version/1.18.2-1.11.2 (1.11.2 fabric)
-	modCompileOnly "maven.modrinth:voxelmap-updated:SDVTG1wT"
+	modCompileOnly("maven.modrinth:voxelmap-updated:SDVTG1wT")
 	// https://modrinth.com/mod/journeymap/version/1.18.2-5.9.7-fabric (5.9.7 fabric)
-	modCompileOnly "maven.modrinth:journeymap:5JbcGXLn"
+	modCompileOnly("maven.modrinth:journeymap:5JbcGXLn")
 	// https://modrinth.com/mod/xaeros-minimap/version/23.6.2_Fabric_1.18.2 (23.6.2 fabric)
-	modCompileOnly "maven.modrinth:xaeros-minimap:Jwydpps9"
-}
-
-architectury {
-	common(rootProject.enabled_platforms.split(","))
+	modCompileOnly("maven.modrinth:xaeros-minimap:Jwydpps9")
 }
 
 tasks {
 	blossom {
 		replaceToken (
-				"%VERSION%",
-				project.version,
-				"src/main/java/gjum/minecraft/mapsync/common/MapSyncMod.java"
+			"%VERSION%",
+			project.version,
+			"src/main/java/gjum/minecraft/mapsync/common/MapSyncMod.java"
 		)
 	}
 }
 
-publishing {
-	publications {
-		mavenCommon(MavenPublication) {
-			artifactId = rootProject.archives_base_name
-			from components.java
-		}
-	}
-
-	// See https://docs.gradle.org/current/userguide/publishing_maven.html for information on how to set up publishing.
-	repositories {
-		// Add repositories to publish to here.
+processResources {
+	filesMatching("assets/mapsync/lang/en_us.json") {
+		expand(rootProject.properties)
 	}
 }

@@ -9,7 +9,7 @@ version = "${mod_version}"
 displayName = "${mod_display_name}"
 description = "${mod_description}"
 displayURL = "${mod_home_url}"
-authors = "Gjum,Protonull"
+authors = "${mod_authors}"
 #logoFile = ""
 
 [[dependencies.mapsync]]

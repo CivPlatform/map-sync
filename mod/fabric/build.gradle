@@ -1,3 +1,5 @@
+import groovy.json.JsonBuilder
+
 plugins {
 	id "com.github.johnrengelman.shadow" version "7.1.2"
 }
@@ -29,6 +31,12 @@ dependencies {
 processResources {
 	filesMatching("fabric.mod.json") {
 		expand(rootProject.properties)
+		filter {
+			(it as String).replace(
+				"\"%FABRIC_AUTHORS_ARRAY%\"",
+				new JsonBuilder((rootProject.properties["mod_authors"] as String).tokenize(",")).toString()
+			)
+		}
 	}
 }
 

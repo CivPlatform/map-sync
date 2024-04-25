@@ -5,8 +5,6 @@ import gjum.minecraft.mapsync.common.net.Packet;
 import io.netty.buffer.ByteBuf;
 import org.jetbrains.annotations.NotNull;
 
-import javax.annotation.Nonnull;
-
 /**
  * This packet is sent in two situations:
  *
@@ -19,7 +17,7 @@ public class ChunkTilePacket implements Packet {
 
 	public final ChunkTile chunkTile;
 
-	public ChunkTilePacket(@Nonnull ChunkTile chunkTile) {
+	public ChunkTilePacket(@NotNull ChunkTile chunkTile) {
 		this.chunkTile = chunkTile;
 	}
 

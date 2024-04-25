@@ -7,7 +7,6 @@ import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.level.Level;
 import org.jetbrains.annotations.NotNull;
 
-import javax.annotation.Nonnull;
 import java.util.List;
 
 /**
@@ -27,7 +26,7 @@ public class ServerboundCatchupRequestPacket implements Packet {
 	/**
 	 * Chunks must all be in the same dimension
 	 */
-	public ServerboundCatchupRequestPacket(@Nonnull List<CatchupChunk> chunks) {
+	public ServerboundCatchupRequestPacket(@NotNull List<CatchupChunk> chunks) {
 		if (chunks.isEmpty()) throw new Error("Chunks list must not be empty");
 		ResourceKey<Level> dim = null;
 		for (CatchupChunk chunk : chunks) {

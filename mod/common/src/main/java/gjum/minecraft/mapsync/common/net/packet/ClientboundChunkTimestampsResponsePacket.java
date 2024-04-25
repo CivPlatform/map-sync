@@ -4,8 +4,8 @@ import gjum.minecraft.mapsync.common.data.CatchupChunk;
 import gjum.minecraft.mapsync.common.net.Packet;
 import io.netty.buffer.ByteBuf;
 import net.minecraft.core.Registry;
+import org.jetbrains.annotations.NotNull;
 
-import javax.annotation.Nonnull;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -20,9 +20,9 @@ public class ClientboundChunkTimestampsResponsePacket implements Packet {
 	/**
 	 * sorted by newest to oldest
 	 */
-	public final @Nonnull List<CatchupChunk> chunks;
+	public final @NotNull List<CatchupChunk> chunks;
 
-	public ClientboundChunkTimestampsResponsePacket(@Nonnull List<CatchupChunk> chunks) {
+	public ClientboundChunkTimestampsResponsePacket(@NotNull List<CatchupChunk> chunks) {
 		this.chunks = chunks;
 	}
 

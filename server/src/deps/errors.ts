@@ -1,10 +1,10 @@
-import node_os from 'node:os'
-import node_utils from 'node:util'
+import node_os from "node:os";
+import node_utils from "node:util";
 
 export enum ErrorType {
-	FileExists,
-	FileNotFound,
-	UNKNOWN,
+    FileExists,
+    FileNotFound,
+    UNKNOWN,
 }
 
 /**
@@ -12,31 +12,31 @@ export enum ErrorType {
  * more readable and logic-able.
  */
 export function getErrorType(error: any): ErrorType {
-	switch (Math.abs(error.errno ?? Infinity)) {
-		case node_os.constants.errno.ENOENT:
-			return ErrorType.FileNotFound
-		case node_os.constants.errno.EEXIST:
-			return ErrorType.FileExists
-		default:
-			return ErrorType.UNKNOWN
-	}
+    switch (Math.abs(error.errno ?? Infinity)) {
+        case node_os.constants.errno.ENOENT:
+            return ErrorType.FileNotFound;
+        case node_os.constants.errno.EEXIST:
+            return ErrorType.FileExists;
+        default:
+            return ErrorType.UNKNOWN;
+    }
 }
 
 /**
  * Utility that guarantees that the error is an instance of Error.
  */
 export function ensureError(error: any): Error {
-	if (error instanceof Error) {
-		return error
-	}
-	switch (typeof error) {
-		case 'string':
-			return new Error(error)
-		case 'number':
-		case 'bigint':
-			return new Error(String(error))
-	}
-	return new Error(node_utils.inspect(error))
+    if (error instanceof Error) {
+        return error;
+    }
+    switch (typeof error) {
+        case "string":
+            return new Error(error);
+        case "number":
+        case "bigint":
+            return new Error(String(error));
+    }
+    return new Error(node_utils.inspect(error));
 }
 
 /**
@@ -45,5 +45,5 @@ export function ensureError(error: any): Error {
  * https://www.proposals.es/proposals/throw%20expressions
  */
 export function inlineThrow<T>(error: any): T {
-	throw error
+    throw error;
 }

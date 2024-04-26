@@ -1,36 +1,36 @@
 {
-	"name": "civmap-server",
-	"version": "SNAPSHOT",
-	"private": true,
-	"author": "Gjum",
-	"license": "GPL-3.0-only",
-	"scripts": {
-		"build": "tsc",
-		"format": "prettier -w .",
-		"test": "true",
-		"start": "node -r source-map-support/register dist/main.js",
-		"start:dev": "tsc && node --inspect -r source-map-support/register dist/main.js"
-	},
-	"dependencies": {
-		"async-mutex": "^0.4.0",
-		"better-sqlite3": "^8.5.0",
-		"kysely": "^0.26.1",
-		"source-map-support": "^0.5.21",
-		"zod": "^3.21.4",
-		"zod-validation-error": "^1.3.1"
-	},
-	"devDependencies": {
-		"@types/better-sqlite3": "^7.6.4",
-		"@types/node": "^18.17.4",
-		"dotenv": "^16.0.1",
-		"prettier": "^3.0.1",
-		"typescript": "^5.1.6"
-	},
-	"prettier": {
-		"useTabs": true,
-		"tabWidth": 2,
-		"trailingComma": "all",
-		"singleQuote": true,
-		"semi": false
-	}
+    "name": "civmap-server",
+    "version": "SNAPSHOT",
+    "private": true,
+    "author": "Gjum",
+    "license": "GPL-3.0-only",
+    "scripts": {
+        "build": "tsc",
+        "format": "prettier -w .",
+        "test": "true",
+        "start": "node -r source-map-support/register dist/main.js",
+        "start:dev": "tsc && node --inspect -r source-map-support/register dist/main.js"
+    },
+    "dependencies": {
+        "async-mutex": "^0.4.0",
+        "better-sqlite3": "^9.5.0",
+        "kysely": "^0.26.1",
+        "source-map-support": "^0.5.21",
+        "zod": "^3.21.4",
+        "zod-validation-error": "^1.3.1"
+    },
+    "devDependencies": {
+        "@types/better-sqlite3": "^7.6.4",
+        "@types/node": "^18.17.4",
+        "dotenv": "^16.0.1",
+        "prettier": "^3.0.1",
+        "typescript": "^5.1.6"
+    },
+    "prettier": {
+        "useTabs": false,
+        "tabWidth": 4,
+        "trailingComma": "all",
+        "singleQuote": false,
+        "semi": true
+    }
 }

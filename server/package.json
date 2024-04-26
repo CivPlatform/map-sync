@@ -27,10 +27,10 @@
 		"typescript": "^5.1.6"
 	},
 	"prettier": {
-		"useTabs": true,
-		"tabWidth": 2,
+		"useTabs": false,
+		"tabWidth": 4,
 		"trailingComma": "all",
-		"singleQuote": true,
-		"semi": false
+		"singleQuote": false,
+		"semi": true
 	}
 }

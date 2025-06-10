@@ -1,5 +1,4 @@
 import { BufReader } from "./BufReader";
-import { BufWriter } from "./BufWriter";
 
 export interface EncryptionResponsePacket {
     type: "EncryptionResponse";
@@ -16,10 +15,5 @@ export namespace EncryptionResponsePacket {
             sharedSecret: reader.readBufWithLen(),
             verifyToken: reader.readBufWithLen(),
         };
-    }
-
-    export function encode(pkt: EncryptionResponsePacket, writer: BufWriter) {
-        writer.writeBufWithLen(pkt.sharedSecret);
-        writer.writeBufWithLen(pkt.verifyToken);
     }
 }

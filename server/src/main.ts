@@ -50,7 +50,7 @@ export class Main {
         const timestamps = await database.getRegionTimestamps(client.world!);
         client.send({
             type: "RegionTimestamps",
-            world: client.world!,
+            dimension: client.world!,
             regions: timestamps,
         });
     }
@@ -83,7 +83,7 @@ export class Main {
 
         await database
             .storeChunkData(
-                pkt.world,
+                pkt.dimension,
                 pkt.chunk_x,
                 pkt.chunk_z,
                 client.uuid,
@@ -112,13 +112,13 @@ export class Main {
 
         for (const req of pkt.chunks) {
             let chunk = await database.getChunkData(
-                pkt.world,
+                pkt.dimension,
                 req.chunkX,
                 req.chunkZ,
             );
             if (!chunk) {
                 console.error(`${client.name} requested unavailable chunk`, {
-                    world: pkt.world,
+                    world: pkt.dimension,
                     ...req,
                 });
                 continue;
@@ -129,7 +129,7 @@ export class Main {
 
             client.send({
                 type: "ChunkTile",
-                world: pkt.world,
+                dimension: pkt.dimension,
                 chunk_x: req.chunkX,
                 chunk_z: req.chunkX,
                 ts: req.timestamp,
@@ -150,10 +150,10 @@ export class Main {
             throw new Error(`${client.name} is not authenticated`);
 
         const chunks = await database.getChunkTimestamps(
-            pkt.world,
+            pkt.dimension,
             pkt.regions,
         );
         if (chunks.length)
-            client.send({ type: "Catchup", world: pkt.world, chunks });
+            client.send({ type: "Catchup", dimension: pkt.dimension, chunks });
     }
 }

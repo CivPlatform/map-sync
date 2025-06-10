@@ -1,6 +1,5 @@
 import { type TCPSocketListener, type Socket, listen } from "bun";
 import * as crypto from "./crypto.ts";
-import { Main } from "./main";
 import type { ClientPacket, ServerPacket } from "./protocol";
 import { decodePacket, encodePacket } from "./protocol";
 import { BufReader } from "./protocol/BufReader";
@@ -9,24 +8,44 @@ import { EncryptionResponsePacket } from "./protocol/EncryptionResponsePacket";
 import { HandshakePacket } from "./protocol/HandshakePacket";
 import { SUPPORTED_VERSIONS } from "./constants";
 
-const { PORT = "12312", HOST = "127.0.0.1" } = process.env;
+export interface ProtocolHandler {
+    handleClientConnected(
+        client: TcpClient
+    ): Promise<void>
 
-type ProtocolHandler = Main; // TODO cleanup
+    handleClientDisconnected(
+        client: TcpClient
+    ): Promise<void>
+
+    handleClientAuthenticated(
+        client: TcpClient
+    ): Promise<void>
+
+    handleClientPacketReceived(
+        client: TcpClient,
+        packet: ClientPacket
+    ): Promise<void>
+}
 
 export class TcpServer {
     server: TCPSocketListener<TcpClient>;
     clients: Record<number, TcpClient> = {};
 
-    constructor(readonly handler: ProtocolHandler) {
+    constructor(
+        host: string,
+        port: number,
+        readonly handler: ProtocolHandler
+    ) {
         const self = this;
         this.server = listen<TcpClient>({
-            hostname: HOST,
-            port: parseInt(PORT),
+            hostname: host,
+            port: port,
             socket: {
                 binaryType: "buffer",
                 async open(socket) {
                     const client = new TcpClient(socket, self, handler);
                     self.clients[client.id] = socket.data = client;
+                    await self.handler.handleClientConnected(client);
                 },
                 async close(socket, err) {
                     const client: TcpClient = socket.data;
@@ -34,6 +53,7 @@ export class TcpServer {
                     if ((err ?? null) !== null) {
                         client.warn(`Closed due to an error!`, err);
                     }
+                    await self.handler.handleClientDisconnected(client);
                 },
                 async data(socket, data) {
                     const client: TcpClient = socket.data;
@@ -41,7 +61,7 @@ export class TcpServer {
                 },
             }
         });
-        console.log("[TcpServer] Listening on", HOST, PORT);
+        console.log("[TcpServer] Listening on", host, port);
     }
 }
 
@@ -76,7 +96,6 @@ export class TcpClient {
         private handler: ProtocolHandler,
     ) {
         this.log("Connected from", socket.remoteAddress);
-        handler.handleClientConnected(this);
     }
 
     static readonly #EMPTY_BUFFER = Buffer.allocUnsafe(0);

@@ -10,7 +10,8 @@
         "format": "bunx prettier -w .",
         "test": "bun test ./src/*.test.ts",
         "start": "bun src/main.ts",
-        "start:dev": "bun --inspect src/main.ts"
+        "start:dev": "bun --inspect src/main.ts",
+        "compile": "bun build --compile . --outfile out/mapsync-server"
     },
     "dependencies": {
         "async-mutex": "^0.4.0",

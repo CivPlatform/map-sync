@@ -1,7 +1,7 @@
 import "./cli";
 import * as database from "./database";
 import * as metadata from "./metadata";
-import { ClientPacket } from "./protocol";
+import { type ClientPacket } from "./protocol";
 import { CatchupRequestPacket } from "./protocol/CatchupRequestPacket";
 import { ChunkTilePacket } from "./protocol/ChunkTilePacket";
 import { TcpClient, TcpServer } from "./server";

@@ -1,5 +1,5 @@
 import { BufWriter } from "./BufWriter";
-import { CatchupRegion } from "../model";
+import { type CatchupRegion } from "../model";
 
 export interface RegionTimestampsPacket {
     type: "RegionTimestamps";

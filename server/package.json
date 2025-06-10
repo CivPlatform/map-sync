@@ -11,6 +11,7 @@
         "test": "bun test ./src/*.test.ts",
         "start": "bun src/main.ts",
         "start:dev": "bun --inspect src/main.ts",
+        "check": "bunx tsc",
         "compile": "bun build --compile . --outfile out/mapsync-server"
     },
     "dependencies": {

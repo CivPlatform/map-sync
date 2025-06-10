@@ -1,7 +1,7 @@
 import "./cli.ts";
 import * as database from "./database.ts";
 import * as metadata from "./metadata.ts";
-import { type ClientPacket } from "./net/protocol.ts";
+import { type ClientPacket, UnexpectedPacket } from "./net/protocol.ts";
 import { type ProtocolHandler, TcpClient, TcpServer } from "./net/server.ts";
 import {
     ChunkTilePacket,
@@ -10,7 +10,7 @@ import {
     ServerboundCatchupRequestPacket,
     ServerboundChunkTimestampsRequestPacket,
 } from "./net/packets.ts";
-import { exists } from "./lang.ts";
+import { isAuthed, OnlineAuth, requireAuth } from "./net/auth.ts";
 
 let config: metadata.Config = null!;
 Promise.resolve().then(async () => {
@@ -32,19 +32,18 @@ Promise.resolve().then(async () => {
             public async handleClientDisconnected(client: TcpClient) {}
 
             public async handleClientAuthenticated(client: TcpClient) {
-                if (!client.uuid) {
-                    throw new Error("Client not authenticated");
-                }
+                if (client.auth instanceof OnlineAuth) {
+                    metadata.cachePlayerUuid(
+                        client.auth.name,
+                        client.auth.uuid,
+                    );
+                    await metadata.saveUuidCache();
 
-                metadata.cachePlayerUuid(client.mcName!, client.uuid!);
-                await metadata.saveUuidCache();
-
-                if (config.whitelist) {
-                    if (!metadata.whitelist.has(client.uuid)) {
-                        client.log(
-                            `Rejected unwhitelisted user ${client.mcName} (${client.uuid})`,
-                        );
-                        client.kick(`Not whitelisted`);
+                    if (
+                        config.whitelist &&
+                        !metadata.whitelist.has(client.auth.uuid)
+                    ) {
+                        client.kick(`Not whitelisted!`);
                         return;
                     }
                 }
@@ -53,8 +52,8 @@ Promise.resolve().then(async () => {
 
                 await client.send(
                     new ClientboundRegionTimestampsPacket(
-                        client.world!,
-                        await database.getRegionTimestamps(client.world!),
+                        client.dimension!,
+                        await database.getRegionTimestamps(client.dimension!),
                     ),
                 );
             }
@@ -63,29 +62,27 @@ Promise.resolve().then(async () => {
                 client: TcpClient,
                 packet: ClientPacket,
             ) {
-                client.debug(client.mcName + " <- " + packet.type.toString());
                 switch (packet.type) {
                     case ChunkTilePacket.TYPE:
-                        return this.handleChunkTilePacket(
+                        await this.handleChunkTilePacket(
                             client,
                             packet as ChunkTilePacket,
                         );
+                        return;
                     case ServerboundCatchupRequestPacket.TYPE:
-                        return this.handleCatchupRequest(
+                        await this.handleCatchupRequest(
                             client,
                             packet as ServerboundCatchupRequestPacket,
                         );
+                        return;
                     case ServerboundChunkTimestampsRequestPacket.TYPE:
-                        return this.handleRegionCatchupPacket(
+                        await this.handleRegionCatchupPacket(
                             client,
                             packet as ServerboundChunkTimestampsRequestPacket,
                         );
+                        return;
                     default:
-                        throw new Error(
-                            `Unknown packet '${(packet as any).type}' from client ${
-                                client.id
-                            }`,
-                        );
+                        throw new UnexpectedPacket(packet.type.toString());
                 }
             }
 
@@ -93,31 +90,29 @@ Promise.resolve().then(async () => {
                 client: TcpClient,
                 packet: ChunkTilePacket,
             ) {
-                if (!client.uuid) {
-                    throw new Error(`${client.name} is not authenticated`);
-                }
+                requireAuth(client);
 
                 // TODO ignore if same chunk hash exists in db
 
-                await database
-                    .storeChunkData(
-                        packet.dimension,
-                        packet.chunkX,
-                        packet.chunkZ,
-                        client.uuid!,
-                        packet.timestamp,
-                        packet.version,
-                        packet.hash,
-                        packet.data,
-                    )
-                    .catch(console.error);
+                if (client.auth instanceof OnlineAuth) {
+                    await database
+                        .storeChunkData(
+                            packet.dimension,
+                            packet.chunkX,
+                            packet.chunkZ,
+                            client.auth.uuid,
+                            packet.timestamp,
+                            packet.version,
+                            packet.hash,
+                            packet.data,
+                        )
+                        .catch(client.warn);
+                }
 
                 // TODO small timeout, then skip if other client already has it
                 await Promise.allSettled(
                     Object.values(server.clients)
-                        .filter(
-                            (other) => other !== client && exists(other.uuid),
-                        )
+                        .filter((other) => other !== client && isAuthed(other))
                         .map((other) => other.send(packet)),
                 );
 
@@ -128,9 +123,7 @@ Promise.resolve().then(async () => {
                 client: TcpClient,
                 packet: ServerboundCatchupRequestPacket,
             ) {
-                if (!client.uuid) {
-                    throw new Error(`${client.name} is not authenticated`);
-                }
+                requireAuth(client);
 
                 for (const req of packet.chunks) {
                     let chunk = await database.getChunkData(
@@ -170,9 +163,7 @@ Promise.resolve().then(async () => {
                 client: TcpClient,
                 packet: ServerboundChunkTimestampsRequestPacket,
             ) {
-                if (!client.uuid) {
-                    throw new Error(`${client.name} is not authenticated`);
-                }
+                requireAuth(client);
 
                 const chunks = await database.getChunkTimestamps(
                     packet.dimension,

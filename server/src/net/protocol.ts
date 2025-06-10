@@ -76,3 +76,9 @@ export function encodePacket(pkt: ServerPacket, writer: BufferWriter): void {
             throw new Error(`Unknown packet type ${(pkt as any).type}`);
     }
 }
+
+export class UnexpectedPacket extends Error {
+    public constructor(message?: string) {
+        super(message);
+    }
+}

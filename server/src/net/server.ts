@@ -1,19 +1,28 @@
 import { listen, type Socket, type TCPSocketListener } from "bun";
-import * as crypto from "../crypto.ts";
+
+import node_crypto from "node:crypto";
+
+import { exists, INT32_SIZE } from "../lang.ts";
 import {
+    type ClientPacket,
     decodePacket,
     encodePacket,
-    type ClientPacket,
     type ServerPacket,
+    UnexpectedPacket,
 } from "./protocol.ts";
-import { BufferWriter, BufferReader } from "./buffers.ts";
-import { SUPPORTED_VERSIONS } from "../constants.ts";
+import { BufferReader, BufferWriter } from "./buffers.ts";
 import {
-    ClientboundEncryptionRequestPacket,
+    ChunkTilePacket,
+    ServerboundCatchupRequestPacket,
+    ServerboundChunkTimestampsRequestPacket,
     ServerboundEncryptionResponsePacket,
     ServerboundHandshakePacket,
 } from "./packets.ts";
-import { exists, INT32_SIZE } from "../lang.ts";
+import {
+    handleConnected,
+    handleEncryptionResponse,
+    handleHandshake,
+} from "./auth.ts";
 
 export interface ProtocolHandler {
     handleClientConnected(client: TcpClient): Promise<void>;
@@ -29,13 +38,13 @@ export interface ProtocolHandler {
 }
 
 export class TcpServer {
-    server: TCPSocketListener<TcpClient>;
-    clients: Record<number, TcpClient> = {};
+    public readonly server: TCPSocketListener<TcpClient>;
+    public readonly clients: Record<number, TcpClient> = {};
 
-    constructor(
+    public constructor(
         host: string,
         port: number,
-        readonly handler: ProtocolHandler,
+        public readonly handlers: ProtocolHandler,
     ) {
         const self = this;
         this.server = listen<TcpClient>({
@@ -44,9 +53,10 @@ export class TcpServer {
             socket: {
                 binaryType: "buffer",
                 async open(socket) {
-                    const client = new TcpClient(socket, self, handler);
+                    const client = new TcpClient(socket, self.handlers);
                     self.clients[client.id] = socket.data = client;
-                    await self.handler.handleClientConnected(client);
+                    await handleConnected(client);
+                    await self.handlers.handleClientConnected(client);
                 },
                 async close(socket, err) {
                     const client: TcpClient = socket.data;
@@ -54,7 +64,7 @@ export class TcpServer {
                     if (exists(err)) {
                         client.warn(`Closed due to an error!`, err);
                     }
-                    await self.handler.handleClientDisconnected(client);
+                    await self.handlers.handleClientDisconnected(client);
                 },
                 async data(socket, data) {
                     const client: TcpClient = socket.data;
@@ -67,34 +77,29 @@ export class TcpServer {
 }
 
 let nextClientId = 1;
+const MAX_FRAME_SIZE = 2 ** 15;
 
 /** Prefixes packets with their length (UInt32BE);
  * handles Mojang authentication */
 export class TcpClient {
-    readonly id = nextClientId++;
+    public readonly id = nextClientId++;
     /** contains mojang name once logged in */
-    name = "Client" + this.id;
+    public name = "Client" + this.id;
 
-    modVersion: string | undefined;
-    gameAddress: string | undefined;
-    uuid: string | undefined;
-    mcName: string | undefined;
-    world: string | undefined;
-
-    /** prevent Out of Memory when client sends a large packet */
-    maxFrameSize = 2 ** 15;
+    public claimedMojangUsername: string | null = null;
+    public gameAddress: string | null = null;
+    public dimension: string | null = null;
 
     /** sent by client during handshake */
-    private claimedMojangName?: string;
-    private verifyToken?: Buffer;
-    /** we need to wait for the mojang auth response
-     * before we can en/decrypt packets following the handshake */
-    private ciphers: crypto.Ciphers | null = null;
+    public auth: any;
+    public ciphers: {
+        encipher: node_crypto.Cipheriv;
+        decipher: node_crypto.Decipheriv;
+    } | null = null;
 
-    constructor(
+    public constructor(
         private socket: Socket<TcpClient>,
-        private server: TcpServer,
-        private handler: ProtocolHandler,
+        public handlers: ProtocolHandler,
     ) {
         this.log("Connected from", socket.remoteAddress);
     }
@@ -115,7 +120,7 @@ export class TcpClient {
             const frameSize = this.#receivedBuffer.readUInt32BE();
 
             // prevent Out of Memory
-            if (frameSize > this.maxFrameSize) {
+            if (frameSize > MAX_FRAME_SIZE) {
                 return this.kick(
                     "Frame too large: " +
                         frameSize +
@@ -144,174 +149,61 @@ export class TcpClient {
         }
     }
 
-    private async handlePacketReceived(pkt: ClientPacket) {
-        if (!this.uuid) {
-            // not authenticated yet
-            switch (pkt.type) {
-                case ServerboundHandshakePacket.TYPE:
-                    return await this.handleHandshakePacket(
-                        pkt as ServerboundHandshakePacket,
-                    );
-                case ServerboundEncryptionResponsePacket.TYPE:
-                    return await this.handleEncryptionResponsePacket(
-                        pkt as ServerboundEncryptionResponsePacket,
-                    );
-            }
-            throw new Error(
-                `Packet ${pkt.type.toString()} from unauth'd client ${this.id}`,
-            );
-        } else {
-            return await this.handler.handleClientPacketReceived(this, pkt);
+    private async handlePacketReceived(packet: ClientPacket) {
+        this.debug("Received packet: " + packet.type.toString());
+        switch (packet.type) {
+            case ServerboundHandshakePacket.TYPE:
+                await handleHandshake(
+                    this,
+                    packet as ServerboundHandshakePacket,
+                );
+                return;
+            case ServerboundEncryptionResponsePacket.TYPE:
+                await handleEncryptionResponse(
+                    this,
+                    packet as ServerboundEncryptionResponsePacket,
+                );
+                return;
+            case ServerboundChunkTimestampsRequestPacket.TYPE:
+            case ServerboundCatchupRequestPacket.TYPE:
+            case ChunkTilePacket.TYPE:
+                await this.handlers.handleClientPacketReceived(this, packet);
+                return;
+            default:
+                throw new UnexpectedPacket(packet.type.toString());
         }
     }
 
-    kick(internalReason: string) {
+    public kick(internalReason: string) {
         this.log(`Kicking:`, internalReason);
         this.socket.end();
     }
 
-    async send(pkt: ServerPacket) {
-        if (!this.ciphers) {
-            this.debug("Not encrypted, dropping packet", pkt.type);
-            return;
+    public async send(packet: ServerPacket) {
+        const writer = new BufferWriter();
+        writer.writeUnt32(0); // Placeholder for frame length, will write later
+        encodePacket(packet, writer);
+
+        let buffer = writer.getBuffer();
+        buffer.writeUInt32BE(buffer.byteLength - INT32_SIZE, 0);
+
+        if (exists(this.ciphers)) {
+            buffer = this.ciphers.encipher.update(buffer);
         }
-        if (!this.uuid) {
-            this.debug("Not authenticated, dropping packet", pkt.type);
-            return;
-        }
-        this.debug(this.mcName + " -> " + pkt.type.toString());
-        await this.sendInternal(pkt, true);
+
+        this.socket.write(buffer);
     }
 
-    private async sendInternal(pkt: ServerPacket, doCrypto = false) {
-        if (this.socket.readyState <= 0)
-            return this.debug("Socket closed, dropping", pkt.type);
-        if (doCrypto && !this.ciphers)
-            throw new Error(`Can't encrypt: handshake not finished`);
-
-        const writer = new BufferWriter(); // TODO size hint
-        writer.writeUnt32(0); // set later, but reserve space in buffer
-        encodePacket(pkt, writer);
-        let buf = writer.getBuffer();
-        buf.writeUInt32BE(buf.length - 4, 0); // write into space reserved above
-
-        if (doCrypto) {
-            buf = this.ciphers!.encipher.update(buf);
-        }
-
-        this.socket.write(buf);
-    }
-
-    private async handleHandshakePacket(packet: ServerboundHandshakePacket) {
-        if (this.ciphers) throw new Error(`Already authenticated`);
-        if (this.verifyToken) throw new Error(`Encryption already started`);
-
-        if (!SUPPORTED_VERSIONS.has(packet.modVersion)) {
-            this.kick(
-                "Connected with unsupported version [" +
-                    packet.modVersion +
-                    "]",
-            );
-            return;
-        }
-
-        this.gameAddress = packet.gameAddress;
-        this.claimedMojangName = packet.mojangName;
-        this.world = packet.dimension;
-        this.verifyToken = crypto.randomBytes(4);
-
-        await this.sendInternal(
-            new ClientboundEncryptionRequestPacket(
-                crypto.PUBLIC_KEY,
-                this.verifyToken,
-            ),
-        );
-    }
-
-    private async handleEncryptionResponsePacket(
-        pkt: ServerboundEncryptionResponsePacket,
-    ) {
-        if (this.ciphers) throw new Error(`Already authenticated`);
-        if (!this.claimedMojangName)
-            throw new Error(`Encryption has not started: no mojangName`);
-        if (!this.verifyToken)
-            throw new Error(`Encryption has not started: no verifyToken`);
-
-        const verifyToken = crypto.decrypt(pkt.verifyToken);
-        if (!this.verifyToken.equals(verifyToken)) {
-            throw new Error(
-                `verifyToken mismatch: got ${verifyToken} expected ${this.verifyToken}`,
-            );
-        }
-
-        const secret = crypto.decrypt(pkt.sharedSecret);
-
-        const shaHex = crypto
-            .createHash("sha1")
-            .update(secret)
-            .update(crypto.PUBLIC_KEY)
-            .digest()
-            .toString("hex");
-
-        this.ciphers = await fetchHasJoined({
-            username: this.claimedMojangName,
-            shaHex,
-        }).then(async (mojangAuth) => {
-            if (!mojangAuth?.uuid) {
-                this.kick(`Mojang auth failed`);
-                throw new Error(`Mojang auth failed`);
-            }
-
-            this.log("Authenticated as", mojangAuth);
-
-            this.uuid = mojangAuth.uuid;
-            this.mcName = mojangAuth.name;
-            this.name += ":" + mojangAuth.name;
-
-            return crypto.createCiphers(secret);
-        });
-
-        await this.handler.handleClientAuthenticated(this);
-    }
-
-    debug(...args: any[]) {
+    public debug(...args: any[]) {
         if (process.env.NODE_ENV === "production") return;
         console.debug(`[${this.name}]`, ...args);
     }
 
-    log(...args: any[]) {
+    public log(...args: any[]) {
         console.log(`[${this.name}]`, ...args);
     }
 
-    warn(...args: any[]) {
+    public warn(...args: any[]) {
         console.error(`[${this.name}]`, ...args);
-    }
-}
-
-async function fetchHasJoined(args: {
-    username: string;
-    shaHex: string;
-    clientIp?: string;
-}) {
-    const { username, shaHex, clientIp } = args;
-
-    // if auth is disabled, return a "usable" item
-    if ("DISABLE_AUTH" in process.env)
-        return { name: username, uuid: `AUTH-DISABLED-${username}` };
-
-    let url = `https://sessionserver.mojang.com/session/minecraft/hasJoined?username=${username}&serverId=${shaHex}`;
-    if (clientIp) url += `&ip=${clientIp}`;
-    const res = await fetch(url);
-    try {
-        if (res.status === 204) return null;
-        let { id, name } = (await res.json()) as { id: string; name: string };
-        const uuid = id.replace(
-            /^(........)-?(....)-?(....)-?(....)-?(............)$/,
-            "$1-$2-$3-$4-$5",
-        );
-        return { uuid, name };
-    } catch (err) {
-        console.error(res);
-        throw err;
     }
 }

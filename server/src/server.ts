@@ -1,5 +1,5 @@
+import { type TCPSocketListener, type Socket, listen } from "bun";
 import crypto from "crypto";
-import net from "net";
 import { Main } from "./main";
 import type { ClientPacket, ServerPacket } from "./protocol";
 import { decodePacket, encodePacket } from "./protocol";
@@ -14,7 +14,7 @@ const { PORT = "12312", HOST = "127.0.0.1" } = process.env;
 type ProtocolHandler = Main; // TODO cleanup
 
 export class TcpServer {
-    server: net.Server;
+    server: TCPSocketListener<TcpClient>;
     clients: Record<number, TcpClient> = {};
 
     keyPair = crypto.generateKeyPairSync("rsa", { modulusLength: 1024 });
@@ -25,20 +25,30 @@ export class TcpServer {
     });
 
     constructor(readonly handler: ProtocolHandler) {
-        this.server = net.createServer({}, (socket) => {
-            const client = new TcpClient(socket, this, handler);
-            this.clients[client.id] = client;
-            socket.on("close", () => delete this.clients[client.id]);
+        const self = this;
+        this.server = listen<TcpClient>({
+            hostname: HOST,
+            port: parseInt(PORT),
+            socket: {
+                binaryType: "buffer",
+                async open(socket) {
+                    const client = new TcpClient(socket, self, handler);
+                    self.clients[client.id] = socket.data = client;
+                },
+                async close(socket, err) {
+                    const client: TcpClient = socket.data;
+                    delete self.clients[client.id];
+                    if ((err ?? null) !== null) {
+                        client.warn(`Closed due to an error!`, err);
+                    }
+                },
+                async data(socket, data) {
+                    const client: TcpClient = socket.data;
+                    await client.handleReceivedData(data);
+                },
+            }
         });
-
-        this.server.on("error", (err: Error) => {
-            console.error("[TcpServer] Error:", err);
-            this.server.close();
-        });
-
-        this.server.listen({ port: parseInt(PORT), hostname: HOST }, () => {
-            console.log("[TcpServer] Listening on", HOST, PORT);
-        });
+        console.log("[TcpServer] Listening on", HOST, PORT);
     }
 
     decrypt(buf: Buffer) {
@@ -81,85 +91,60 @@ export class TcpClient {
     }>;
 
     constructor(
-        private socket: net.Socket,
+        private socket: Socket<TcpClient>,
         private server: TcpServer,
         private handler: ProtocolHandler,
     ) {
         this.log("Connected from", socket.remoteAddress);
         handler.handleClientConnected(this);
+    }
 
-        /** Accumulates received data, containing none, one, or multiple frames; the last frame may be partial only. */
-        let accBuf: Buffer = Buffer.alloc(0);
+    static readonly #EMPTY_BUFFER = Buffer.allocUnsafe(0);
+    #receivedBuffer: Buffer = TcpClient.#EMPTY_BUFFER;
+    public async handleReceivedData(
+        data: Buffer
+    ) {
+        if (this.cryptoPromise) {
+            data = (await this.cryptoPromise).decipher.update(data);
+        }
 
-        socket.on("data", async (data: Buffer) => {
-            try {
-                if (this.cryptoPromise) {
-                    const { decipher } = await this.cryptoPromise;
-                    data = decipher.update(data);
-                }
+        // creating a new buffer every time is fine in our case, because we expect most frames to be large
+        this.#receivedBuffer = Buffer.concat([
+            this.#receivedBuffer,
+            data
+        ]);
 
-                // creating a new buffer every time is fine in our case, because we expect most frames to be large
-                accBuf = Buffer.concat([accBuf, data]);
+        // we may receive multiple frames in one call
+        while (true) {
+            if (this.#receivedBuffer.byteLength <= 4) return; // wait for more data
+            const frameSize = this.#receivedBuffer.readUInt32BE();
 
-                // we may receive multiple frames in one call
-                while (true) {
-                    if (accBuf.length <= 4) return; // wait for more data
-                    const frameSize = accBuf.readUInt32BE();
-
-                    // prevent Out of Memory
-                    if (frameSize > this.maxFrameSize) {
-                        return this.kick(
-                            "Frame too large: " +
-                                frameSize +
-                                " have " +
-                                accBuf.length,
-                        );
-                    }
-
-                    if (accBuf.length < 4 + frameSize) return; // wait for more data
-
-                    const frameReader = new BufReader(accBuf);
-                    frameReader.readUInt32(); // skip frame size
-                    let pktBuf = frameReader.readBufLen(frameSize);
-                    accBuf = frameReader.readRemainder();
-
-                    const reader = new BufReader(pktBuf);
-
-                    try {
-                        const packet = decodePacket(reader);
-                        await this.handlePacketReceived(packet);
-                    } catch (err) {
-                        this.warn(err);
-                        return this.kick("Error in packet handler");
-                    }
-                }
-            } catch (err) {
-                this.warn(err);
-                return this.kick("Error in data handler");
+            // prevent Out of Memory
+            if (frameSize > this.maxFrameSize) {
+                return this.kick(
+                    "Frame too large: " +
+                    frameSize +
+                    " have " +
+                    this.#receivedBuffer.byteLength,
+                );
             }
-        });
 
-        socket.on("close", (hadError: boolean) => {
-            this.log("Closed.", { hadError });
-        });
+            if (this.#receivedBuffer.byteLength < 4 + frameSize) return; // wait for more data
 
-        socket.on("end", () => {
-            // This event is called when the other end signals the end of transmission, meaning this client is
-            // still writeable, but no longer readable. In this situation we just want to close the socket.
-            // https://nodejs.org/dist/latest-v18.x/docs/api/net.html#event-end
-            this.kick("Ended");
-        });
+            const frameReader = new BufReader(this.#receivedBuffer.subarray(4));
+            const packetBuffer = frameReader.readBufLen(frameSize);
+            this.#receivedBuffer = frameReader.readRemainder();
 
-        socket.on("timeout", () => {
-            // As per the docs, the socket needs to be manually closed.
-            // https://nodejs.org/dist/latest-v18.x/docs/api/net.html#event-timeout
-            this.kick("Timed out");
-        });
-
-        socket.on("error", (err: Error) => {
-            this.warn("Error:", err);
-            this.kick("Socket error");
-        });
+            try {
+                const packet = decodePacket(new BufReader(packetBuffer));
+                await this.handlePacketReceived(packet);
+            }
+            catch (err) {
+                this.warn(err);
+                this.kick("Error in packet handler");
+                return;
+            }
+        }
     }
 
     private async handlePacketReceived(pkt: ClientPacket) {
@@ -181,7 +166,7 @@ export class TcpClient {
 
     kick(internalReason: string) {
         this.log(`Kicking:`, internalReason);
-        this.socket.destroy();
+        this.socket.end();
     }
 
     async send(pkt: ServerPacket) {
@@ -198,7 +183,7 @@ export class TcpClient {
     }
 
     private async sendInternal(pkt: ServerPacket, doCrypto = false) {
-        if (!this.socket.writable)
+        if (this.socket.readyState <= 0)
             return this.debug("Socket closed, dropping", pkt.type);
         if (doCrypto && !this.cryptoPromise)
             throw new Error(`Can't encrypt: handshake not finished`);

@@ -36,7 +36,7 @@ export class TcpServer {
             this.server.close();
         });
 
-        this.server.listen({ port: PORT, hostname: HOST }, () => {
+        this.server.listen({ port: parseInt(PORT), hostname: HOST }, () => {
             console.log("[TcpServer] Listening on", HOST, PORT);
         });
     }

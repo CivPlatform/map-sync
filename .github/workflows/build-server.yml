@@ -13,17 +13,14 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        version: ["lts/*", "latest"]
+        version: ["1.2.15", "latest"]
     steps:
       - uses: actions/checkout@v3
-      - name: Use latest Node.js LTS
-        uses: actions/setup-node@v3
+      - name: Setup bun.sh
+        uses: oven-sh/setup-bun@v1
         with:
-          node-version: ${{ matrix.version }}
-          # cache: "yarn"
-      - run: yarn
+          bun-version: ${{ matrix.version }}
+      - run: bun install
         working-directory: ./server
-      - run: yarn build
-        working-directory: ./server
-      - run: yarn test
+      - run: bun test
         working-directory: ./server

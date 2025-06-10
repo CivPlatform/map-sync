@@ -26,6 +26,9 @@ dependencies {
 
 	// https://modrinth.com/mod/modmenu/version/3.2.5 (3.2.5 fabric)
 	modCompileOnly("maven.modrinth:modmenu:nVxObSbX")
+
+	// https://github.com/TooTallNate/Java-WebSocket
+	include("org.java-websocket:Java-WebSocket:1.6.0")
 }
 
 processResources {

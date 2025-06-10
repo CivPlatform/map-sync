@@ -2,36 +2,40 @@ package gjum.minecraft.mapsync.common.net;
 
 import com.mojang.authlib.exceptions.AuthenticationException;
 import gjum.minecraft.mapsync.common.MapSyncMod;
+import gjum.minecraft.mapsync.common.data.CatchupChunk;
 import gjum.minecraft.mapsync.common.data.ChunkTile;
-import gjum.minecraft.mapsync.common.net.encryption.EncryptionDecoder;
-import gjum.minecraft.mapsync.common.net.encryption.EncryptionEncoder;
-import gjum.minecraft.mapsync.common.net.packet.*;
+import gjum.minecraft.mapsync.common.net.packet.ChunkTilePacket;
+import gjum.minecraft.mapsync.common.net.packet.ClientboundChunkTimestampsResponsePacket;
+import gjum.minecraft.mapsync.common.net.packet.ClientboundAuthRequestPacket;
+import gjum.minecraft.mapsync.common.net.packet.ClientboundRegionTimestampsPacket;
+import gjum.minecraft.mapsync.common.net.packet.ClientboundWelcomePacket;
+import gjum.minecraft.mapsync.common.net.packet.ServerboundCatchupRequestPacket;
+import gjum.minecraft.mapsync.common.net.packet.ServerboundChunkTimestampsRequestPacket;
+import gjum.minecraft.mapsync.common.net.packet.ServerboundAuthResponsePacket;
+import gjum.minecraft.mapsync.common.net.packet.ServerboundHandshakePacket;
 import gjum.minecraft.mapsync.common.utils.Hasher;
-import io.netty.bootstrap.Bootstrap;
-import io.netty.channel.*;
-import io.netty.channel.nio.NioEventLoopGroup;
-import io.netty.channel.socket.SocketChannel;
-import io.netty.channel.socket.nio.NioSocketChannel;
-import io.netty.handler.codec.LengthFieldBasedFrameDecoder;
-import io.netty.handler.codec.LengthFieldPrepender;
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
+import java.nio.ByteBuffer;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.HexFormat;
+import java.util.List;
+import java.util.Objects;
+import java.util.concurrent.ThreadLocalRandom;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.User;
 import net.minecraft.world.level.ChunkPos;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import org.apache.commons.lang3.StringUtils;
+import org.java_websocket.client.WebSocketClient;
+import org.java_websocket.enums.ReadyState;
+import org.java_websocket.handshake.ServerHandshake;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-
-import javax.crypto.*;
-import javax.crypto.spec.SecretKeySpec;
-import java.security.*;
-import java.util.*;
-import java.util.concurrent.ThreadLocalRandom;
-import java.util.concurrent.TimeUnit;
-import java.util.stream.Collectors;
-
-import static gjum.minecraft.mapsync.common.MapSyncMod.debugLog;
-import static gjum.minecraft.mapsync.common.MapSyncMod.getMod;
+import org.jetbrains.annotations.UnknownNullability;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * handles reconnection, authentication, encryption
@@ -42,7 +46,7 @@ public class SyncClient {
 	public synchronized void sendChunkTile(ChunkTile chunkTile) {
 		var serverKnownHash = getServerKnownChunkHash(chunkTile.chunkPos());
 		if (Arrays.equals(chunkTile.dataHash(), serverKnownHash)) {
-			debugLog("server already has chunk (hash) " + chunkTile.chunkPos());
+			MapSyncMod.debugLog("server already has chunk (hash) " + chunkTile.chunkPos());
 			return; // server already has this chunk
 		}
 
@@ -62,11 +66,10 @@ public class SyncClient {
 
 	// XXX end of hotfix
 
-	public static final Logger logger = LogManager.getLogger(SyncClient.class);
+	public static final Logger LOGGER = LoggerFactory.getLogger(SyncClient.class);
+	public static final int RESTART_DELAY = 5;
 
-	public int retrySec = 5;
-
-	public final @NotNull String address;
+	public final @NotNull SyncAddress syncAddress;
 	public final @NotNull String gameAddress;
 
 	/**
@@ -79,118 +82,151 @@ public class SyncClient {
 	 * and disconnect when coming across this during a check
 	 */
 	public boolean isShutDown = false;
-	private boolean isEncrypted = false;
 	private @Nullable String lastError;
 	/**
 	 * limited (on insert) to 199 entries
 	 */
-	private ArrayList<Packet> queue = new ArrayList<>();
-	private @Nullable Channel channel;
-	private static @Nullable NioEventLoopGroup workerGroup;
+	private final ArrayList<Packet> queue = new ArrayList<>();
+	private final SyncConnection connection;
+	/** Whether the connection has survived the handshake and login exchange */
+	private boolean isEstablished = false;
 
-	public SyncClient(@NotNull String address, @NotNull String gameAddress) {
-		if (!address.contains(":")) address = address + ":12312";
-		this.address = address;
-		this.gameAddress = gameAddress;
-		connect();
+	public SyncClient(
+		final @NotNull SyncAddress syncAddress,
+		final @NotNull String gameAddress
+	) {
+		this.syncAddress = Objects.requireNonNull(syncAddress);
+		this.gameAddress = Objects.requireNonNull(gameAddress);
+		this.connection = new SyncConnection(syncAddress);
+		this.connection.connect();
 	}
 
-	private void connect() {
-		try {
-			if (isShutDown) return;
-
-			if (workerGroup != null && !workerGroup.isShuttingDown()) {
-				// end any tasks of the old connection
-				workerGroup.shutdownGracefully();
-			}
-			workerGroup = new NioEventLoopGroup();
-			isEncrypted = false;
-
-			var bootstrap = new Bootstrap();
-			bootstrap.group(workerGroup);
-			bootstrap.channel(NioSocketChannel.class);
-			bootstrap.option(ChannelOption.SO_KEEPALIVE, true);
-			bootstrap.handler(new ChannelInitializer<SocketChannel>() {
-				public void initChannel(SocketChannel ch) {
-					ch.pipeline().addLast(
-							new LengthFieldPrepender(4),
-							new LengthFieldBasedFrameDecoder(1 << 15, 0, 4, 0, 4),
-							new ClientboundPacketDecoder(),
-							new ServerboundPacketEncoder(),
-							new ClientHandler(SyncClient.this));
+	private class SyncConnection extends WebSocketClient {
+		public SyncConnection(
+			final @NotNull SyncAddress serverUri
+		) {
+			super(serverUri.address());
+		}
+		@Override
+		public void onOpen(
+			final @NotNull ServerHandshake handshake
+		) {
+			LOGGER.info("[map-sync] OPENED!");
+			INTERNAL_send(new ServerboundHandshakePacket(
+				MapSyncMod.getMod().getVersion(),
+				Minecraft.getInstance().getUser().getName(),
+				SyncClient.this.gameAddress,
+				MapSyncMod.getMod().getDimensionState().dimension.location().toString()
+			));
+		}
+		@Override
+		public void onClose(
+			final int code,
+			final @UnknownNullability String reason,
+			final boolean remote
+		) {
+			LOGGER.info("[map-sync] Closed!");
+			SyncClient.this.handleDisconnect(code, reason, remote);
+		}
+		@Override
+		public void onError(
+			final @NotNull Exception thrown
+		) {
+			LOGGER.warn("[map-sync] Something went wrong", thrown);
+			SyncClient.this.lastError = thrown.getMessage();
+			close();
+		}
+		@Override
+		public void onMessage(
+			final @NotNull String message
+		) {
+			LOGGER.warn("[map-sync] Received a string message from the server!");
+			SyncClient.this.lastError = "Server sent unsupported packets!";
+			SyncClient.this.autoReconnect = false;
+			SyncClient.this.isShutDown = true;
+			SyncClient.this.isEstablished = false;
+			close();
+		}
+		@Override
+		public void onMessage(
+			@NotNull ByteBuffer bytes
+		) {
+			LOGGER.info("[map-sync] Received bytes!");
+			final ByteBuf buf = Unpooled.wrappedBuffer(bytes);
+			try {
+				final byte packetId = buf.readByte();
+				switch (packetId) {
+					case ChunkTilePacket.PACKET_ID -> {
+						final var packet = (ChunkTilePacket) ChunkTilePacket.read(buf);
+						Packet.assertNoRemainder(buf);
+						MapSyncMod.getMod().handleSharedChunk(packet.chunkTile);
+					}
+					case ClientboundAuthRequestPacket.PACKET_ID -> {
+						final ClientboundAuthRequestPacket packet = ClientboundAuthRequestPacket.read(buf);
+						Packet.assertNoRemainder(buf);
+						handleAuthRequest(this, packet);
+					}
+					case ClientboundWelcomePacket.PACKET_ID -> {
+						final ClientboundWelcomePacket packet =  ClientboundWelcomePacket.read(buf);
+						Packet.assertNoRemainder(buf);
+						handleWelcome(packet);
+					}
+					case ClientboundChunkTimestampsResponsePacket.PACKET_ID -> {
+						final var packet = (ClientboundChunkTimestampsResponsePacket) ClientboundChunkTimestampsResponsePacket.read(buf);
+						Packet.assertNoRemainder(buf);
+						for (CatchupChunk chunk : packet.chunks) {
+							chunk.syncClient = SyncClient.this;
+						}
+						MapSyncMod.getMod().handleCatchupData(packet);
+					}
+					case ClientboundRegionTimestampsPacket.PACKET_ID -> {
+						final var packet = (ClientboundRegionTimestampsPacket) ClientboundRegionTimestampsPacket.read(buf);
+						Packet.assertNoRemainder(buf);
+						MapSyncMod.getMod().handleRegionTimestamps(packet, SyncClient.this);
+					}
 				}
-			});
-
-			String[] hostPortArr = address.split(":");
-			int port = Integer.parseInt(hostPortArr[1]);
-
-			final var channelFuture = bootstrap.connect(hostPortArr[0], port);
-			channel = channelFuture.channel();
-			channelFuture.addListener(future -> {
-				if (future.isSuccess()) {
-					logger.info("[map-sync] Connected to " + address);
-					channelFuture.channel().writeAndFlush(new ServerboundHandshakePacket(
-							getMod().getVersion(),
-							Minecraft.getInstance().getUser().getName(),
-							gameAddress,
-							getMod().getDimensionState().dimension.location().toString()));
-				} else {
-					handleDisconnect(future.cause());
-				}
-			});
-		} catch (Throwable e) {
-			e.printStackTrace();
-			handleDisconnect(e);
-		}
-	}
-
-	void handleDisconnect(Throwable err) {
-		isEncrypted = false;
-
-		if (Minecraft.getInstance().level == null) shutDown();
-
-		String errMsg = err.getMessage();
-		if (errMsg == null) errMsg = err.toString();
-		lastError = errMsg;
-		if (isShutDown) {
-			logger.warn("[map-sync] Got disconnected from '" + address + "'." +
-					" Won't retry (has shut down)");
-			if (!errMsg.contains("Channel inactive")) err.printStackTrace();
-		} else if (!autoReconnect) {
-			logger.warn("[map-sync] Got disconnected from '" + address + "'." +
-					" Won't retry (autoReconnect=false)");
-			if (!errMsg.contains("Channel inactive")) err.printStackTrace();
-		} else if (workerGroup == null) {
-			logger.warn("[map-sync] Got disconnected from '" + address + "'." +
-					" Won't retry (workerGroup=null)");
-			err.printStackTrace();
-		} else {
-			workerGroup.schedule(this::connect, retrySec, TimeUnit.SECONDS);
-
-			if (!errMsg.startsWith("Connection refused: ")) { // reduce spam
-				logger.warn("[map-sync] Got disconnected from '" + address + "'." +
-						" Retrying in " + retrySec + " sec");
-				if (!errMsg.contains("Channel inactive")) err.printStackTrace();
+			}
+			catch (final Exception thrown) {
+				onError(thrown);
 			}
 		}
 	}
 
-	public synchronized void handleEncryptionSuccess() {
-		if (channel == null) return;
-
-		lastError = null;
-		isEncrypted = true;
-		getMod().handleSyncServerEncryptionSuccess();
-
-		for (Packet packet : queue) {
-			channel.write(packet);
+	public synchronized void connect() {
+		if (this.isShutDown) {
+			return;
 		}
-		queue.clear();
-		channel.flush();
+		if (this.connection.getReadyState() == ReadyState.OPEN) {
+			this.connection.close();
+		}
+		this.connection.connect();
 	}
 
-	public boolean isEncrypted() {
-		return isEncrypted;
+	private void handleDisconnect(
+		final int code,
+		final @UnknownNullability String reason,
+		final boolean remote
+	) {
+		this.isEstablished = false;
+
+		if (Minecraft.getInstance().level == null) {
+			this.isShutDown = true;
+		}
+
+		if (StringUtils.isNotEmpty(reason)) {
+			this.lastError = reason;
+		}
+
+		LOGGER.warn("[map-sync] Got disconnected from '{}': {}", this.syncAddress, this.lastError);
+
+		if (!this.isShutDown && this.autoReconnect && !remote) {
+			// TODO: Readd auto-reconnect
+			// workerGroup.schedule(this::connect, retrySec, TimeUnit.SECONDS);
+		}
+	}
+
+	public boolean isEstablished() {
+		return this.isEstablished;
 	}
 
 	public String getError() {
@@ -200,92 +236,90 @@ public class SyncClient {
 	/**
 	 * Send if encrypted, or queue and send once encryption is set up.
 	 */
-	public void send(Packet packet) {
-		send(packet, true);
+	public synchronized void send(Packet packet) {
+		if (this.connection == null || this.connection.getReadyState() != ReadyState.OPEN) {
+			this.queue.add(packet);
+			final int queueSize = this.queue.size();
+			if (queueSize > 200) {
+				final List<Packet> slice = List.copyOf(this.queue.subList(100, queueSize));
+				this.queue.clear();
+				this.queue.addAll(slice);
+			}
+			return;
+		}
+		INTERNAL_send(packet);
 	}
 
-	/**
-	 * Send if encrypted, or queue and send once encryption is set up.
-	 */
-	public synchronized void send(Packet packet, boolean flush) {
-		try {
-			if (isEncrypted() && channel != null && channel.isActive()) {
-				if (flush) channel.writeAndFlush(packet);
-				else channel.write(packet);
-			} else {
-				queue.add(packet);
-				// don't let the queue occupy too much memory
-				if (queue.size() > 200) {
-					logger.warn("[map-sync] Dropping 100 oldest packets from queue");
-					queue = queue.stream()
-							.skip(100)
-							.collect(Collectors.toCollection(ArrayList::new));
-				}
-			}
-		} catch (Throwable e) {
-			e.printStackTrace();
-		}
+	private void INTERNAL_send(
+		final @NotNull Packet packet
+	) {
+		final ByteBuf buf = Unpooled.buffer();
+		buf.writeByte(getClientPacketId(packet));
+		packet.write(buf);
+
+		final byte[] bytes = new byte[buf.readableBytes()];
+		buf.readBytes(bytes);
+
+		this.connection.send(bytes);
+	}
+
+	private static int getClientPacketId(Packet packet) {
+		if (packet instanceof ChunkTilePacket) return ChunkTilePacket.PACKET_ID;
+		if (packet instanceof ServerboundHandshakePacket) return ServerboundHandshakePacket.PACKET_ID;
+		if (packet instanceof ServerboundAuthResponsePacket) return ServerboundAuthResponsePacket.PACKET_ID;
+		if (packet instanceof ServerboundCatchupRequestPacket) return ServerboundCatchupRequestPacket.PACKET_ID;
+		if (packet instanceof ServerboundChunkTimestampsRequestPacket) return ServerboundChunkTimestampsRequestPacket.PACKET_ID;
+		throw new IllegalArgumentException("Unknown client packet class " + packet);
 	}
 
 	public synchronized void shutDown() {
-		isShutDown = true;
-		if (channel != null) {
-			channel.disconnect();
-			channel.eventLoop().shutdownGracefully();
-			channel = null;
-		}
-		if (workerGroup != null && !workerGroup.isShuttingDown()) {
-			// this also stops any ongoing reconnect timeout
-			workerGroup.shutdownGracefully();
-			workerGroup = null;
-		}
+		this.isShutDown = true;
+		this.isEstablished = false;
+		this.connection.close();
 	}
 
-	void setUpEncryption(ChannelHandlerContext ctx, ClientboundEncryptionRequestPacket packet) {
+	private void handleAuthRequest(
+		final @NotNull WebSocketClient connection,
+		final @NotNull ClientboundAuthRequestPacket packet
+	) {
+		final var clientSecret = new byte[Long.BYTES];
+		ThreadLocalRandom.current().nextBytes(clientSecret);
+
+		// note that this is different from minecraft (we get no negative hashes)
+		final String shaHex = HexFormat.of().formatHex(Hasher.sha1()
+			.update(clientSecret)
+			.update(packet.serverSecret())
+			.generateHash()
+		);
+
+		final User session = Minecraft.getInstance().getUser();
 		try {
-			byte[] sharedSecret = new byte[16];
-			ThreadLocalRandom.current().nextBytes(sharedSecret);
-
-			if (!MapSyncMod.getMod().isDevMode()) {
-				// note that this is different from minecraft (we get no negative hashes)
-				final String shaHex = HexFormat.of().formatHex(Hasher.sha1()
-						.update(sharedSecret)
-						.update(packet.publicKey.getEncoded())
-						.generateHash()
-				);
-
-				final User session = Minecraft.getInstance().getUser();
-				Minecraft.getInstance().getMinecraftSessionService().joinServer(
-						session.getGameProfile(),
-						session.getAccessToken(),
-						shaHex
-				);
-			}
-
-			try {
-				ctx.channel().writeAndFlush(new ServerboundEncryptionResponsePacket(
-						encrypt(packet.publicKey, sharedSecret),
-						encrypt(packet.publicKey, packet.verifyToken)));
-			} catch (NoSuchAlgorithmException | InvalidKeyException | NoSuchPaddingException | BadPaddingException |
-			         IllegalBlockSizeException e) {
-				shutDown();
-				throw new RuntimeException(e);
-			}
-
-			SecretKey secretKey = new SecretKeySpec(sharedSecret, "AES");
-			ctx.pipeline()
-					.addFirst("encrypt", new EncryptionEncoder(secretKey))
-					.addFirst("decrypt", new EncryptionDecoder(secretKey));
-
-			handleEncryptionSuccess();
-		} catch (AuthenticationException e) {
-			SyncClient.logger.warn("Auth error: " + e.getMessage(), e);
+			Minecraft.getInstance().getMinecraftSessionService().joinServer(
+				session.getGameProfile(),
+				session.getAccessToken(),
+				shaHex
+			);
 		}
+		catch (final AuthenticationException authenticationFailure) {
+			LOGGER.warn("Failed authentication check!");
+			connection.close();
+			return;
+		}
+
+		INTERNAL_send(new ServerboundAuthResponsePacket(
+			clientSecret
+		));
 	}
 
-	private static byte[] encrypt(PublicKey key, byte[] data) throws NoSuchPaddingException, NoSuchAlgorithmException, BadPaddingException, IllegalBlockSizeException, InvalidKeyException {
-		Cipher cipher = Cipher.getInstance("RSA/ECB/PKCS1Padding");
-		cipher.init(Cipher.ENCRYPT_MODE, key);
-		return cipher.doFinal(data);
+	private synchronized void handleWelcome(
+		final @NotNull ClientboundWelcomePacket packet
+	) {
+		this.isEstablished = true;
+		this.lastError = null;
+
+		for (final Packet pendingPacket : List.copyOf(this.queue)) {
+			INTERNAL_send(pendingPacket);
+		}
+		this.queue.clear();
 	}
 }

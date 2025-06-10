@@ -6,3 +6,6 @@ export const SUPPORTED_VERSIONS = new Set([
 // SHA1 produces 160-bit (20-byte) hashes
 // https://en.wikipedia.org/wiki/SHA-1
 export const SHA1_HASH_LENGTH = 20;
+
+export const UUID_REGEX =
+    /^(........)-?(....)-?(....)-?(....)-?(............)$/;

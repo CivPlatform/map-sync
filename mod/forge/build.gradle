@@ -26,6 +26,9 @@ dependencies {
 
 	common(project(path: ":common", configuration: "namedElements")) { transitive false }
 	shadowCommon(project(path: ":common", configuration: "transformProductionForge")) { transitive false }
+
+	// https://github.com/TooTallNate/Java-WebSocket
+	include("org.java-websocket:Java-WebSocket:1.6.0")
 }
 
 processResources {

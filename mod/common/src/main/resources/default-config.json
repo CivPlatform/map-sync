@@ -2,7 +2,7 @@
 	"servers": {
 		"localhost:25565": {
 			"syncServerAddresses": [
-				"localhost:12312"
+				"ws://localhost:12312"
 			]
 		}
 	}

@@ -1,24 +1,17 @@
 import node_crypto from "node:crypto";
 
-import { z } from "zod";
-import { fromZodError } from "zod-validation-error";
+import { z } from "zod/v4";
 
 import { type TcpClient } from "./server.ts";
 import {
-    ClientboundEncryptionRequestPacket,
-    ServerboundEncryptionResponsePacket,
+    ClientboundAuthRequestPacket,
+    ClientboundWelcomePacket,
+    ServerboundAuthResponsePacket,
     type ServerboundHandshakePacket,
 } from "./packets.ts";
 import { UnexpectedPacket } from "./protocol.ts";
-import { SUPPORTED_VERSIONS } from "../constants.ts";
-
-const KEY_PAIR = node_crypto.generateKeyPairSync("rsa", {
-    modulusLength: 1024,
-});
-const PUBLIC_KEY = KEY_PAIR.publicKey.export({
-    type: "spki",
-    format: "der",
-});
+import { SUPPORTED_VERSIONS, UUID_REGEX } from "../constants.ts";
+import { INT64_SIZE } from "../lang.ts";
 
 // ============================================================
 // Handshake
@@ -45,89 +38,58 @@ export async function handleHandshake(
         return;
     }
 
-    client.claimedMojangUsername = packet.mojangName;
     client.gameAddress = packet.gameAddress;
     client.dimension = packet.dimension;
 
-    const verifyToken = node_crypto.randomBytes(4);
+    if (Bun.env["MAPSYNC_DISABLE_AUTH"] === "true") {
+        client.auth = new OfflineAuth(packet.mojangName);
+        client.name += "?:" + packet.mojangName;
+        await client.send(new ClientboundWelcomePacket());
+        return;
+    }
 
-    client.auth = new AwaitingEncryptionResponse(verifyToken);
-    await client.send(
-        new ClientboundEncryptionRequestPacket(PUBLIC_KEY, verifyToken),
-    );
+    const serverSecret = node_crypto.randomBytes(INT64_SIZE);
+    client.auth = new AwaitingAuthResponse(serverSecret, packet.mojangName);
+    await client.send(new ClientboundAuthRequestPacket(serverSecret));
 }
 
 // ============================================================
 // Encryption Response
 // ============================================================
 
-export function decrypt(buf: Buffer): Buffer {
-    return node_crypto.privateDecrypt(
-        {
-            key: KEY_PAIR.privateKey,
-            padding: node_crypto.constants.RSA_PKCS1_PADDING,
-        },
-        buf,
-    );
+class AwaitingAuthResponse {
+    public constructor(
+        public readonly serverSecret: Buffer,
+        public readonly claimedMojangUsername: string,
+    ) {}
 }
 
-class AwaitingEncryptionResponse {
-    public constructor(public readonly verifyToken: Buffer) {}
-}
-
-export async function handleEncryptionResponse(
+export async function handleAuthResponse(
     client: TcpClient,
-    packet: ServerboundEncryptionResponsePacket,
+    packet: ServerboundAuthResponsePacket,
 ) {
-    if (!(client.auth instanceof AwaitingEncryptionResponse)) {
+    if (!(client.auth instanceof AwaitingAuthResponse)) {
         throw new UnexpectedPacket(packet.type.toString());
     }
 
-    const decryptedVerifyToken = decrypt(packet.verifyToken);
-    if (!client.auth.verifyToken.equals(decryptedVerifyToken)) {
-        client.kick("verifyToken does not match!");
-        client.debug(
-            `Expected [${client.auth.verifyToken.toHex()}], received [${decryptedVerifyToken.toHex()}]`,
-        );
+    const auth = await fetchHasJoined(
+        client,
+        client.auth.claimedMojangUsername,
+        node_crypto
+            .createHash("sha1")
+            .update(packet.clientSecret)
+            .update(client.auth.serverSecret)
+            .digest()
+            .toString("hex"),
+    );
+    if (auth === null) {
+        client.kick("Not authenticated!");
         return;
     }
 
-    const decryptedSharedSecret = decrypt(packet.sharedSecret);
-    client.ciphers = {
-        encipher: node_crypto.createCipheriv(
-            "aes-128-cfb8",
-            decryptedSharedSecret,
-            decryptedSharedSecret,
-        ),
-        decipher: node_crypto.createDecipheriv(
-            "aes-128-cfb8",
-            decryptedSharedSecret,
-            decryptedSharedSecret,
-        ),
-    };
-    client.debug("Connection is now encrypted!");
-
-    if (Bun.env["MAPSYNC_DISABLE_AUTH"] === "true") {
-        client.auth = new OfflineAuth(client.claimedMojangUsername!);
-        client.name += "?:" + client.claimedMojangUsername!;
-    } else {
-        const auth = await fetchHasJoined(
-            client,
-            node_crypto
-                .createHash("sha1")
-                .update(decryptedSharedSecret)
-                .update(PUBLIC_KEY)
-                .digest()
-                .toString("hex"),
-        );
-        if (auth === null) {
-            client.kick("Not authenticated!");
-            return;
-        }
-
-        client.auth = new OnlineAuth(auth.name, auth.uuid);
-        client.name += ":" + auth.name;
-    }
+    client.auth = new OnlineAuth(auth.name, auth.uuid);
+    client.name += ":" + auth.name;
+    await client.send(new ClientboundWelcomePacket());
 
     await client.handlers.handleClientAuthenticated(client);
 }
@@ -160,18 +122,19 @@ export function requireAuth(client: TcpClient) {
 }
 
 const MOJANG_AUTH_RESPONSE_SCHEMA = z.object({
-    id: z.string().uuid(),
+    id: z.string().regex(UUID_REGEX),
     name: z.string(),
 });
 
 async function fetchHasJoined(
     client: TcpClient,
+    username: string,
     shaHex: string,
 ): Promise<{
     name: string;
     uuid: string;
 } | null> {
-    let url = `https://sessionserver.mojang.com/session/minecraft/hasJoined?username=${client.claimedMojangUsername!}&serverId=${shaHex}`;
+    let url = `https://sessionserver.mojang.com/session/minecraft/hasJoined?username=${username}&serverId=${shaHex}`;
 
     let response: Response;
     try {
@@ -196,18 +159,13 @@ async function fetchHasJoined(
     try {
         auth = MOJANG_AUTH_RESPONSE_SCHEMA.parse(raw);
     } catch (error) {
-        client.warn(
-            "Could not validate auth response!",
-            fromZodError(error as z.ZodError),
-        );
+        client.warn("Could not validate auth response!");
+        client.warn(z.prettifyError(error as z.ZodError));
         return null;
     }
 
     return {
         name: auth.name,
-        uuid: auth.id.replace(
-            /^(........)-?(....)-?(....)-?(....)-?(............)$/,
-            "$1-$2-$3-$4-$5",
-        ),
+        uuid: auth.id.replace(UUID_REGEX, "$1-$2-$3-$4-$5"),
     };
 }

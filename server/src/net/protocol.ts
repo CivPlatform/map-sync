@@ -1,43 +1,46 @@
 import { BufferWriter, BufferReader } from "./buffers.ts";
 import {
     ChunkTilePacket,
-    ClientboundEncryptionRequestPacket,
+    ClientboundAuthRequestPacket,
     ClientboundRegionTimestampsPacket,
     ServerboundChunkTimestampsRequestPacket,
-    ServerboundEncryptionResponsePacket,
+    ServerboundAuthResponsePacket,
     ServerboundHandshakePacket,
     ClientboundChunkTimestampsResponsePacket,
     ServerboundCatchupRequestPacket,
+    ClientboundWelcomePacket,
 } from "./packets.ts";
 
 export type ClientPacket =
     | ChunkTilePacket
-    | ServerboundEncryptionResponsePacket
+    | ServerboundAuthResponsePacket
     | ServerboundHandshakePacket
     | ServerboundCatchupRequestPacket
     | ServerboundChunkTimestampsRequestPacket;
 
 export type ServerPacket =
     | ChunkTilePacket
-    | ClientboundEncryptionRequestPacket
+    | ClientboundAuthRequestPacket
     | ClientboundChunkTimestampsResponsePacket
-    | ClientboundRegionTimestampsPacket;
+    | ClientboundRegionTimestampsPacket
+    | ClientboundWelcomePacket;
 
 export const packetIds = [
     "ERROR:pkt0",
     ServerboundHandshakePacket.TYPE,
-    ClientboundEncryptionRequestPacket.TYPE,
-    ServerboundEncryptionResponsePacket.TYPE,
+    ClientboundAuthRequestPacket.TYPE,
+    ServerboundAuthResponsePacket.TYPE,
     ChunkTilePacket.TYPE,
     ClientboundChunkTimestampsResponsePacket.TYPE,
     ServerboundCatchupRequestPacket.TYPE,
     ClientboundRegionTimestampsPacket.TYPE,
     ServerboundChunkTimestampsRequestPacket.TYPE,
+    ClientboundWelcomePacket.TYPE,
 ];
 
 export function getPacketId(type: ServerPacket["type"]) {
     const id = packetIds.indexOf(type);
-    if (id === -1) throw new Error(`Unknown packet type ${type.toString()}`);
+    if (id <= 0) throw new Error(`Unknown packet type ${type.toString()}`);
     return id;
 }
 
@@ -48,8 +51,8 @@ export function decodePacket(reader: BufferReader): ClientPacket {
             return ChunkTilePacket.decode(reader);
         case ServerboundHandshakePacket.TYPE:
             return ServerboundHandshakePacket.decode(reader);
-        case ServerboundEncryptionResponsePacket.TYPE:
-            return ServerboundEncryptionResponsePacket.decode(reader);
+        case ServerboundAuthResponsePacket.TYPE:
+            return ServerboundAuthResponsePacket.decode(reader);
         case ServerboundCatchupRequestPacket.TYPE:
             return ServerboundCatchupRequestPacket.decode(reader);
         case ServerboundChunkTimestampsRequestPacket.TYPE:
@@ -59,22 +62,30 @@ export function decodePacket(reader: BufferReader): ClientPacket {
     }
 }
 
-export function encodePacket(pkt: ServerPacket, writer: BufferWriter): void {
-    writer.writeUnt8(getPacketId(pkt.type));
-    switch (pkt.type) {
+export function encodePacket(packet: ServerPacket, writer: BufferWriter): void {
+    writer.writeUnt8(getPacketId(packet.type));
+    switch (packet.type) {
         case ChunkTilePacket.TYPE:
-            return (pkt as ChunkTilePacket).encode(writer);
+            return (packet as ChunkTilePacket).encode(writer);
         case ClientboundChunkTimestampsResponsePacket.TYPE:
-            return (pkt as ClientboundChunkTimestampsResponsePacket).encode(
+            return (packet as ClientboundChunkTimestampsResponsePacket).encode(
                 writer,
             );
-        case ClientboundEncryptionRequestPacket.TYPE:
-            return (pkt as ClientboundEncryptionRequestPacket).encode(writer);
+        case ClientboundAuthRequestPacket.TYPE:
+            return (packet as ClientboundAuthRequestPacket).encode(writer);
+        case ClientboundWelcomePacket.TYPE:
+            return (packet as ClientboundWelcomePacket).encode(writer);
         case ClientboundRegionTimestampsPacket.TYPE:
-            return (pkt as ClientboundRegionTimestampsPacket).encode(writer);
+            return (packet as ClientboundRegionTimestampsPacket).encode(writer);
         default:
-            throw new Error(`Unknown packet type ${(pkt as any).type}`);
+            throw new Error(`Unknown packet type ${(packet as any).type}`);
     }
+}
+
+export function encodePacketToBytes(packet: ServerPacket): Buffer {
+    const writer = new BufferWriter();
+    encodePacket(packet, writer);
+    return writer.getBuffer();
 }
 
 export class UnexpectedPacket extends Error {

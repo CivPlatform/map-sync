@@ -2,14 +2,16 @@ package gjum.minecraft.mapsync.common;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import gjum.minecraft.mapsync.common.config.ServerConfig;
+import java.util.ArrayList;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.TextComponent;
+import org.apache.commons.lang3.StringUtils;
 import org.jetbrains.annotations.NotNull;
-
-import java.util.List;
 
 import static gjum.minecraft.mapsync.common.MapSyncMod.getMod;
 
@@ -78,8 +80,12 @@ public class ModGui extends Screen {
 	public void connectClicked(Button btn) {
 		try {
 			if (syncServerAddressField == null) return;
-			var addresses = List.of(syncServerAddressField.getValue().split("[^-_.:A-Za-z0-9]+"));
-			serverConfig.setSyncServerAddresses(addresses);
+			serverConfig.setSyncServerAddresses(
+				Stream.of(StringUtils.split(syncServerAddressField.getValue(), ","))
+					.map(String::trim)
+					.filter(StringUtils::isNotEmpty)
+					.collect(Collectors.toCollection(ArrayList::new))
+			);
 			getMod().shutDownSyncClients();
 			getMod().getSyncClients();
 			btn.active = false;
@@ -117,7 +123,7 @@ public class ModGui extends Screen {
 			for (var client : syncClients) {
 				int statusColor;
 				String statusText;
-				if (client.isEncrypted()) {
+				if (client.isEstablished()) {
 					numConnected++;
 					statusColor = 0x008800;
 					statusText = "Connected";
@@ -128,7 +134,7 @@ public class ModGui extends Screen {
 					statusColor = 0xffffff;
 					statusText = "Connecting...";
 				}
-				statusText = client.address + "  " + statusText;
+				statusText = client.syncAddress + "  " + statusText;
 				drawString(poseStack, font, statusText, left, msgY, statusColor);
 				msgY += 10;
 			}

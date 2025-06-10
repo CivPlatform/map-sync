@@ -35,40 +35,36 @@ export class ServerboundHandshakePacket implements Packet {
     }
 }
 
-export class ClientboundEncryptionRequestPacket implements Packet {
-    public static readonly TYPE = Symbol("ClientboundEncryptionRequestPacket");
+export class ClientboundAuthRequestPacket implements Packet {
+    public static readonly TYPE = Symbol("ClientboundAuthRequestPacket");
 
-    public readonly type = ClientboundEncryptionRequestPacket.TYPE;
+    public readonly type = ClientboundAuthRequestPacket.TYPE;
 
-    public constructor(
-        public readonly publicKey: Buffer,
-        public readonly verifyToken: Buffer,
-    ) {}
+    public constructor(public readonly serverSecret: Buffer) {}
 
     public encode(writer: BufferWriter) {
-        writer.writeBufWithLen(this.publicKey);
-        writer.writeBufWithLen(this.verifyToken);
+        writer.writeBufWithLen(this.serverSecret);
     }
 }
 
-export class ServerboundEncryptionResponsePacket implements Packet {
-    public static readonly TYPE = Symbol("ServerboundEncryptionResponsePacket");
+export class ServerboundAuthResponsePacket implements Packet {
+    public static readonly TYPE = Symbol("ServerboundAuthResponsePacket");
 
-    public readonly type = ServerboundEncryptionResponsePacket.TYPE;
+    public readonly type = ServerboundAuthResponsePacket.TYPE;
 
-    public constructor(
-        public readonly sharedSecret: Buffer,
-        public readonly verifyToken: Buffer,
-    ) {}
+    public constructor(public readonly clientSecret: Buffer) {}
 
-    public static decode(
-        reader: BufferReader,
-    ): ServerboundEncryptionResponsePacket {
-        return new ServerboundEncryptionResponsePacket(
-            reader.readBufWithLen(),
-            reader.readBufWithLen(),
-        );
+    public static decode(reader: BufferReader): ServerboundAuthResponsePacket {
+        return new ServerboundAuthResponsePacket(reader.readBufWithLen());
     }
+}
+
+export class ClientboundWelcomePacket implements Packet {
+    public static readonly TYPE = Symbol("Welcome");
+
+    public readonly type = ClientboundWelcomePacket.TYPE;
+
+    public encode(writer: BufferWriter) {}
 }
 
 export class ClientboundRegionTimestampsPacket implements Packet {

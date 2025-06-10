@@ -87,6 +87,10 @@ export class BufferReader {
 
     public constructor(private readonly buffer: Buffer) {}
 
+    public get remainder(): number {
+        return this.buffer.length - this.offset;
+    }
+
     public readUnt8(): number {
         const val = this.buffer.readUInt8(this.offset);
         this.offset += 1;
@@ -164,6 +168,6 @@ export class BufferReader {
 
     /** any reads after this will fail */
     public readRemainder(): Buffer {
-        return this.readBufLen(this.buffer.length - this.offset);
+        return this.readBufLen(this.remainder);
     }
 }

@@ -1,7 +1,11 @@
 import "./cli.ts";
 import * as database from "./database.ts";
 import * as metadata from "./metadata.ts";
-import { type ClientPacket, UnexpectedPacket } from "./net/protocol.ts";
+import {
+    type ClientPacket,
+    encodePacketToBytes,
+    UnexpectedPacket,
+} from "./net/protocol.ts";
 import { type ProtocolHandler, TcpClient, TcpServer } from "./net/server.ts";
 import {
     ChunkTilePacket,
@@ -43,7 +47,9 @@ Promise.resolve().then(async () => {
                         config.whitelist &&
                         !metadata.whitelist.has(client.auth.uuid)
                     ) {
-                        client.kick(`Not whitelisted!`);
+                        client.kick(
+                            `Not whitelisted! [${Bun.inspect(client.auth)}]`,
+                        );
                         return;
                     }
                 }
@@ -110,10 +116,12 @@ Promise.resolve().then(async () => {
                 }
 
                 // TODO small timeout, then skip if other client already has it
+                const packetRaw = encodePacketToBytes(packet);
                 await Promise.allSettled(
-                    Object.values(server.clients)
+                    server.clients
+                        .values()
                         .filter((other) => other !== client && isAuthed(other))
-                        .map((other) => other.send(packet)),
+                        .map((other) => other.sendRaw(packet.type, packetRaw)),
                 );
 
                 // TODO queue tile render for web map
@@ -172,7 +180,7 @@ Promise.resolve().then(async () => {
                         z: region.regionZ,
                     })),
                 );
-                if (chunks.length) {
+                if (chunks.length > 0) {
                     await client.send(
                         new ClientboundChunkTimestampsResponsePacket(
                             packet.dimension,

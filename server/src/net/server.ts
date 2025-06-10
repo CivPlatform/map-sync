@@ -1,14 +1,19 @@
 import { listen, type Socket, type TCPSocketListener } from "bun";
-import * as crypto from "./crypto.ts";
-import type { ClientPacket, ServerPacket } from "./protocol";
-import { decodePacket, encodePacket } from "./protocol";
-import { BufferWriter, BufferReader } from "./protocol/buffers.ts";
-import { SUPPORTED_VERSIONS } from "./constants";
+import * as crypto from "../crypto.ts";
+import {
+    decodePacket,
+    encodePacket,
+    type ClientPacket,
+    type ServerPacket,
+} from "./protocol.ts";
+import { BufferWriter, BufferReader } from "./buffers.ts";
+import { SUPPORTED_VERSIONS } from "../constants.ts";
 import {
     ClientboundEncryptionRequestPacket,
     ServerboundEncryptionResponsePacket,
     ServerboundHandshakePacket,
-} from "./protocol/packets.ts";
+} from "./packets.ts";
+import { exists, INT32_SIZE } from "../lang.ts";
 
 export interface ProtocolHandler {
     handleClientConnected(client: TcpClient): Promise<void>;
@@ -46,7 +51,7 @@ export class TcpServer {
                 async close(socket, err) {
                     const client: TcpClient = socket.data;
                     delete self.clients[client.id];
-                    if ((err ?? null) !== null) {
+                    if (exists(err)) {
                         client.warn(`Closed due to an error!`, err);
                     }
                     await self.handler.handleClientDisconnected(client);
@@ -97,7 +102,7 @@ export class TcpClient {
     static readonly #EMPTY_BUFFER = Buffer.allocUnsafe(0);
     #receivedBuffer: Buffer = TcpClient.#EMPTY_BUFFER;
     public async handleReceivedData(data: Buffer) {
-        if (this.ciphers) {
+        if (exists(this.ciphers)) {
             data = this.ciphers.decipher.update(data);
         }
 
@@ -106,7 +111,7 @@ export class TcpClient {
 
         // we may receive multiple frames in one call
         while (true) {
-            if (this.#receivedBuffer.byteLength <= 4) return; // wait for more data
+            if (this.#receivedBuffer.byteLength <= INT32_SIZE) return; // wait for more data
             const frameSize = this.#receivedBuffer.readUInt32BE();
 
             // prevent Out of Memory
@@ -119,10 +124,11 @@ export class TcpClient {
                 );
             }
 
-            if (this.#receivedBuffer.byteLength < 4 + frameSize) return; // wait for more data
+            if (this.#receivedBuffer.byteLength < INT32_SIZE + frameSize)
+                return; // wait for more data
 
             const frameReader = new BufferReader(
-                this.#receivedBuffer.subarray(4),
+                this.#receivedBuffer.subarray(INT32_SIZE),
             );
             const packetBuffer = frameReader.readBufLen(frameSize);
             this.#receivedBuffer = frameReader.readRemainder();

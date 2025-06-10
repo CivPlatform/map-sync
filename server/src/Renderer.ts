@@ -1,6 +1,6 @@
-import { spawn } from "child_process";
-import { promisify } from "util";
-import * as database from "./database";
+import { spawn } from "node:child_process";
+import { promisify } from "node:util";
+import * as database from "./database.ts";
 
 export async function renderTile(
     dimension: string,

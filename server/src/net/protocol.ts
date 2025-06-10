@@ -1,5 +1,4 @@
-import { BufReader } from "./BufReader";
-import { BufferWriter } from "./buffers.ts";
+import { BufferWriter, BufferReader } from "./buffers.ts";
 import {
     ChunkTilePacket,
     ClientboundEncryptionRequestPacket,
@@ -42,8 +41,8 @@ export function getPacketId(type: ServerPacket["type"]) {
     return id;
 }
 
-export function decodePacket(reader: BufReader): ClientPacket {
-    const packetType = reader.readUInt8();
+export function decodePacket(reader: BufferReader): ClientPacket {
+    const packetType = reader.readUnt8();
     switch (packetIds[packetType]) {
         case ChunkTilePacket.TYPE:
             return ChunkTilePacket.decode(reader);

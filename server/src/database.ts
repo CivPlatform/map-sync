@@ -1,7 +1,7 @@
 import * as kysely from "kysely";
 import { Database as BunSqliteDatabase } from "bun:sqlite";
-import { DATA_FOLDER } from "./metadata";
-import { type Pos2D } from "./model";
+import { DATA_FOLDER } from "./metadata.ts";
+import { type Pos2D } from "./model.ts";
 
 let database: kysely.Kysely<Database> | null = null;
 

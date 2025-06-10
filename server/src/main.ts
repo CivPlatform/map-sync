@@ -1,15 +1,16 @@
-import "./cli";
-import * as database from "./database";
-import * as metadata from "./metadata";
-import { type ClientPacket } from "./protocol";
-import { type ProtocolHandler, TcpClient, TcpServer } from "./server";
+import "./cli.ts";
+import * as database from "./database.ts";
+import * as metadata from "./metadata.ts";
+import { type ClientPacket } from "./net/protocol.ts";
+import { type ProtocolHandler, TcpClient, TcpServer } from "./net/server.ts";
 import {
     ChunkTilePacket,
     ClientboundChunkTimestampsResponsePacket,
     ClientboundRegionTimestampsPacket,
     ServerboundCatchupRequestPacket,
     ServerboundChunkTimestampsRequestPacket,
-} from "./protocol/packets.ts";
+} from "./net/packets.ts";
+import { exists } from "./lang.ts";
 
 let config: metadata.Config = null!;
 Promise.resolve().then(async () => {
@@ -115,9 +116,7 @@ Promise.resolve().then(async () => {
                 await Promise.allSettled(
                     Object.values(server.clients)
                         .filter(
-                            (other) =>
-                                other !== client &&
-                                (other.uuid ?? null) !== null,
+                            (other) => other !== client && exists(other.uuid),
                         )
                         .map((other) => other.send(packet)),
                 );

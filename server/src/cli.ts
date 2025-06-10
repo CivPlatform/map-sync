@@ -1,15 +1,15 @@
-import lib_readline from "readline";
-import lib_stream from "stream";
+import node_readline from "node:readline";
+import node_stream from "node:stream";
 
-import * as metadata from "./metadata";
+import * as metadata from "./metadata.ts";
 
 //idk where these come from lol
 interface TerminalExtras {
-    output: lib_stream.Writable;
+    output: node_stream.Writable;
     _refreshLine(): void;
 }
-type TermType = lib_readline.Interface & TerminalExtras;
-const term = lib_readline.createInterface({
+type TermType = node_readline.Interface & TerminalExtras;
+const term = node_readline.createInterface({
     input: process.stdin,
     output: process.stdout,
 }) as TermType;
@@ -21,8 +21,8 @@ if (!("MAPSYNC_DUMB_TERM" in process.env)) {
         var newStdout = Object.create(oldStdout);
         var oldStderr = process.stderr;
         var newStderr = Object.create(oldStdout);
-        function write_func(outout: lib_stream.Writable) {
-            return function (this: lib_stream.Writable) {
+        function write_func(outout: node_stream.Writable) {
+            return function (this: node_stream.Writable) {
                 term.output.write("\x1b[2K\r");
                 var result = outout.write.apply(
                     this,

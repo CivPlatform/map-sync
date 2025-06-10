@@ -121,7 +121,9 @@ export class TcpClient {
 
             if (this.#receivedBuffer.byteLength < 4 + frameSize) return; // wait for more data
 
-            const frameReader = new BufferReader(this.#receivedBuffer.subarray(4));
+            const frameReader = new BufferReader(
+                this.#receivedBuffer.subarray(4),
+            );
             const packetBuffer = frameReader.readBufLen(frameSize);
             this.#receivedBuffer = frameReader.readRemainder();
 
@@ -141,9 +143,13 @@ export class TcpClient {
             // not authenticated yet
             switch (pkt.type) {
                 case ServerboundHandshakePacket.TYPE:
-                    return await this.handleHandshakePacket(pkt as ServerboundHandshakePacket);
+                    return await this.handleHandshakePacket(
+                        pkt as ServerboundHandshakePacket,
+                    );
                 case ServerboundEncryptionResponsePacket.TYPE:
-                    return await this.handleEncryptionResponsePacket(pkt as ServerboundEncryptionResponsePacket);
+                    return await this.handleEncryptionResponsePacket(
+                        pkt as ServerboundEncryptionResponsePacket,
+                    );
             }
             throw new Error(
                 `Packet ${pkt.type.toString()} from unauth'd client ${this.id}`,
@@ -208,10 +214,12 @@ export class TcpClient {
         this.world = packet.dimension;
         this.verifyToken = crypto.randomBytes(4);
 
-        await this.sendInternal(new ClientboundEncryptionRequestPacket(
-            crypto.PUBLIC_KEY,
-            this.verifyToken
-        ));
+        await this.sendInternal(
+            new ClientboundEncryptionRequestPacket(
+                crypto.PUBLIC_KEY,
+                this.verifyToken,
+            ),
+        );
     }
 
     private async handleEncryptionResponsePacket(

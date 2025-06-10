@@ -66,7 +66,9 @@ export function encodePacket(pkt: ServerPacket, writer: BufferWriter): void {
         case ChunkTilePacket.TYPE:
             return (pkt as ChunkTilePacket).encode(writer);
         case ClientboundChunkTimestampsResponsePacket.TYPE:
-            return (pkt as ClientboundChunkTimestampsResponsePacket).encode(writer);
+            return (pkt as ClientboundChunkTimestampsResponsePacket).encode(
+                writer,
+            );
         case ClientboundEncryptionRequestPacket.TYPE:
             return (pkt as ClientboundEncryptionRequestPacket).encode(writer);
         case ClientboundRegionTimestampsPacket.TYPE:

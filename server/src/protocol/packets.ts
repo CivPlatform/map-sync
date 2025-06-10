@@ -2,16 +2,13 @@ import { BufferWriter, BufferReader } from "./buffers.ts";
 import { SHA1_HASH_LENGTH } from "../constants.ts";
 
 interface Packet {
-    type: Symbol
+    type: Symbol;
 }
 
-function readArray<T>(
-    length: number,
-    parser: () => T
-): Array<T> {
+function readArray<T>(length: number, parser: () => T): Array<T> {
     const array: T[] = new Array(length);
     for (let i = 0; i < length; i++) {
-        array[i] = parser()
+        array[i] = parser();
     }
     return array;
 }
@@ -33,7 +30,7 @@ export class ServerboundHandshakePacket implements Packet {
             reader.readString(),
             reader.readString(),
             reader.readString(),
-            reader.readString()
+            reader.readString(),
         );
     }
 }
@@ -64,10 +61,12 @@ export class ServerboundEncryptionResponsePacket implements Packet {
         public readonly verifyToken: Buffer,
     ) {}
 
-    public static decode(reader: BufferReader): ServerboundEncryptionResponsePacket {
+    public static decode(
+        reader: BufferReader,
+    ): ServerboundEncryptionResponsePacket {
         return new ServerboundEncryptionResponsePacket(
             reader.readBufWithLen(),
-            reader.readBufWithLen()
+            reader.readBufWithLen(),
         );
     }
 }
@@ -98,7 +97,9 @@ export class ClientboundRegionTimestampsPacket implements Packet {
 }
 
 export class ServerboundChunkTimestampsRequestPacket implements Packet {
-    public static readonly TYPE = Symbol("ServerboundChunkTimestampsRequestPacket");
+    public static readonly TYPE = Symbol(
+        "ServerboundChunkTimestampsRequestPacket",
+    );
 
     public readonly type = ServerboundChunkTimestampsRequestPacket.TYPE;
 
@@ -110,19 +111,23 @@ export class ServerboundChunkTimestampsRequestPacket implements Packet {
         }>,
     ) {}
 
-    public static decode(reader: BufferReader): ServerboundChunkTimestampsRequestPacket {
+    public static decode(
+        reader: BufferReader,
+    ): ServerboundChunkTimestampsRequestPacket {
         return new ServerboundChunkTimestampsRequestPacket(
             reader.readString(),
             readArray(reader.readInt16(), () => ({
                 regionX: reader.readInt16(),
                 regionZ: reader.readInt16(),
-            }))
+            })),
         );
     }
 }
 
 export class ClientboundChunkTimestampsResponsePacket implements Packet {
-    public static readonly TYPE = Symbol("ClientboundChunkTimestampsResponsePacket");
+    public static readonly TYPE = Symbol(
+        "ClientboundChunkTimestampsResponsePacket",
+    );
 
     public readonly type = ClientboundChunkTimestampsResponsePacket.TYPE;
 
@@ -160,14 +165,16 @@ export class ServerboundCatchupRequestPacket implements Packet {
         }>,
     ) {}
 
-    public static decode(reader: BufferReader): ServerboundCatchupRequestPacket {
+    public static decode(
+        reader: BufferReader,
+    ): ServerboundCatchupRequestPacket {
         return new ServerboundCatchupRequestPacket(
             reader.readString(),
             readArray(reader.readUnt32(), () => ({
                 chunkX: reader.readInt32(),
                 chunkZ: reader.readInt32(),
-                timestamp: reader.readUnt64()
-            }))
+                timestamp: reader.readUnt64(),
+            })),
         );
     }
 }
@@ -205,7 +212,7 @@ export class ChunkTilePacket implements Packet {
             reader.readUnt64(),
             reader.readUnt16(),
             reader.readBufLen(SHA1_HASH_LENGTH),
-            reader.readRemainder()
+            reader.readRemainder(),
         );
     }
 }

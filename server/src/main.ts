@@ -4,8 +4,11 @@ import * as metadata from "./metadata";
 import { type ClientPacket } from "./protocol";
 import { type ProtocolHandler, TcpClient, TcpServer } from "./server";
 import {
-    ChunkTilePacket, ClientboundChunkTimestampsResponsePacket,
-    ClientboundRegionTimestampsPacket, ServerboundCatchupRequestPacket, ServerboundChunkTimestampsRequestPacket,
+    ChunkTilePacket,
+    ClientboundChunkTimestampsResponsePacket,
+    ClientboundRegionTimestampsPacket,
+    ServerboundCatchupRequestPacket,
+    ServerboundChunkTimestampsRequestPacket,
 } from "./protocol/packets.ts";
 
 let config: metadata.Config = null!;
@@ -62,11 +65,20 @@ Promise.resolve().then(async () => {
                 client.debug(client.mcName + " <- " + packet.type.toString());
                 switch (packet.type) {
                     case ChunkTilePacket.TYPE:
-                        return this.handleChunkTilePacket(client, packet as ChunkTilePacket);
+                        return this.handleChunkTilePacket(
+                            client,
+                            packet as ChunkTilePacket,
+                        );
                     case ServerboundCatchupRequestPacket.TYPE:
-                        return this.handleCatchupRequest(client, packet as ServerboundCatchupRequestPacket);
+                        return this.handleCatchupRequest(
+                            client,
+                            packet as ServerboundCatchupRequestPacket,
+                        );
                     case ServerboundChunkTimestampsRequestPacket.TYPE:
-                        return this.handleRegionCatchupPacket(client, packet as ServerboundChunkTimestampsRequestPacket);
+                        return this.handleRegionCatchupPacket(
+                            client,
+                            packet as ServerboundChunkTimestampsRequestPacket,
+                        );
                     default:
                         throw new Error(
                             `Unknown packet '${(packet as any).type}' from client ${
@@ -141,15 +153,17 @@ Promise.resolve().then(async () => {
                     if (chunk.ts > req.timestamp) continue; // someone sent a new chunk, which presumably got relayed to the client
                     if (chunk.ts < req.timestamp) continue; // the client already has a chunk newer than this
 
-                    await client.send(new ChunkTilePacket(
-                        packet.dimension,
-                        req.chunkX,
-                        req.chunkZ,
-                        req.timestamp,
-                        chunk.version,
-                        chunk.hash,
-                        chunk.data
-                    ));
+                    await client.send(
+                        new ChunkTilePacket(
+                            packet.dimension,
+                            req.chunkX,
+                            req.chunkZ,
+                            req.timestamp,
+                            chunk.version,
+                            chunk.hash,
+                            chunk.data,
+                        ),
+                    );
                 }
             }
 
@@ -165,14 +179,16 @@ Promise.resolve().then(async () => {
                     packet.dimension,
                     packet.regions.map((region) => ({
                         x: region.regionX,
-                        z: region.regionZ
+                        z: region.regionZ,
                     })),
                 );
                 if (chunks.length) {
-                    await client.send(new ClientboundChunkTimestampsResponsePacket(
-                        packet.dimension,
-                        chunks
-                    ));
+                    await client.send(
+                        new ClientboundChunkTimestampsResponsePacket(
+                            packet.dimension,
+                            chunks,
+                        ),
+                    );
                 }
             }
         })(),

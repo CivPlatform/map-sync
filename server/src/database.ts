@@ -31,9 +31,9 @@ export function get() {
                         {
                             create: true,
                             readwrite: true,
-                        }
-                    ) as unknown as kysely.SqliteDatabase
-                }
+                        },
+                    ) as unknown as kysely.SqliteDatabase;
+                },
             }),
         });
     }

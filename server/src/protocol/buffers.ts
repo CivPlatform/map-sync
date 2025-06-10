@@ -85,9 +85,7 @@ export class BufferWriter {
 export class BufferReader {
     private offset = 0;
 
-    public constructor(
-        private readonly buffer: Buffer
-    ) {}
+    public constructor(private readonly buffer: Buffer) {}
 
     public readUnt8(): number {
         const val = this.buffer.readUInt8(this.offset);

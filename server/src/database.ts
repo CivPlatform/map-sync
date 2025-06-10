@@ -1,5 +1,5 @@
 import * as kysely from "kysely";
-import sqlite from "better-sqlite3";
+import { Database as BunSqliteDatabase } from "bun:sqlite";
 import { DATA_FOLDER } from "./metadata";
 import { type Pos2D } from "./model";
 
@@ -25,12 +25,15 @@ export function get() {
     if (!database) {
         database = new kysely.Kysely<Database>({
             dialect: new kysely.SqliteDialect({
-                database: async () =>
-                    sqlite(
-                        process.env["SQLITE_PATH"] ??
-                            `${DATA_FOLDER}/db.sqlite`,
-                        {},
-                    ),
+                database: async () => {
+                    return new BunSqliteDatabase(
+                        Bun.env["SQLITE_PATH"] ?? `${DATA_FOLDER}/db.sqlite`,
+                        {
+                            create: true,
+                            readwrite: true,
+                        }
+                    ) as unknown as kysely.SqliteDatabase
+                }
             }),
         });
     }

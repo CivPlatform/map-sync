@@ -1,30 +1,27 @@
-import { type TCPSocketListener, type Socket, listen } from "bun";
+import { listen, type Socket, type TCPSocketListener } from "bun";
 import * as crypto from "./crypto.ts";
 import type { ClientPacket, ServerPacket } from "./protocol";
 import { decodePacket, encodePacket } from "./protocol";
 import { BufReader } from "./protocol/BufReader";
 import { BufWriter } from "./protocol/BufWriter";
-import { EncryptionResponsePacket } from "./protocol/EncryptionResponsePacket";
-import { HandshakePacket } from "./protocol/HandshakePacket";
 import { SUPPORTED_VERSIONS } from "./constants";
+import {
+    ClientboundEncryptionRequestPacket,
+    ServerboundEncryptionResponsePacket,
+    ServerboundHandshakePacket,
+} from "./protocol/packets.ts";
 
 export interface ProtocolHandler {
-    handleClientConnected(
-        client: TcpClient
-    ): Promise<void>
+    handleClientConnected(client: TcpClient): Promise<void>;
 
-    handleClientDisconnected(
-        client: TcpClient
-    ): Promise<void>
+    handleClientDisconnected(client: TcpClient): Promise<void>;
 
-    handleClientAuthenticated(
-        client: TcpClient
-    ): Promise<void>
+    handleClientAuthenticated(client: TcpClient): Promise<void>;
 
     handleClientPacketReceived(
         client: TcpClient,
-        packet: ClientPacket
-    ): Promise<void>
+        packet: ClientPacket,
+    ): Promise<void>;
 }
 
 export class TcpServer {
@@ -34,7 +31,7 @@ export class TcpServer {
     constructor(
         host: string,
         port: number,
-        readonly handler: ProtocolHandler
+        readonly handler: ProtocolHandler,
     ) {
         const self = this;
         this.server = listen<TcpClient>({
@@ -59,7 +56,7 @@ export class TcpServer {
                     const client: TcpClient = socket.data;
                     await client.handleReceivedData(data);
                 },
-            }
+            },
         });
         console.log("[TcpServer] Listening on", host, port);
     }
@@ -100,18 +97,13 @@ export class TcpClient {
 
     static readonly #EMPTY_BUFFER = Buffer.allocUnsafe(0);
     #receivedBuffer: Buffer = TcpClient.#EMPTY_BUFFER;
-    public async handleReceivedData(
-        data: Buffer
-    ) {
+    public async handleReceivedData(data: Buffer) {
         if (this.ciphers) {
             data = this.ciphers.decipher.update(data);
         }
 
         // creating a new buffer every time is fine in our case, because we expect most frames to be large
-        this.#receivedBuffer = Buffer.concat([
-            this.#receivedBuffer,
-            data
-        ]);
+        this.#receivedBuffer = Buffer.concat([this.#receivedBuffer, data]);
 
         // we may receive multiple frames in one call
         while (true) {
@@ -122,9 +114,9 @@ export class TcpClient {
             if (frameSize > this.maxFrameSize) {
                 return this.kick(
                     "Frame too large: " +
-                    frameSize +
-                    " have " +
-                    this.#receivedBuffer.byteLength,
+                        frameSize +
+                        " have " +
+                        this.#receivedBuffer.byteLength,
                 );
             }
 
@@ -137,8 +129,7 @@ export class TcpClient {
             try {
                 const packet = decodePacket(new BufReader(packetBuffer));
                 await this.handlePacketReceived(packet);
-            }
-            catch (err) {
+            } catch (err) {
                 this.warn(err);
                 this.kick("Error in packet handler");
                 return;
@@ -150,13 +141,13 @@ export class TcpClient {
         if (!this.uuid) {
             // not authenticated yet
             switch (pkt.type) {
-                case "Handshake":
-                    return await this.handleHandshakePacket(pkt);
-                case "EncryptionResponse":
-                    return await this.handleEncryptionResponsePacket(pkt);
+                case ServerboundHandshakePacket.TYPE:
+                    return await this.handleHandshakePacket(pkt as ServerboundHandshakePacket);
+                case ServerboundEncryptionResponsePacket.TYPE:
+                    return await this.handleEncryptionResponsePacket(pkt as ServerboundEncryptionResponsePacket);
             }
             throw new Error(
-                `Packet ${pkt.type} from unauth'd client ${this.id}`,
+                `Packet ${pkt.type.toString()} from unauth'd client ${this.id}`,
             );
         } else {
             return await this.handler.handleClientPacketReceived(this, pkt);
@@ -177,7 +168,7 @@ export class TcpClient {
             this.debug("Not authenticated, dropping packet", pkt.type);
             return;
         }
-        this.debug(this.mcName + " -> " + pkt.type);
+        this.debug(this.mcName + " -> " + pkt.type.toString());
         await this.sendInternal(pkt, true);
     }
 
@@ -200,7 +191,7 @@ export class TcpClient {
         this.socket.write(buf);
     }
 
-    private async handleHandshakePacket(packet: HandshakePacket) {
+    private async handleHandshakePacket(packet: ServerboundHandshakePacket) {
         if (this.ciphers) throw new Error(`Already authenticated`);
         if (this.verifyToken) throw new Error(`Encryption already started`);
 
@@ -218,15 +209,14 @@ export class TcpClient {
         this.world = packet.dimension;
         this.verifyToken = crypto.randomBytes(4);
 
-        await this.sendInternal({
-            type: "EncryptionRequest",
-            publicKey: crypto.PUBLIC_KEY,
-            verifyToken: this.verifyToken,
-        });
+        await this.sendInternal(new ClientboundEncryptionRequestPacket(
+            crypto.PUBLIC_KEY,
+            this.verifyToken
+        ));
     }
 
     private async handleEncryptionResponsePacket(
-        pkt: EncryptionResponsePacket,
+        pkt: ServerboundEncryptionResponsePacket,
     ) {
         if (this.ciphers) throw new Error(`Already authenticated`);
         if (!this.claimedMojangName)

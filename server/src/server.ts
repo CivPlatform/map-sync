@@ -2,8 +2,7 @@ import { listen, type Socket, type TCPSocketListener } from "bun";
 import * as crypto from "./crypto.ts";
 import type { ClientPacket, ServerPacket } from "./protocol";
 import { decodePacket, encodePacket } from "./protocol";
-import { BufReader } from "./protocol/BufReader";
-import { BufWriter } from "./protocol/BufWriter";
+import { BufferWriter, BufferReader } from "./protocol/buffers.ts";
 import { SUPPORTED_VERSIONS } from "./constants";
 import {
     ClientboundEncryptionRequestPacket,
@@ -122,12 +121,12 @@ export class TcpClient {
 
             if (this.#receivedBuffer.byteLength < 4 + frameSize) return; // wait for more data
 
-            const frameReader = new BufReader(this.#receivedBuffer.subarray(4));
+            const frameReader = new BufferReader(this.#receivedBuffer.subarray(4));
             const packetBuffer = frameReader.readBufLen(frameSize);
             this.#receivedBuffer = frameReader.readRemainder();
 
             try {
-                const packet = decodePacket(new BufReader(packetBuffer));
+                const packet = decodePacket(new BufferReader(packetBuffer));
                 await this.handlePacketReceived(packet);
             } catch (err) {
                 this.warn(err);
@@ -178,7 +177,7 @@ export class TcpClient {
         if (doCrypto && !this.ciphers)
             throw new Error(`Can't encrypt: handshake not finished`);
 
-        const writer = new BufWriter(); // TODO size hint
+        const writer = new BufferWriter(); // TODO size hint
         writer.writeUnt32(0); // set later, but reserve space in buffer
         encodePacket(pkt, writer);
         let buf = writer.getBuffer();

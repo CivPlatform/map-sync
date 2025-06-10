@@ -1,5 +1,4 @@
-import { BufReader } from "./BufReader.ts";
-import { BufWriter } from "./BufWriter.ts";
+import { BufferWriter, BufferReader } from "./buffers.ts";
 import { SHA1_HASH_LENGTH } from "../constants.ts";
 
 interface Packet {
@@ -29,7 +28,7 @@ export class ServerboundHandshakePacket implements Packet {
         public readonly dimension: string,
     ) {}
 
-    public static decode(reader: BufReader): ServerboundHandshakePacket {
+    public static decode(reader: BufferReader): ServerboundHandshakePacket {
         return new ServerboundHandshakePacket(
             reader.readString(),
             reader.readString(),
@@ -49,7 +48,7 @@ export class ClientboundEncryptionRequestPacket implements Packet {
         public readonly verifyToken: Buffer,
     ) {}
 
-    public encode(writer: BufWriter) {
+    public encode(writer: BufferWriter) {
         writer.writeBufWithLen(this.publicKey);
         writer.writeBufWithLen(this.verifyToken);
     }
@@ -65,7 +64,7 @@ export class ServerboundEncryptionResponsePacket implements Packet {
         public readonly verifyToken: Buffer,
     ) {}
 
-    public static decode(reader: BufReader): ServerboundEncryptionResponsePacket {
+    public static decode(reader: BufferReader): ServerboundEncryptionResponsePacket {
         return new ServerboundEncryptionResponsePacket(
             reader.readBufWithLen(),
             reader.readBufWithLen()
@@ -87,7 +86,7 @@ export class ClientboundRegionTimestampsPacket implements Packet {
         }>,
     ) {}
 
-    public encode(writer: BufWriter) {
+    public encode(writer: BufferWriter) {
         writer.writeString(this.dimension);
         writer.writeInt16(this.regions.length);
         for (const region of this.regions) {
@@ -111,7 +110,7 @@ export class ServerboundChunkTimestampsRequestPacket implements Packet {
         }>,
     ) {}
 
-    public static decode(reader: BufReader): ServerboundChunkTimestampsRequestPacket {
+    public static decode(reader: BufferReader): ServerboundChunkTimestampsRequestPacket {
         return new ServerboundChunkTimestampsRequestPacket(
             reader.readString(),
             readArray(reader.readInt16(), () => ({
@@ -136,7 +135,7 @@ export class ClientboundChunkTimestampsResponsePacket implements Packet {
         }>,
     ) {}
 
-    public encode(writer: BufWriter) {
+    public encode(writer: BufferWriter) {
         writer.writeString(this.dimension);
         writer.writeUnt32(this.chunks.length);
         for (const chunk of this.chunks) {
@@ -161,13 +160,13 @@ export class ServerboundCatchupRequestPacket implements Packet {
         }>,
     ) {}
 
-    public static decode(reader: BufReader): ServerboundCatchupRequestPacket {
+    public static decode(reader: BufferReader): ServerboundCatchupRequestPacket {
         return new ServerboundCatchupRequestPacket(
             reader.readString(),
-            readArray(reader.readUInt32(), () => ({
+            readArray(reader.readUnt32(), () => ({
                 chunkX: reader.readInt32(),
                 chunkZ: reader.readInt32(),
-                timestamp: reader.readUInt64()
+                timestamp: reader.readUnt64()
             }))
         );
     }
@@ -188,7 +187,7 @@ export class ChunkTilePacket implements Packet {
         public readonly data: Buffer,
     ) {}
 
-    public encode(writer: BufWriter) {
+    public encode(writer: BufferWriter) {
         writer.writeString(this.dimension);
         writer.writeInt32(this.chunkX);
         writer.writeInt32(this.chunkZ);
@@ -198,13 +197,13 @@ export class ChunkTilePacket implements Packet {
         writer.writeBufRaw(this.data); // XXX do we need to prefix with length?
     }
 
-    public static decode(reader: BufReader): ChunkTilePacket {
+    public static decode(reader: BufferReader): ChunkTilePacket {
         return new ChunkTilePacket(
             reader.readString(),
             reader.readInt32(),
             reader.readInt32(),
-            reader.readUInt64(),
-            reader.readUInt16(),
+            reader.readUnt64(),
+            reader.readUnt16(),
             reader.readBufLen(SHA1_HASH_LENGTH),
             reader.readRemainder()
         );

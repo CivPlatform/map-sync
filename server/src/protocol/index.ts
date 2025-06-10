@@ -1,5 +1,5 @@
 import { BufReader } from "./BufReader";
-import { BufWriter } from "./BufWriter";
+import { BufferWriter } from "./buffers.ts";
 import {
     ChunkTilePacket,
     ClientboundEncryptionRequestPacket,
@@ -60,7 +60,7 @@ export function decodePacket(reader: BufReader): ClientPacket {
     }
 }
 
-export function encodePacket(pkt: ServerPacket, writer: BufWriter): void {
+export function encodePacket(pkt: ServerPacket, writer: BufferWriter): void {
     writer.writeUnt8(getPacketId(pkt.type));
     switch (pkt.type) {
         case ChunkTilePacket.TYPE:

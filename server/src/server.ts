@@ -204,7 +204,7 @@ export class TcpClient {
             throw new Error(`Can't encrypt: handshake not finished`);
 
         const writer = new BufWriter(); // TODO size hint
-        writer.writeUInt32(0); // set later, but reserve space in buffer
+        writer.writeUnt32(0); // set later, but reserve space in buffer
         encodePacket(pkt, writer);
         let buf = writer.getBuffer();
         buf.writeUInt32BE(buf.length - 4, 0); // write into space reserved above

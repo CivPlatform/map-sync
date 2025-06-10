@@ -59,7 +59,7 @@ export function decodePacket(reader: BufReader): ClientPacket {
 }
 
 export function encodePacket(pkt: ServerPacket, writer: BufWriter): void {
-    writer.writeUInt8(getPacketId(pkt.type));
+    writer.writeUnt8(getPacketId(pkt.type));
     switch (pkt.type) {
         case "ChunkTile":
             return ChunkTilePacket.encode(pkt, writer);

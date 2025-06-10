@@ -1,5 +1,5 @@
 import { type TCPSocketListener, type Socket, listen } from "bun";
-import crypto from "crypto";
+import * as crypto from "./crypto.ts";
 import { Main } from "./main";
 import type { ClientPacket, ServerPacket } from "./protocol";
 import { decodePacket, encodePacket } from "./protocol";
@@ -16,13 +16,6 @@ type ProtocolHandler = Main; // TODO cleanup
 export class TcpServer {
     server: TCPSocketListener<TcpClient>;
     clients: Record<number, TcpClient> = {};
-
-    keyPair = crypto.generateKeyPairSync("rsa", { modulusLength: 1024 });
-    // precomputed for networking
-    publicKeyBuffer = this.keyPair.publicKey.export({
-        type: "spki",
-        format: "der",
-    });
 
     constructor(readonly handler: ProtocolHandler) {
         const self = this;
@@ -50,16 +43,6 @@ export class TcpServer {
         });
         console.log("[TcpServer] Listening on", HOST, PORT);
     }
-
-    decrypt(buf: Buffer) {
-        return crypto.privateDecrypt(
-            {
-                key: this.keyPair.privateKey,
-                padding: crypto.constants.RSA_PKCS1_PADDING,
-            },
-            buf,
-        );
-    }
 }
 
 let nextClientId = 1;
@@ -85,10 +68,7 @@ export class TcpClient {
     private verifyToken?: Buffer;
     /** we need to wait for the mojang auth response
      * before we can en/decrypt packets following the handshake */
-    private cryptoPromise?: Promise<{
-        cipher: crypto.Cipher;
-        decipher: crypto.Decipher;
-    }>;
+    private ciphers: crypto.Ciphers | null = null;
 
     constructor(
         private socket: Socket<TcpClient>,
@@ -104,8 +84,8 @@ export class TcpClient {
     public async handleReceivedData(
         data: Buffer
     ) {
-        if (this.cryptoPromise) {
-            data = (await this.cryptoPromise).decipher.update(data);
+        if (this.ciphers) {
+            data = this.ciphers.decipher.update(data);
         }
 
         // creating a new buffer every time is fine in our case, because we expect most frames to be large
@@ -170,7 +150,7 @@ export class TcpClient {
     }
 
     async send(pkt: ServerPacket) {
-        if (!this.cryptoPromise) {
+        if (!this.ciphers) {
             this.debug("Not encrypted, dropping packet", pkt.type);
             return;
         }
@@ -185,7 +165,7 @@ export class TcpClient {
     private async sendInternal(pkt: ServerPacket, doCrypto = false) {
         if (this.socket.readyState <= 0)
             return this.debug("Socket closed, dropping", pkt.type);
-        if (doCrypto && !this.cryptoPromise)
+        if (doCrypto && !this.ciphers)
             throw new Error(`Can't encrypt: handshake not finished`);
 
         const writer = new BufWriter(); // TODO size hint
@@ -195,15 +175,14 @@ export class TcpClient {
         buf.writeUInt32BE(buf.length - 4, 0); // write into space reserved above
 
         if (doCrypto) {
-            const { cipher } = await this.cryptoPromise!;
-            buf = cipher!.update(buf);
+            buf = this.ciphers!.encipher.update(buf);
         }
 
         this.socket.write(buf);
     }
 
     private async handleHandshakePacket(packet: HandshakePacket) {
-        if (this.cryptoPromise) throw new Error(`Already authenticated`);
+        if (this.ciphers) throw new Error(`Already authenticated`);
         if (this.verifyToken) throw new Error(`Encryption already started`);
 
         if (!SUPPORTED_VERSIONS.has(packet.modVersion)) {
@@ -222,7 +201,7 @@ export class TcpClient {
 
         await this.sendInternal({
             type: "EncryptionRequest",
-            publicKey: this.server.publicKeyBuffer,
+            publicKey: crypto.PUBLIC_KEY,
             verifyToken: this.verifyToken,
         });
     }
@@ -230,29 +209,29 @@ export class TcpClient {
     private async handleEncryptionResponsePacket(
         pkt: EncryptionResponsePacket,
     ) {
-        if (this.cryptoPromise) throw new Error(`Already authenticated`);
+        if (this.ciphers) throw new Error(`Already authenticated`);
         if (!this.claimedMojangName)
             throw new Error(`Encryption has not started: no mojangName`);
         if (!this.verifyToken)
             throw new Error(`Encryption has not started: no verifyToken`);
 
-        const verifyToken = this.server.decrypt(pkt.verifyToken);
+        const verifyToken = crypto.decrypt(pkt.verifyToken);
         if (!this.verifyToken.equals(verifyToken)) {
             throw new Error(
                 `verifyToken mismatch: got ${verifyToken} expected ${this.verifyToken}`,
             );
         }
 
-        const secret = this.server.decrypt(pkt.sharedSecret);
+        const secret = crypto.decrypt(pkt.sharedSecret);
 
         const shaHex = crypto
             .createHash("sha1")
             .update(secret)
-            .update(this.server.publicKeyBuffer)
+            .update(crypto.PUBLIC_KEY)
             .digest()
             .toString("hex");
 
-        this.cryptoPromise = fetchHasJoined({
+        this.ciphers = await fetchHasJoined({
             username: this.claimedMojangName,
             shaHex,
         }).then(async (mojangAuth) => {
@@ -267,19 +246,10 @@ export class TcpClient {
             this.mcName = mojangAuth.name;
             this.name += ":" + mojangAuth.name;
 
-            return {
-                cipher: crypto.createCipheriv("aes-128-cfb8", secret, secret),
-                decipher: crypto.createDecipheriv(
-                    "aes-128-cfb8",
-                    secret,
-                    secret,
-                ),
-            };
+            return crypto.createCiphers(secret);
         });
 
-        await this.cryptoPromise.then(async () => {
-            await this.handler.handleClientAuthenticated(this);
-        });
+        await this.handler.handleClientAuthenticated(this);
     }
 
     debug(...args: any[]) {

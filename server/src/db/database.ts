@@ -1,12 +1,13 @@
 import { Database as BunSqliteDatabase } from "bun:sqlite";
 
-import * as kysely from "kysely";
+import { Kysely, type Generated, Migrator } from "kysely";
 import { BunSqliteDialect } from "kysely-bun-sqlite";
 
-import { DATA_FOLDER } from "./metadata.ts";
-import { type Pos2D } from "./model.ts";
+import { DATA_FOLDER } from "../metadata.ts";
+import Migrations from "./migrations.ts";
+import { type Pos2D } from "../model.ts";
 
-let database: kysely.Kysely<Database> | null = null;
+let database: Kysely<Database> | null = null;
 
 export interface Database {
     chunk_data: {
@@ -18,9 +19,9 @@ export interface Database {
         world: string;
         chunk_x: number;
         chunk_z: number;
-        gen_region_x: kysely.Generated<number>;
-        gen_region_z: kysely.Generated<number>;
-        gen_region_coord: kysely.Generated<string>;
+        gen_region_x: Generated<number>;
+        gen_region_z: Generated<number>;
+        gen_region_coord: Generated<string>;
         uuid: string;
         ts: number;
         hash: Buffer;
@@ -28,7 +29,7 @@ export interface Database {
 }
 
 export function get() {
-    return (database ??= new kysely.Kysely<Database>({
+    return (database ??= new Kysely<Database>({
         dialect: new BunSqliteDialect({
             database: new BunSqliteDatabase(
                 Bun.env["SQLITE_PATH"] ?? `${DATA_FOLDER}/db.sqlite`,
@@ -41,62 +42,20 @@ export function get() {
     }));
 }
 
+export function getMigrations(): Migrator {
+    return new Migrator({
+        db: get(),
+        provider: new Migrations(),
+    });
+}
+
+/** Convenience function to migrate to latest */
 export async function setup() {
-    await get()
-        .transaction()
-        .execute(async (db) => {
-            await db.schema
-                .createTable("chunk_data")
-                .ifNotExists()
-                .addColumn("hash", "blob", (col) => col.notNull().primaryKey())
-                .addColumn("version", "integer", (col) => col.notNull())
-                .addColumn("data", "blob", (col) => col.notNull())
-                .execute();
-            await db.schema
-                .createTable("player_chunk")
-                .ifNotExists()
-                .addColumn("world", "text", (col) => col.notNull())
-                .addColumn("chunk_x", "integer", (col) => col.notNull())
-                .addColumn("chunk_z", "integer", (col) => col.notNull())
-                .addColumn("gen_region_x", "integer", (col) =>
-                    col
-                        .generatedAlwaysAs(
-                            kysely.sql<number>`floor(chunk_x / 32.0)`,
-                        )
-                        .notNull(),
-                )
-                .addColumn("gen_region_z", "integer", (col) =>
-                    col
-                        .generatedAlwaysAs(
-                            kysely.sql<number>`floor(chunk_z / 32.0)`,
-                        )
-                        .notNull(),
-                )
-                .addColumn("gen_region_coord", "text", (col) => {
-                    return col
-                        .generatedAlwaysAs(
-                            kysely.sql<string>`gen_region_x || '_' || gen_region_z`,
-                        )
-                        .notNull();
-                })
-                .addColumn("uuid", "text", (col) => col.notNull())
-                .addColumn("ts", "bigint", (col) => col.notNull())
-                .addColumn("hash", "blob", (col) => col.notNull())
-                .addPrimaryKeyConstraint("PK_coords_and_player", [
-                    "world",
-                    "chunk_x",
-                    "chunk_z",
-                    "uuid",
-                ])
-                .addForeignKeyConstraint(
-                    "FK_chunk_ref",
-                    ["hash"],
-                    "chunk_data",
-                    ["hash"],
-                    (fk) => fk.onUpdate("no action").onDelete("no action"),
-                )
-                .execute();
-        });
+    const results = await getMigrations().migrateToLatest();
+    if (results.error) {
+        throw results.error;
+    }
+    return results.results ?? [];
 }
 
 /**
@@ -178,13 +137,13 @@ export async function storeChunkData(
 ) {
     await get()
         .transaction()
-        .execute(async (db) => {
-            await db
+        .execute(async (transaction) => {
+            await transaction
                 .insertInto("chunk_data")
                 .values({ hash, version, data })
                 .onConflict((oc) => oc.column("hash").doNothing())
                 .execute();
-            await db
+            await transaction
                 .replaceInto("player_chunk")
                 .values({
                     world: dimension,
@@ -210,8 +169,8 @@ export async function getRegionChunks(
         .selectFrom("player_chunk")
         .innerJoin("chunk_data", "chunk_data.hash", "player_chunk.hash")
         .select([
-            "player_chunk.chunk_x as chunk_x",
-            "player_chunk.chunk_z as chunk_z",
+            "player_chunk.chunk_x as chunkX",
+            "player_chunk.chunk_z as chunkZ",
             (eb) => eb.fn.max("player_chunk.ts").as("timestamp"),
             "chunk_data.version as version",
             "chunk_data.data as data",
@@ -219,7 +178,7 @@ export async function getRegionChunks(
         .where("player_chunk.world", "=", dimension)
         .where("player_chunk.gen_region_x", "=", regionX)
         .where("player_chunk.gen_region_z", "=", regionZ)
-        .groupBy(["chunk_x", "chunk_z", "version", "data"])
-        .orderBy("player_chunk.ts", "desc")
+        .groupBy(["chunkX", "chunkZ", "version", "data"])
+        .orderBy("timestamp", "desc")
         .execute();
 }

@@ -92,39 +92,40 @@ Promise.resolve().then(async () => {
                 }
             }
 
-            private async handleChunkTilePacket(
+            private async handleRegionCatchupPacket(
                 client: TcpClient,
-                packet: ChunkTilePacket,
+                packet: ServerboundChunkTimestampsRequestPacket,
             ) {
                 requireAuth(client);
 
-                // TODO ignore if same chunk hash exists in db
-
-                if (client.auth instanceof OnlineAuth) {
-                    await database
-                        .storeChunkData(
-                            packet.dimension,
-                            packet.chunkX,
-                            packet.chunkZ,
-                            client.auth.uuid,
-                            packet.timestamp,
-                            packet.version,
-                            packet.hash,
-                            packet.data,
-                        )
-                        .catch(client.warn);
+                if (packet.regions.length < 1) {
+                    client.warn(
+                        "Client requested chunk-timestamps without specifying any regions.",
+                    );
+                    return;
                 }
 
-                // TODO small timeout, then skip if other client already has it
-                const packetRaw = encodePacketToBytes(packet);
-                await Promise.allSettled(
-                    server.clients
-                        .values()
-                        .filter((other) => other !== client && isAuthed(other))
-                        .map((other) => other.sendRaw(packet.type, packetRaw)),
+                const chunks = await database.getChunkTimestamps(
+                    packet.dimension,
+                    packet.regions.map((region) => ({
+                        x: region.regionX,
+                        z: region.regionZ,
+                    })),
                 );
 
-                // TODO queue tile render for web map
+                if (chunks.length < 1) {
+                    client.warn(
+                        `Client's request chunk-timestamps for [${packet.regions.length}] regions has no results.`,
+                    );
+                    return;
+                }
+
+                await client.send(
+                    new ClientboundChunkTimestampsResponsePacket(
+                        packet.dimension,
+                        chunks,
+                    ),
+                );
             }
 
             private async handleCatchupRequest(
@@ -167,27 +168,37 @@ Promise.resolve().then(async () => {
                 }
             }
 
-            private async handleRegionCatchupPacket(
+            private async handleChunkTilePacket(
                 client: TcpClient,
-                packet: ServerboundChunkTimestampsRequestPacket,
+                packet: ChunkTilePacket,
             ) {
                 requireAuth(client);
 
-                const chunks = await database.getChunkTimestamps(
-                    packet.dimension,
-                    packet.regions.map((region) => ({
-                        x: region.regionX,
-                        z: region.regionZ,
-                    })),
-                );
-                if (chunks.length > 0) {
-                    await client.send(
-                        new ClientboundChunkTimestampsResponsePacket(
+                if (client.auth instanceof OnlineAuth) {
+                    await database
+                        .storeChunkData(
                             packet.dimension,
-                            chunks,
-                        ),
-                    );
+                            packet.chunkX,
+                            packet.chunkZ,
+                            client.auth.uuid,
+                            packet.timestamp,
+                            packet.version,
+                            packet.hash,
+                            packet.data,
+                        )
+                        .catch(client.warn);
                 }
+
+                // TODO small timeout, then skip if other client already has it
+                const packetRaw = encodePacketToBytes(packet);
+                await Promise.allSettled(
+                    server.clients
+                        .values()
+                        .filter((other) => other !== client && isAuthed(other))
+                        .map((other) => other.sendRaw(packet.type, packetRaw)),
+                );
+
+                // TODO queue tile render for web map
             }
         })(),
     );

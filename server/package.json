@@ -16,7 +16,8 @@
     },
     "dependencies": {
         "async-mutex": "^0.4.0",
-        "kysely": "^0.26.1",
+        "kysely": "^0.28.2",
+        "kysely-bun-sqlite": "^0.4.0",
         "zod": "^3.25.57"
     },
     "devDependencies": {

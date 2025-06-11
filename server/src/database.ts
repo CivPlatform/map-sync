@@ -1,5 +1,8 @@
-import * as kysely from "kysely";
 import { Database as BunSqliteDatabase } from "bun:sqlite";
+
+import * as kysely from "kysely";
+import { BunSqliteDialect } from "kysely-bun-sqlite";
+
 import { DATA_FOLDER } from "./metadata.ts";
 import { type Pos2D } from "./model.ts";
 
@@ -15,6 +18,8 @@ export interface Database {
         world: string;
         chunk_x: number;
         chunk_z: number;
+        region_x: kysely.Generated<number>;
+        region_z: kysely.Generated<number>;
         uuid: string;
         ts: number;
         hash: Buffer;
@@ -22,22 +27,17 @@ export interface Database {
 }
 
 export function get() {
-    if (!database) {
-        database = new kysely.Kysely<Database>({
-            dialect: new kysely.SqliteDialect({
-                database: async () => {
-                    return new BunSqliteDatabase(
-                        Bun.env["SQLITE_PATH"] ?? `${DATA_FOLDER}/db.sqlite`,
-                        {
-                            create: true,
-                            readwrite: true,
-                        },
-                    ) as unknown as kysely.SqliteDatabase;
+    return (database ??= new kysely.Kysely<Database>({
+        dialect: new BunSqliteDialect({
+            database: new BunSqliteDatabase(
+                Bun.env["SQLITE_PATH"] ?? `${DATA_FOLDER}/db.sqlite`,
+                {
+                    create: true,
+                    readwrite: true,
                 },
-            }),
-        });
-    }
-    return database;
+            ),
+        }),
+    }));
 }
 
 export async function setup() {
@@ -54,6 +54,16 @@ export async function setup() {
         .addColumn("world", "text", (col) => col.notNull())
         .addColumn("chunk_x", "integer", (col) => col.notNull())
         .addColumn("chunk_z", "integer", (col) => col.notNull())
+        .addColumn("region_x", "integer", (col) =>
+            col
+                .generatedAlwaysAs(kysely.sql<number>`floor(chunk_x / 32.0)`)
+                .notNull(),
+        )
+        .addColumn("region_z", "integer", (col) =>
+            col
+                .generatedAlwaysAs(kysely.sql<number>`floor(chunk_z / 32.0)`)
+                .notNull(),
+        )
         .addColumn("uuid", "text", (col) => col.notNull())
         .addColumn("ts", "bigint", (col) => col.notNull())
         .addColumn("hash", "blob", (col) => col.notNull())
@@ -77,24 +87,17 @@ export async function setup() {
  * Converts the entire database of player chunks into regions, with each region
  * having the highest (aka newest) timestamp.
  */
-export function getRegionTimestamps(dimension: string) {
-    // computing region coordinates in SQL requires truncating, not rounding
-    return get()
+export async function getRegionTimestamps(dimension: string) {
+    return await get()
         .selectFrom("player_chunk")
         .select([
-            (eb) =>
-                kysely.sql<number>`floor(${eb.ref("chunk_x")} / 32.0)`.as(
-                    "regionX",
-                ),
-            (eb) =>
-                kysely.sql<number>`floor(${eb.ref("chunk_z")} / 32.0)`.as(
-                    "regionZ",
-                ),
+            "region_x as regionX",
+            "region_z as regionZ",
             (eb) => eb.fn.max("ts").as("timestamp"),
         ])
         .where("world", "=", dimension)
         .groupBy(["regionX", "regionZ"])
-        .orderBy("regionX", "desc")
+        .orderBy("timestamp", "asc")
         .execute();
 }
 
@@ -102,31 +105,25 @@ export function getRegionTimestamps(dimension: string) {
  * Converts an array of region coords into an array of timestamped chunk coords.
  */
 export async function getChunkTimestamps(dimension: string, regions: Pos2D[]) {
-    return get()
-        .with("regions", (db) =>
-            db
-                .selectFrom("player_chunk")
-                .select([
-                    (eb) =>
-                        kysely.sql<string>`(cast(floor(${eb.ref(
-                            "chunk_x",
-                        )} / 32.0) as int) || '_' || cast(floor(${eb.ref(
-                            "chunk_z",
-                        )} / 32.0) as int))`.as("region"),
-                    "chunk_x as x",
-                    "chunk_z as z",
-                    (eb) => eb.fn.max("ts").as("timestamp"),
-                ])
-                .where("world", "=", dimension)
-                .groupBy(["x", "z"]),
+    return await get()
+        .selectFrom("player_chunk")
+        .select([
+            "chunk_x as chunkX",
+            "chunk_z as chunkZ",
+            (eb) => eb.fn.max("ts").as("timestamp"),
+        ])
+        .where((eb) =>
+            eb.or(
+                regions.map((region) =>
+                    eb.and([
+                        eb("region_x", "=", region.x),
+                        eb("region_z", "=", region.z),
+                    ]),
+                ),
+            ),
         )
-        .selectFrom("regions")
-        .select(["x as chunkX", "z as chunkZ", "timestamp"])
-        .where(
-            "region",
-            "in",
-            regions.map((region) => region.x + "_" + region.z),
-        )
+        .where("world", "=", dimension)
+        .groupBy(["chunkX", "chunkZ"])
         .orderBy("timestamp", "desc")
         .execute();
 }
@@ -142,7 +139,7 @@ export async function getChunkData(
     chunkX: number,
     chunkZ: number,
 ) {
-    return get()
+    return await get()
         .selectFrom("player_chunk")
         .innerJoin("chunk_data", "chunk_data.hash", "player_chunk.hash")
         .select([
@@ -202,7 +199,7 @@ export async function getRegionChunks(
         maxChunkX = minChunkX + 16;
     const minChunkZ = regionZ << 4,
         maxChunkZ = minChunkZ + 16;
-    return get()
+    return await get()
         .selectFrom("player_chunk")
         .innerJoin("chunk_data", "chunk_data.hash", "player_chunk.hash")
         .select([
@@ -217,6 +214,7 @@ export async function getRegionChunks(
         .where("player_chunk.chunk_x", "<", maxChunkX)
         .where("player_chunk.chunk_z", ">=", minChunkZ)
         .where("player_chunk.chunk_z", "<", maxChunkZ)
+        .groupBy(["chunk_x", "chunk_z", "version", "data"])
         .orderBy("player_chunk.ts", "desc")
         .execute();
 }

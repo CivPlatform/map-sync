@@ -18,9 +18,9 @@ export interface Database {
         world: string;
         chunk_x: number;
         chunk_z: number;
-        region_x: kysely.Generated<number>;
-        region_z: kysely.Generated<number>;
-        region_coord: kysely.Generated<string>;
+        gen_region_x: kysely.Generated<number>;
+        gen_region_z: kysely.Generated<number>;
+        gen_region_coord: kysely.Generated<string>;
         uuid: string;
         ts: number;
         hash: Buffer;
@@ -43,62 +43,71 @@ export function get() {
 
 export async function setup() {
     await get()
-        .schema.createTable("chunk_data")
-        .ifNotExists()
-        .addColumn("hash", "blob", (col) => col.notNull().primaryKey())
-        .addColumn("version", "integer", (col) => col.notNull())
-        .addColumn("data", "blob", (col) => col.notNull())
-        .execute();
-    await get()
-        .schema.createTable("player_chunk")
-        .ifNotExists()
-        .addColumn("world", "text", (col) => col.notNull())
-        .addColumn("chunk_x", "integer", (col) => col.notNull())
-        .addColumn("chunk_z", "integer", (col) => col.notNull())
-        .addColumn("region_x", "integer", (col) =>
-            col
-                .generatedAlwaysAs(kysely.sql<number>`floor(chunk_x / 32.0)`)
-                .notNull(),
-        )
-        .addColumn("region_z", "integer", (col) =>
-            col
-                .generatedAlwaysAs(kysely.sql<number>`floor(chunk_z / 32.0)`)
-                .notNull(),
-        )
-        .addColumn("region_coord", "text", (col) => {
-            return col
-                .generatedAlwaysAs(kysely.sql<string>`cast(floor(chunk_x / 32.0) as int) || '_' || cast(floor(chunk_z / 32.0) as int)`)
-                .notNull();
-        })
-        .addColumn("uuid", "text", (col) => col.notNull())
-        .addColumn("ts", "bigint", (col) => col.notNull())
-        .addColumn("hash", "blob", (col) => col.notNull())
-        .addPrimaryKeyConstraint("PK_coords_and_player", [
-            "world",
-            "chunk_x",
-            "chunk_z",
-            "uuid",
-        ])
-        .addForeignKeyConstraint(
-            "FK_chunk_ref",
-            ["hash"],
-            "chunk_data",
-            ["hash"],
-            (fk) => fk.onUpdate("no action").onDelete("no action"),
-        )
-        .execute();
+        .transaction()
+        .execute(async (db) => {
+            await db.schema
+                .createTable("chunk_data")
+                .ifNotExists()
+                .addColumn("hash", "blob", (col) => col.notNull().primaryKey())
+                .addColumn("version", "integer", (col) => col.notNull())
+                .addColumn("data", "blob", (col) => col.notNull())
+                .execute();
+            await db.schema
+                .createTable("player_chunk")
+                .ifNotExists()
+                .addColumn("world", "text", (col) => col.notNull())
+                .addColumn("chunk_x", "integer", (col) => col.notNull())
+                .addColumn("chunk_z", "integer", (col) => col.notNull())
+                .addColumn("gen_region_x", "integer", (col) =>
+                    col
+                        .generatedAlwaysAs(
+                            kysely.sql<number>`floor(chunk_x / 32.0)`,
+                        )
+                        .notNull(),
+                )
+                .addColumn("gen_region_z", "integer", (col) =>
+                    col
+                        .generatedAlwaysAs(
+                            kysely.sql<number>`floor(chunk_z / 32.0)`,
+                        )
+                        .notNull(),
+                )
+                .addColumn("gen_region_coord", "text", (col) => {
+                    return col
+                        .generatedAlwaysAs(
+                            kysely.sql<string>`gen_region_x || '_' || gen_region_z`,
+                        )
+                        .notNull();
+                })
+                .addColumn("uuid", "text", (col) => col.notNull())
+                .addColumn("ts", "bigint", (col) => col.notNull())
+                .addColumn("hash", "blob", (col) => col.notNull())
+                .addPrimaryKeyConstraint("PK_coords_and_player", [
+                    "world",
+                    "chunk_x",
+                    "chunk_z",
+                    "uuid",
+                ])
+                .addForeignKeyConstraint(
+                    "FK_chunk_ref",
+                    ["hash"],
+                    "chunk_data",
+                    ["hash"],
+                    (fk) => fk.onUpdate("no action").onDelete("no action"),
+                )
+                .execute();
+        });
 }
 
 /**
- * Converts the entire database of player chunks into regions, with each region
- * having the highest (aka newest) timestamp.
+ * Gets the timestamps for ALL regions stored.
  */
 export async function getRegionTimestamps(dimension: string) {
     return await get()
         .selectFrom("player_chunk")
         .select([
-            "region_x as regionX",
-            "region_z as regionZ",
+            "gen_region_x as regionX",
+            "gen_region_z as regionZ",
             (eb) => eb.fn.max("ts").as("timestamp"),
         ])
         .where("world", "=", dimension)
@@ -107,9 +116,6 @@ export async function getRegionTimestamps(dimension: string) {
         .execute();
 }
 
-/**
- * Converts an array of region coords into an array of timestamped chunk coords.
- */
 export async function getChunkTimestamps(dimension: string, regions: Pos2D[]) {
     return await get()
         .selectFrom("player_chunk")
@@ -119,7 +125,7 @@ export async function getChunkTimestamps(dimension: string, regions: Pos2D[]) {
             (eb) => eb.fn.max("ts").as("timestamp"),
         ])
         .where(
-            "region_coord",
+            "gen_region_coord",
             "in",
             regions.map((region) => region.x + "_" + region.z),
         )
@@ -171,21 +177,25 @@ export async function storeChunkData(
     data: Buffer,
 ) {
     await get()
-        .insertInto("chunk_data")
-        .values({ hash, version, data })
-        .onConflict((oc) => oc.column("hash").doNothing())
-        .execute();
-    await get()
-        .replaceInto("player_chunk")
-        .values({
-            world: dimension,
-            chunk_x: chunkX,
-            chunk_z: chunkZ,
-            uuid,
-            ts: timestamp,
-            hash,
-        })
-        .execute();
+        .transaction()
+        .execute(async (db) => {
+            await db
+                .insertInto("chunk_data")
+                .values({ hash, version, data })
+                .onConflict((oc) => oc.column("hash").doNothing())
+                .execute();
+            await db
+                .replaceInto("player_chunk")
+                .values({
+                    world: dimension,
+                    chunk_x: chunkX,
+                    chunk_z: chunkZ,
+                    uuid,
+                    ts: timestamp,
+                    hash,
+                })
+                .execute();
+        });
 }
 
 /**
@@ -196,10 +206,6 @@ export async function getRegionChunks(
     regionX: number,
     regionZ: number,
 ) {
-    const minChunkX = regionX << 4,
-        maxChunkX = minChunkX + 16;
-    const minChunkZ = regionZ << 4,
-        maxChunkZ = minChunkZ + 16;
     return await get()
         .selectFrom("player_chunk")
         .innerJoin("chunk_data", "chunk_data.hash", "player_chunk.hash")
@@ -211,10 +217,8 @@ export async function getRegionChunks(
             "chunk_data.data as data",
         ])
         .where("player_chunk.world", "=", dimension)
-        .where("player_chunk.chunk_x", ">=", minChunkX)
-        .where("player_chunk.chunk_x", "<", maxChunkX)
-        .where("player_chunk.chunk_z", ">=", minChunkZ)
-        .where("player_chunk.chunk_z", "<", maxChunkZ)
+        .where("player_chunk.gen_region_x", "=", regionX)
+        .where("player_chunk.gen_region_z", "=", regionZ)
         .groupBy(["chunk_x", "chunk_z", "version", "data"])
         .orderBy("player_chunk.ts", "desc")
         .execute();

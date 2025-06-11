@@ -1,8 +1,7 @@
 import node_fs from "node:fs";
 import node_path from "node:path";
 import { Mutex } from "async-mutex";
-import * as z from "zod";
-import { fromZodError } from "zod-validation-error";
+import z, { prettifyError } from "zod/v4";
 import { Errors, type JSONValue, parseJson } from "./lang.ts";
 
 export const DATA_FOLDER = process.env["MAPSYNC_DATA_DIR"] ?? "./mapsync";
@@ -48,7 +47,7 @@ function parseConfigFile<T>(
         return parser(parseJson(fileContents));
     } catch (e) {
         if (e instanceof z.ZodError) {
-            throw "Could not parse " + file + ": " + fromZodError(e);
+            throw "Could not parse " + file + ": " + prettifyError(e);
         }
         throw e;
     }
@@ -124,7 +123,7 @@ export async function saveWhitelist() {
 
 const UUID_CACHE_FILE = "uuid_cache.json";
 const UUID_CACHE_MUTEX = new Mutex();
-const UUID_CACHE_SCHEMA = z.record(z.string().uuid());
+const UUID_CACHE_SCHEMA = z.record(z.string(), z.uuid());
 //                         IGN     UUID
 const uuid_cache = new Map<string, string>();
 

@@ -21,6 +21,7 @@ import {
     handleAuthResponse,
     handleHandshake,
 } from "./auth.ts";
+import { MAX_WS_FRAME_LENGTH } from "../constants.ts";
 
 export interface ProtocolHandler {
     handleClientConnected(client: TcpClient): Promise<void>;
@@ -70,6 +71,14 @@ export class TcpServer {
                 return undefined;
             },
             websocket: {
+                maxPayloadLength: MAX_WS_FRAME_LENGTH,
+                // Allow 20 full frames of data of backpressure. Keep in mind
+                // that this is still >12x less than the default backpressure
+                // of 16MB.
+                backpressureLimit: MAX_WS_FRAME_LENGTH * 20,
+                closeOnBackpressureLimit: true,
+                idleTimeout: 60, // 60 seconds
+
                 async open(socket) {
                     const client = new TcpClient(socket, self.handlers);
                     self.clients.set(client.id, (socket.data = client));

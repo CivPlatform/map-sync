@@ -14,6 +14,7 @@ import gjum.minecraft.mapsync.common.net.packet.ServerboundChunkTimestampsReques
 import gjum.minecraft.mapsync.common.net.packet.ServerboundAuthResponsePacket;
 import gjum.minecraft.mapsync.common.net.packet.ServerboundHandshakePacket;
 import gjum.minecraft.mapsync.common.utils.Hasher;
+import gjum.minecraft.mapsync.common.utils.MagicValues;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import java.nio.ByteBuffer;
@@ -29,6 +30,7 @@ import net.minecraft.client.User;
 import net.minecraft.world.level.ChunkPos;
 import org.apache.commons.lang3.StringUtils;
 import org.java_websocket.client.WebSocketClient;
+import org.java_websocket.drafts.Draft_6455;
 import org.java_websocket.enums.ReadyState;
 import org.java_websocket.handshake.ServerHandshake;
 import org.jetbrains.annotations.NotNull;
@@ -105,7 +107,14 @@ public class SyncClient {
 		public SyncConnection(
 			final @NotNull SyncAddress serverUri
 		) {
-			super(serverUri.address());
+			super(
+				serverUri.address(),
+				new Draft_6455(
+					List.of(), // plugins
+					List.of(), // protocols
+					MagicValues.MAX_WS_FRAME_SIZE
+				)
+			);
 		}
 		@Override
 		public void onOpen(

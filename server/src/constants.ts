@@ -9,3 +9,7 @@ export const SHA1_HASH_LENGTH = 20;
 
 export const UUID_REGEX =
     /^(........)-?(....)-?(....)-?(....)-?(............)$/;
+
+// Sets the maximum frame length as the maximum 16-bit unsigned int value
+// https://datatracker.ietf.org/doc/html/rfc6455#section-5.2
+export const MAX_WS_FRAME_LENGTH = (1 << 16) - 1;

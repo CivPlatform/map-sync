@@ -20,6 +20,7 @@ export interface Database {
         chunk_z: number;
         region_x: kysely.Generated<number>;
         region_z: kysely.Generated<number>;
+        region_coord: kysely.Generated<string>;
         uuid: string;
         ts: number;
         hash: Buffer;
@@ -64,6 +65,11 @@ export async function setup() {
                 .generatedAlwaysAs(kysely.sql<number>`floor(chunk_z / 32.0)`)
                 .notNull(),
         )
+        .addColumn("region_coord", "text", (col) => {
+            return col
+                .generatedAlwaysAs(kysely.sql<string>`cast(floor(chunk_x / 32.0) as int) || '_' || cast(floor(chunk_z / 32.0) as int)`)
+                .notNull();
+        })
         .addColumn("uuid", "text", (col) => col.notNull())
         .addColumn("ts", "bigint", (col) => col.notNull())
         .addColumn("hash", "blob", (col) => col.notNull())
@@ -112,15 +118,10 @@ export async function getChunkTimestamps(dimension: string, regions: Pos2D[]) {
             "chunk_z as chunkZ",
             (eb) => eb.fn.max("ts").as("timestamp"),
         ])
-        .where((eb) =>
-            eb.or(
-                regions.map((region) =>
-                    eb.and([
-                        eb("region_x", "=", region.x),
-                        eb("region_z", "=", region.z),
-                    ]),
-                ),
-            ),
+        .where(
+            "region_coord",
+            "in",
+            regions.map((region) => region.x + "_" + region.z),
         )
         .where("world", "=", dimension)
         .groupBy(["chunkX", "chunkZ"])

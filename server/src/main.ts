@@ -1,5 +1,5 @@
 import "./cli";
-import * as database from "./database";
+import * as database from "./db/database";
 import * as metadata from "./metadata";
 import { ClientPacket } from "./protocol";
 import { CatchupRequestPacket } from "./protocol/CatchupRequestPacket";
@@ -9,7 +9,23 @@ import { RegionCatchupPacket } from "./protocol/RegionCatchupPacket";
 
 let config: metadata.Config = null!;
 Promise.resolve().then(async () => {
-    await database.setup();
+    for (const result of await database.setup()) {
+        switch (result.status) {
+            case "Success":
+                console.info(`Migration [${result.migrationName}] applied!`);
+                break;
+            case "Error":
+                console.error(
+                    `Migration [${result.migrationName}] failed to apply!`,
+                );
+                break;
+            case "NotExecuted":
+                console.warn(
+                    `Migration [${result.migrationName}] was not applied!`,
+                );
+                break;
+        }
+    }
 
     config = metadata.getConfig();
 

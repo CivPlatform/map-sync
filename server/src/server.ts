@@ -17,7 +17,7 @@ export class TcpServer {
     server: net.Server;
     clients: Record<number, TcpClient> = {};
 
-    keyPair = crypto.generateKeyPairSync("rsa", { modulusLength: 1024 });
+    keyPair = crypto.generateKeyPairSync("rsa", { modulusLength: 2048 });
     // precomputed for networking
     publicKeyBuffer = this.keyPair.publicKey.export({
         type: "spki",
@@ -45,7 +45,8 @@ export class TcpServer {
         return crypto.privateDecrypt(
             {
                 key: this.keyPair.privateKey,
-                padding: crypto.constants.RSA_PKCS1_PADDING,
+                padding: crypto.constants.RSA_PKCS1_OAEP_PADDING,
+                oaepHash: "sha256"
             },
             buf,
         );

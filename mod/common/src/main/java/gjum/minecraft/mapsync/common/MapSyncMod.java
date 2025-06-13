@@ -11,6 +11,7 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ServerData;
 import net.minecraft.network.protocol.game.ClientboundLoginPacket;
 import net.minecraft.network.protocol.game.ClientboundRespawnPacket;
+import net.minecraft.world.level.ChunkPos;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.jetbrains.annotations.NotNull;
@@ -225,23 +226,21 @@ public abstract class MapSyncMod {
 		if (!dimension.dimension.location().toString().equals(packet.getDimension())) {
 			return;
 		}
-		var outdatedRegions = new ArrayList<RegionPos>();
-		for (var regionTs : packet.getTimestamps()) {
-			var regionPos = new RegionPos(regionTs.x(), regionTs.z());
-			long oldestChunkTs = dimension.getOldestChunkTsInRegion(regionPos);
-			boolean requiresUpdate = regionTs.timestamp() > oldestChunkTs;
 
-			debugLog("region " + regionPos
-					+ (requiresUpdate ? " requires update." : " is up to date.")
-					+ " oldest client chunk ts: " + oldestChunkTs
-					+ ", newest server chunk ts: " + regionTs.timestamp());
+		var regionTs = packet.getTimestamp();
 
-			if (requiresUpdate) {
-				outdatedRegions.add(regionPos);
-			}
+		var regionPos = new RegionPos(regionTs.x(), regionTs.z());
+		long oldestChunkTs = dimension.getOldestChunkTsInRegion(regionPos);
+		boolean requiresUpdate = regionTs.timestamp() > oldestChunkTs;
+
+		debugLog("region " + regionPos
+				+ (requiresUpdate ? " requires update." : " is up to date.")
+				+ " oldest client chunk ts: " + oldestChunkTs
+				+ ", newest server chunk ts: " + regionTs.timestamp());
+
+		if (requiresUpdate) {
+			client.send(new ServerboundChunkTimestampsRequestPacket(packet.getDimension(), regionPos));
 		}
-
-		client.send(new ServerboundChunkTimestampsRequestPacket(packet.getDimension(), outdatedRegions));
 	}
 
 	public void handleSharedChunk(ChunkTile chunkTile) {
@@ -262,6 +261,7 @@ public abstract class MapSyncMod {
 		dimensionState.addCatchupChunks(packet.chunks);
 	}
 
+	private record Pos2D(int x, int z) {}
 	public void requestCatchupData(List<CatchupChunk> chunks) {
 		if (chunks == null || chunks.isEmpty()) {
 			debugLog("not requesting more catchup: null/empty");
@@ -275,8 +275,27 @@ public abstract class MapSyncMod {
 			list.add(chunk);
 		}
 		for (List<CatchupChunk> chunksForServer : byServer.values()) {
-			SyncClient client = chunksForServer.get(0).syncClient;
-			client.send(new ServerboundCatchupRequestPacket(chunksForServer));
+			final SyncClient client = chunksForServer.get(0).syncClient;
+
+			final Map<RegionPos, Map<ChunkPos, CatchupChunk>> regionChunkRequests = new HashMap<>();
+			for (final CatchupChunk chunk : chunksForServer) {
+				final ChunkPos chunkPos = chunk.chunkPos();
+                final Map<ChunkPos, CatchupChunk> regionChunks = regionChunkRequests.computeIfAbsent(
+					RegionPos.forChunkPos(chunkPos),
+					(regionPos) -> new HashMap<>()
+				);
+				final CatchupChunk existingCatchup = regionChunks.get(chunkPos);
+				if (existingCatchup != null && existingCatchup.timestamp() > chunk.timestamp()) {
+					continue;
+				}
+				regionChunks.put(chunkPos, chunk);
+			}
+
+			for (final Map<ChunkPos, CatchupChunk> catchupChunks : regionChunkRequests.values()) {
+				client.send(new ServerboundCatchupRequestPacket(
+					new ArrayList<>(catchupChunks.values())
+				));
+			}
 		}
 	}
 

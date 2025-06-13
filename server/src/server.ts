@@ -108,12 +108,10 @@ export class TcpClient {
 
                     // prevent Out of Memory
                     if (frameSize > this.maxFrameSize) {
-                        return this.kick(
-                            "Frame too large: " +
-                                frameSize +
-                                " have " +
-                                accBuf.length,
+                        this.kick(
+                            `Frame's length [${frameSize}] is too large, max is [${this.maxFrameSize}]!`,
                         );
+                        return;
                     }
 
                     if (accBuf.length < 4 + frameSize) return; // wait for more data

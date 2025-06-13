@@ -6,6 +6,7 @@ import { CatchupRequestPacket } from "./protocol/CatchupRequestPacket";
 import { ChunkTilePacket } from "./protocol/ChunkTilePacket";
 import { TcpClient, TcpServer } from "./server";
 import { RegionCatchupPacket } from "./protocol/RegionCatchupPacket";
+import { CatchupChunk, RegionChunkTimestamps } from "./model";
 
 let config: metadata.Config = null!;
 Promise.resolve().then(async () => {
@@ -48,11 +49,15 @@ export class Main {
         // TODO check version, mc server, user access
 
         const timestamps = await database.getRegionTimestamps(client.world!);
-        client.send({
-            type: "RegionTimestamps",
-            world: client.world!,
-            regions: timestamps,
-        });
+        await Promise.allSettled(
+            timestamps.map((chunk) =>
+                client.send({
+                    type: "RegionTimestamps",
+                    world: client.world!,
+                    region: chunk,
+                }),
+            ),
+        );
     }
 
     handleClientDisconnected(client: ProtocolClient) {}
@@ -151,7 +156,8 @@ export class Main {
 
         const chunks = await database.getChunkTimestamps(
             pkt.world,
-            pkt.regions,
+            pkt.regionX,
+            pkt.regionZ
         );
         if (chunks.length)
             client.send({ type: "Catchup", world: pkt.world, chunks });

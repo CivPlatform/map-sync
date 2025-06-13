@@ -1,7 +1,6 @@
 import * as kysely from "kysely";
 import sqlite from "better-sqlite3";
 import { DATA_FOLDER } from "./metadata";
-import { type Pos2D } from "./model";
 
 let database: kysely.Kysely<Database> | null = null;
 
@@ -98,33 +97,24 @@ export function getRegionTimestamps(dimension: string) {
 /**
  * Converts an array of region coords into an array of timestamped chunk coords.
  */
-export async function getChunkTimestamps(dimension: string, regions: Pos2D[]) {
+export async function getChunkTimestamps(dimension: string, regionX: number, regionZ: number) {
+    const minChunkX = regionX << 4,
+        maxChunkX = minChunkX + 16;
+    const minChunkZ = regionZ << 4,
+        maxChunkZ = minChunkZ + 16;
     return get()
-        .with("regions", (db) =>
-            db
-                .selectFrom("player_chunk")
-                .select([
-                    (eb) =>
-                        kysely.sql<string>`(cast(floor(${eb.ref(
-                            "chunk_x",
-                        )} / 32.0) as int) || '_' || cast(floor(${eb.ref(
-                            "chunk_z",
-                        )} / 32.0) as int))`.as("region"),
-                    "chunk_x as x",
-                    "chunk_z as z",
-                    (eb) => eb.fn.max("ts").as("timestamp"),
-                ])
-                .where("world", "=", dimension)
-                .groupBy(["x", "z"]),
-        )
-        .selectFrom("regions")
-        .select(["x as chunkX", "z as chunkZ", "timestamp"])
-        .where(
-            "region",
-            "in",
-            regions.map((region) => region.x + "_" + region.z),
-        )
-        .orderBy("timestamp", "desc")
+        .selectFrom("player_chunk")
+        .select([
+            "chunk_x as chunkX",
+            "chunk_z as chunkZ",
+            (eb) => eb.fn.max("ts").as("timestamp"),
+        ])
+        .where("world", "=", dimension)
+        .where("chunk_x", ">=", minChunkX)
+        .where("chunk_x", "<", maxChunkX)
+        .where("chunk_z", ">=", minChunkZ)
+        .where("chunk_z", "<", maxChunkZ)
+        .orderBy("ts", "desc")
         .execute();
 }
 

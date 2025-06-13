@@ -14,6 +14,9 @@ import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.handler.codec.LengthFieldBasedFrameDecoder;
 import io.netty.handler.codec.LengthFieldPrepender;
+import java.security.spec.MGF1ParameterSpec;
+import javax.crypto.spec.OAEPParameterSpec;
+import javax.crypto.spec.PSource;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.User;
 import net.minecraft.world.level.ChunkPos;
@@ -267,7 +270,7 @@ public class SyncClient {
 						encrypt(packet.publicKey, sharedSecret),
 						encrypt(packet.publicKey, packet.verifyToken)));
 			} catch (NoSuchAlgorithmException | InvalidKeyException | NoSuchPaddingException | BadPaddingException |
-			         IllegalBlockSizeException e) {
+                     IllegalBlockSizeException | InvalidAlgorithmParameterException e) {
 				shutDown();
 				throw new RuntimeException(e);
 			}
@@ -283,9 +286,15 @@ public class SyncClient {
 		}
 	}
 
-	private static byte[] encrypt(PublicKey key, byte[] data) throws NoSuchPaddingException, NoSuchAlgorithmException, BadPaddingException, IllegalBlockSizeException, InvalidKeyException {
-		Cipher cipher = Cipher.getInstance("RSA/ECB/PKCS1Padding");
-		cipher.init(Cipher.ENCRYPT_MODE, key);
+	private static byte[] encrypt(PublicKey key, byte[] data) throws NoSuchPaddingException, NoSuchAlgorithmException, BadPaddingException, IllegalBlockSizeException, InvalidKeyException, InvalidAlgorithmParameterException {
+		Cipher cipher = Cipher.getInstance("RSA/ECB/OAEPWithSHA-256AndMGF1Padding");
+		// https://docs.openssl.org/master/man3/RSA_public_encrypt/#description
+		cipher.init(Cipher.ENCRYPT_MODE, key, new OAEPParameterSpec(
+			"SHA-256",
+			"MGF1",
+			new MGF1ParameterSpec("SHA-256"),
+			PSource.PSpecified.DEFAULT
+		));
 		return cipher.doFinal(data);
 	}
 }

@@ -23,10 +23,12 @@ import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.handler.codec.LengthFieldBasedFrameDecoder;
 import io.netty.handler.codec.LengthFieldPrepender;
+import java.security.InvalidAlgorithmParameterException;
 import java.security.InvalidKeyException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.security.PublicKey;
+import java.security.spec.MGF1ParameterSpec;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -39,6 +41,8 @@ import javax.crypto.Cipher;
 import javax.crypto.IllegalBlockSizeException;
 import javax.crypto.NoSuchPaddingException;
 import javax.crypto.SecretKey;
+import javax.crypto.spec.OAEPParameterSpec;
+import javax.crypto.spec.PSource;
 import javax.crypto.spec.SecretKeySpec;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.User;
@@ -286,7 +290,7 @@ public class SyncClient {
 					encrypt(packet.publicKey(), sharedSecret),
 					encrypt(packet.publicKey(), packet.verifyToken())));
 		} catch (NoSuchAlgorithmException | InvalidKeyException | NoSuchPaddingException | BadPaddingException |
-				 IllegalBlockSizeException e) {
+				 IllegalBlockSizeException | InvalidAlgorithmParameterException e) {
 			shutDown();
 			throw new RuntimeException(e);
 		}
@@ -299,9 +303,15 @@ public class SyncClient {
 		handleEncryptionSuccess();
 	}
 
-	private static byte[] encrypt(PublicKey key, byte[] data) throws NoSuchPaddingException, NoSuchAlgorithmException, BadPaddingException, IllegalBlockSizeException, InvalidKeyException {
-		Cipher cipher = Cipher.getInstance("RSA/ECB/PKCS1Padding");
-		cipher.init(Cipher.ENCRYPT_MODE, key);
+	private static byte[] encrypt(PublicKey key, byte[] data) throws NoSuchPaddingException, NoSuchAlgorithmException, BadPaddingException, IllegalBlockSizeException, InvalidKeyException, InvalidAlgorithmParameterException {
+		Cipher cipher = Cipher.getInstance("RSA/ECB/OAEPWithSHA-256AndMGF1Padding");
+		// https://docs.openssl.org/master/man3/RSA_public_encrypt/#description
+		cipher.init(Cipher.ENCRYPT_MODE, key, new OAEPParameterSpec(
+			"SHA-256",
+			"MGF1",
+			new MGF1ParameterSpec("SHA-256"),
+			PSource.PSpecified.DEFAULT
+		));
 		return cipher.doFinal(data);
 	}
 }

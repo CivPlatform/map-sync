@@ -20,6 +20,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
@@ -31,6 +32,7 @@ import net.minecraft.client.multiplayer.ServerData;
 import net.minecraft.network.protocol.game.ClientboundLoginPacket;
 import net.minecraft.network.protocol.game.ClientboundRespawnPacket;
 import net.minecraft.resources.Identifier;
+import net.minecraft.world.level.ChunkPos;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.jetbrains.annotations.NotNull;
@@ -272,23 +274,21 @@ public final class MapSyncMod implements ClientModInitializer {
 		if (!dimension.dimension.identifier().toString().equals(packet.getDimension())) {
 			return;
 		}
-		var outdatedRegions = new ArrayList<RegionPos>();
-		for (var regionTs : packet.getTimestamps()) {
-			var regionPos = new RegionPos(regionTs.x(), regionTs.z());
-			long oldestChunkTs = dimension.getOldestChunkTsInRegion(regionPos);
-			boolean requiresUpdate = regionTs.timestamp() > oldestChunkTs;
 
-			debugLog("region " + regionPos
-					+ (requiresUpdate ? " requires update." : " is up to date.")
-					+ " oldest client chunk ts: " + oldestChunkTs
-					+ ", newest server chunk ts: " + regionTs.timestamp());
+		var regionTs = packet.getTimestamp();
 
-			if (requiresUpdate) {
-				outdatedRegions.add(regionPos);
-			}
+		var regionPos = new RegionPos(regionTs.x(), regionTs.z());
+		long oldestChunkTs = dimension.getOldestChunkTsInRegion(regionPos);
+		boolean requiresUpdate = regionTs.timestamp() > oldestChunkTs;
+
+		debugLog("region " + regionPos
+				+ (requiresUpdate ? " requires update." : " is up to date.")
+				+ " oldest client chunk ts: " + oldestChunkTs
+				+ ", newest server chunk ts: " + regionTs.timestamp());
+
+		if (requiresUpdate) {
+			client.send(new ServerboundChunkTimestampsRequestPacket(packet.getDimension(), regionPos));
 		}
-
-		client.send(new ServerboundChunkTimestampsRequestPacket(packet.getDimension(), outdatedRegions));
 	}
 
 	public void handleSharedChunk(ChunkTile chunkTile) {
@@ -322,8 +322,27 @@ public final class MapSyncMod implements ClientModInitializer {
 			list.add(chunk);
 		}
 		for (List<CatchupChunk> chunksForServer : byServer.values()) {
-			SyncClient client = chunksForServer.get(0).syncClient;
-			client.send(new ServerboundCatchupRequestPacket(chunksForServer));
+			final SyncClient client = chunksForServer.getFirst().syncClient;
+
+			final Map<RegionPos, Map<ChunkPos, CatchupChunk>> regionChunkRequests = new HashMap<>();
+			for (final CatchupChunk chunk : chunksForServer) {
+				final ChunkPos chunkPos = chunk.chunkPos();
+                final Map<ChunkPos, CatchupChunk> regionChunks = regionChunkRequests.computeIfAbsent(
+					RegionPos.forChunkPos(chunkPos),
+					(regionPos) -> new HashMap<>()
+				);
+				final CatchupChunk existingCatchup = regionChunks.get(chunkPos);
+				if (existingCatchup != null && existingCatchup.timestamp() > chunk.timestamp()) {
+					continue;
+				}
+				regionChunks.put(chunkPos, chunk);
+			}
+
+			for (final Map<ChunkPos, CatchupChunk> catchupChunks : regionChunkRequests.values()) {
+				client.send(new ServerboundCatchupRequestPacket(
+					new ArrayList<>(catchupChunks.values())
+				));
+			}
 		}
 	}
 

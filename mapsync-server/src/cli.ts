@@ -149,12 +149,16 @@ async function handle_input(input: string): Promise<void> {
             return;
         }
 
-        const regions = await database.getRegionTimestamps(world);
-        await client.send({
-            type: "RegionTimestamps",
-            world,
-            regions,
-        });
+        const regions = await database.getRegionTimestamps(client.world!);
+        await Promise.allSettled(
+            regions.map((region) =>
+                client.send({
+                    type: "RegionTimestamps",
+                    world: client.world!,
+                    region,
+                }),
+            ),
+        );
     } else if (command === "kick") {
         const target = extras.trim(); // IGN or UUID
 

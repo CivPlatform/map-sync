@@ -14,35 +14,29 @@ public class ClientboundRegionTimestampsPacket implements Packet {
 
 	private final String dimension;
 
-	private final RegionTimestamp[] timestamps;
+	private final RegionTimestamp timestamp;
 
-	public ClientboundRegionTimestampsPacket(String dimension, RegionTimestamp[] timestamps) {
+	public ClientboundRegionTimestampsPacket(String dimension, RegionTimestamp timestamp) {
 		this.dimension = dimension;
-		this.timestamps = timestamps;
+		this.timestamp = timestamp;
 	}
 
 	public String getDimension() {
 		return dimension;
 	}
 
-	public RegionTimestamp[] getTimestamps() {
-		return timestamps;
+	public RegionTimestamp getTimestamp() {
+		return timestamp;
 	}
 
 	public static Packet read(ByteBuf buf) {
-		String dimension = Packet.readUtf8String(buf);
-
-		short totalRegions = buf.readShort();
-		RegionTimestamp[] timestamps = new RegionTimestamp[totalRegions];
-		// row = x
-		for (short i = 0; i < totalRegions; i++) {
-			short regionX = buf.readShort();
-			short regionZ = buf.readShort();
-
-			long timestamp = buf.readLong();
-			timestamps[i] = new RegionTimestamp(regionX, regionZ, timestamp);
-		}
-
-		return new ClientboundRegionTimestampsPacket(dimension, timestamps);
+		return new ClientboundRegionTimestampsPacket(
+			Packet.readUtf8String(buf),
+			new RegionTimestamp(
+				buf.readShort(),
+				buf.readShort(),
+				buf.readLong()
+			)
+		);
 	}
 }

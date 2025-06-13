@@ -14,3 +14,9 @@ export interface Pos2D {
     readonly x: number;
     readonly z: number;
 }
+
+export interface RegionChunkTimestamps {
+    readonly regionX: number;
+    readonly regionZ: number;
+    readonly chunks: Array<CatchupChunk>;
+}

@@ -25,11 +25,16 @@ export class TcpServer {
     });
 
     constructor(readonly handler: ProtocolHandler) {
-        this.server = net.createServer({}, (socket) => {
-            const client = new TcpClient(socket, this, handler);
-            this.clients[client.id] = client;
-            socket.on("close", () => delete this.clients[client.id]);
-        });
+        this.server = net.createServer(
+            {
+                keepAlive: true,
+            },
+            (socket) => {
+                const client = new TcpClient(socket, this, handler);
+                this.clients[client.id] = client;
+                socket.on("close", () => delete this.clients[client.id]);
+            },
+        );
 
         this.server.on("error", (err: Error) => {
             console.error("[TcpServer] Error:", err);

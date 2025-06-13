@@ -46,7 +46,7 @@ You can control who has access to a Sync Server by editing its `allowed-users.tx
 <summary>System Install</summary>
 <br />
 
-- install recent nodejs (~17)
+- install recent nodejs (~24)
 - clone code, `cd server`
 - `npm install`
 - `npm run build` -- this has to be run after every time the code is edited

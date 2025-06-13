@@ -1,0 +1,36 @@
+name: "Publishing to release"
+
+on:
+  release:
+    types:
+      - "published"
+
+permissions:
+  contents: "write"
+
+jobs:
+  release-mod:
+    runs-on: "ubuntu-latest"
+    steps:
+      - uses: "actions/checkout@v4"
+
+      - name: "Setting up JDK 17"
+        uses: "actions/setup-java@v4"
+        with:
+          java-version: "17"
+          distribution: "adopt"
+
+      - name: "Building mods"
+        working-directory: "./mod"
+        run: "./gradlew build"
+
+      - name: "Publishing mods"
+        working-directory: "./mod"
+        run: |
+          for file in $(find "dist/" -maxdepth 1 -type f -name "*.jar"); do
+            echo "Uploading $file"
+            gh release upload ${{ github.event.release.tag_name }} "$file" --clobber
+          done
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  # Add a "release-server" at some point via packaging to executable

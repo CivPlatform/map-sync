@@ -5,6 +5,8 @@
     "author": "Gjum",
     "license": "GPL-3.0-only",
     "scripts": {
+        "check:types": "tsc --noEmit --checkJs",
+        "check:style": "prettier --check .",
         "build": "tsc",
         "format": "prettier -w .",
         "test": "true",

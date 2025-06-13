@@ -9,23 +9,7 @@ import { RegionCatchupPacket } from "./protocol/RegionCatchupPacket";
 
 let config: metadata.Config = null!;
 Promise.resolve().then(async () => {
-    for (const result of await database.setup()) {
-        switch (result.status) {
-            case "Success":
-                console.info(`Migration [${result.migrationName}] applied!`);
-                break;
-            case "Error":
-                console.error(
-                    `Migration [${result.migrationName}] failed to apply!`,
-                );
-                break;
-            case "NotExecuted":
-                console.warn(
-                    `Migration [${result.migrationName}] was not applied!`,
-                );
-                break;
-        }
-    }
+    await database.setup();
 
     config = metadata.getConfig();
 

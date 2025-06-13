@@ -1,5 +1,5 @@
 import "./cli";
-import * as database from "./database";
+import * as database from "./db/database";
 import * as metadata from "./metadata";
 import { ClientPacket } from "./protocol";
 import { CatchupRequestPacket } from "./protocol/CatchupRequestPacket";

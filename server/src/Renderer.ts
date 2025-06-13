@@ -1,6 +1,6 @@
 import { spawn } from "child_process";
 import { promisify } from "util";
-import * as database from "./database";
+import * as database from "./db/database";
 
 export async function renderTile(
     dimension: string,
@@ -25,8 +25,8 @@ export async function renderTile(
 
     const chunkHeaderBuf = Buffer.allocUnsafe(4 + 4 + 2); // reused. 32+32+16 bit
     for (const chunk of allChunks) {
-        chunkHeaderBuf.writeInt32BE(chunk.chunk_x, 0);
-        chunkHeaderBuf.writeInt32BE(chunk.chunk_z, 4);
+        chunkHeaderBuf.writeInt32BE(chunk.chunkX, 0);
+        chunkHeaderBuf.writeInt32BE(chunk.chunkZ, 4);
         chunkHeaderBuf.writeUInt16BE(chunk.version, 8);
         await write(chunkHeaderBuf);
         await write(chunk.data);

@@ -1,4 +1,4 @@
-name: Build+Test Server
+name: "Build+Test Server"
 
 on:
   push:
@@ -7,20 +7,31 @@ on:
   pull_request:
     paths:
       - "server/**/*"
+  workflow_call:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        version: ["1.2.15", "latest"]
+    runs-on: "ubuntu-latest"
     steps:
-      - uses: actions/checkout@v3
-      - name: Setup bun.sh
-        uses: oven-sh/setup-bun@v1
+      - uses: "actions/checkout@v4"
+
+      - name: "Setting up Bun"
+        uses: oven-sh/setup-bun@v2
         with:
-          bun-version: ${{ matrix.version }}
-      - run: bun install
-        working-directory: ./server
-      - run: bun test
-        working-directory: ./server
+          bun-version: latest
+
+      - name: "Installing dependencies"
+        working-directory: "./server"
+        run: "bun install"
+
+      - name: "Checking types"
+        working-directory: "./server"
+        run: "bun run check:types"
+
+      - name: "Checking style"
+        working-directory: "./server"
+        run: "bun run check:style"
+
+      - name: "Testing server"
+        working-directory: "./server"
+        run: "bun run test"

@@ -1,10 +1,6 @@
 import node_os from "node:os";
 import node_utils from "node:util";
 
-export function exists<T>(obj: T): obj is NonNullable<T> {
-    return (obj ?? null) !== null;
-}
-
 export const INT8_SIZE = 1;
 export const INT16_SIZE = 2;
 export const INT32_SIZE = 4;

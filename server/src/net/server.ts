@@ -1,6 +1,5 @@
 import { serve, type Server, type ServerWebSocket } from "bun";
 
-import { exists } from "../lang.ts";
 import {
     type ClientPacket,
     decodePacket,
@@ -86,14 +85,13 @@ export class TcpServer {
                     await self.handlers.handleClientConnected(client);
                     client.log("Connected");
                 },
-                async close(socket, err) {
+                async close(socket, code, reason) {
                     const client: TcpClient = socket.data;
                     self.clients.delete(client.id);
-                    if (exists(err)) {
-                        client.warn(`Closed due to an error!`, err);
-                    }
                     await self.handlers.handleClientDisconnected(client);
-                    client.log("Disconnected");
+                    client.log(
+                        `Disconnected (Code: ${code}) (Reason: ${reason})`,
+                    );
                 },
                 async message(socket, message) {
                     const client: TcpClient = socket.data;

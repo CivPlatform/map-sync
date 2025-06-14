@@ -52,10 +52,26 @@ export function getMigrations(): Migrator {
 /** Convenience function to migrate to latest */
 export async function setup() {
     const results = await getMigrations().migrateToLatest();
+    for (const result of results.results ?? []) {
+        switch (result.status) {
+            case "Success":
+                console.info(`Migration [${result.migrationName}] applied!`);
+                break;
+            case "Error":
+                console.error(
+                    `Migration [${result.migrationName}] failed to apply!`,
+                );
+                break;
+            case "NotExecuted":
+                console.warn(
+                    `Migration [${result.migrationName}] was not applied!`,
+                );
+                break;
+        }
+    }
     if (results.error) {
         throw results.error;
     }
-    return results.results ?? [];
 }
 
 /**

@@ -32,6 +32,6 @@ jobs:
         working-directory: "./server"
         run: "bun run check:style"
 
-      - name: "Testing server"
+      - name: "Running tests"
         working-directory: "./server"
         run: "bun run test"

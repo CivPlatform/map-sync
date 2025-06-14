@@ -1,8 +1,9 @@
 import { spawn } from "node:child_process";
 import { promisify } from "node:util";
-import * as database from "./db/database.ts";
+import type DatabaseConnection from "./db/database.ts";
 
 export async function renderTile(
+    database: DatabaseConnection,
     dimension: string,
     tileX: number,
     tileZ: number,

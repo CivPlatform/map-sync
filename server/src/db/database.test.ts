@@ -1,8 +1,8 @@
 import { test } from "bun:test";
 
-test("testMigrations", async () => {
-    process.env["SQLITE_PATH"] = ":memory:"; // Ensure an in-memory database
+import DatabaseConnection from "./database.ts";
 
-    const { setup } = await require("./database.ts");
-    await setup();
+test("testMigrations", async () => {
+    const database = new DatabaseConnection(":memory:");
+    await database.setup();
 });

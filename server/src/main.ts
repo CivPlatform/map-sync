@@ -1,5 +1,5 @@
 import "./cli.ts";
-import * as database from "./db/database.ts";
+import DatabaseConnection from "./db/database.ts";
 import * as metadata from "./metadata.ts";
 import {
     type ClientPacket,
@@ -15,9 +15,17 @@ import {
     ServerboundChunkTimestampsRequestPacket,
 } from "./net/packets.ts";
 import { isAuthed, OnlineAuth, requireAuth } from "./net/auth.ts";
+import { DATA_FOLDER } from "./metadata.ts";
 
 let config: metadata.Config = null!;
 Promise.resolve().then(async () => {
+    const database = new DatabaseConnection(
+        Bun.env["SQLITE_PATH"] ?? `${DATA_FOLDER}/db.sqlite`,
+        {
+            create: true,
+            readwrite: true,
+        },
+    );
     await database.setup();
 
     config = metadata.getConfig();

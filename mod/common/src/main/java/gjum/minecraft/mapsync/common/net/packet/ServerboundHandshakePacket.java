@@ -6,7 +6,7 @@ import org.jetbrains.annotations.NotNull;
 
 /**
  * This should be sent to the server <i>IMMEDIATELY</i> upon connection. If the
- * server accepts the connection, you will receive a {@link ClientboundEncryptionRequestPacket}.
+ * server accepts the connection, you will receive a {@link ClientboundAuthRequestPacket}.
  */
 public class ServerboundHandshakePacket implements Packet {
 	public static final int PACKET_ID = 1;

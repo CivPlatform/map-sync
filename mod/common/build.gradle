@@ -20,6 +20,9 @@ dependencies {
 	modCompileOnly("maven.modrinth:journeymap:5JbcGXLn")
 	// https://modrinth.com/mod/xaeros-minimap/version/23.6.2_Fabric_1.18.2 (23.6.2 fabric)
 	modCompileOnly("maven.modrinth:xaeros-minimap:Jwydpps9")
+
+	// https://github.com/TooTallNate/Java-WebSocket
+	compileOnly("org.java-websocket:Java-WebSocket:1.6.0")
 }
 
 tasks {

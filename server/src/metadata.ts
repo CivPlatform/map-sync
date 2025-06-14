@@ -1,17 +1,15 @@
 import node_fs from "node:fs";
 import node_path from "node:path";
 import { Mutex } from "async-mutex";
-import * as errors from "./deps/errors";
-import * as json from "./deps/json";
-import * as z from "zod";
-import { fromZodError } from "zod-validation-error";
+import z, { prettifyError } from "zod/v4";
+import { Errors, type JSONValue, parseJson } from "./lang.ts";
 
 export const DATA_FOLDER = process.env["MAPSYNC_DATA_DIR"] ?? "./mapsync";
 try {
     node_fs.mkdirSync(DATA_FOLDER, { recursive: true });
     console.log(`Created data folder "${DATA_FOLDER}"`);
 } catch (e: any) {
-    if (errors.getErrorType(e) !== errors.ErrorType.FileExists) throw e;
+    if (Errors.getErrorType(e) !== Errors.ErrorType.FileExists) throw e;
     console.log(`Using data folder "${DATA_FOLDER}"`);
 }
 
@@ -25,7 +23,7 @@ try {
  */
 function parseConfigFile<T>(
     file: string,
-    parser: (raw: json.JSONValue) => T,
+    parser: (raw: JSONValue) => T,
     defaultSupplier: () => any,
 ): T {
     file = node_path.resolve(DATA_FOLDER, file);
@@ -33,7 +31,7 @@ function parseConfigFile<T>(
     try {
         fileContents = node_fs.readFileSync(file, "utf8");
     } catch (e) {
-        if (errors.getErrorType(e) !== errors.ErrorType.FileNotFound) {
+        if (Errors.getErrorType(e) !== Errors.ErrorType.FileNotFound) {
             throw e;
         }
         // Could not find the config file, so attempt to create a default one
@@ -46,10 +44,10 @@ function parseConfigFile<T>(
         return defaultContent;
     }
     try {
-        return parser(json.parse(fileContents));
+        return parser(parseJson(fileContents));
     } catch (e) {
         if (e instanceof z.ZodError) {
-            throw "Could not parse " + file + ": " + fromZodError(e);
+            throw "Could not parse " + file + ": " + prettifyError(e);
         }
         throw e;
     }
@@ -125,7 +123,7 @@ export async function saveWhitelist() {
 
 const UUID_CACHE_FILE = "uuid_cache.json";
 const UUID_CACHE_MUTEX = new Mutex();
-const UUID_CACHE_SCHEMA = z.record(z.string().uuid());
+const UUID_CACHE_SCHEMA = z.record(z.string(), z.uuid());
 //                         IGN     UUID
 const uuid_cache = new Map<string, string>();
 

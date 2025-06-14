@@ -32,7 +32,7 @@ public class CatchupLogic {
 		if (catchupChunks.isEmpty()) return;
 		var catchupDim = catchupChunks.get(0).dimension();
 		if (!dimensionState.dimension.equals(catchupDim)) {
-			logger.warn("Catchup chunks from wrong dimension " + catchupDim + ", expected " + dimensionState.dimension);
+			LOGGER.warn("Catchup chunks from wrong dimension " + catchupDim + ", expected " + dimensionState.dimension);
 			return;
 		}
 		synchronized (this.catchupChunks) {

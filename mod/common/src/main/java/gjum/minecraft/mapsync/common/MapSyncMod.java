@@ -4,13 +4,16 @@ import com.mojang.blaze3d.platform.InputConstants;
 import gjum.minecraft.mapsync.common.config.ModConfig;
 import gjum.minecraft.mapsync.common.config.ServerConfig;
 import gjum.minecraft.mapsync.common.data.*;
+import gjum.minecraft.mapsync.common.net.SyncAddress;
 import gjum.minecraft.mapsync.common.net.SyncClient;
 import gjum.minecraft.mapsync.common.net.packet.*;
+import java.util.stream.Collectors;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ServerData;
 import net.minecraft.network.protocol.game.ClientboundLoginPacket;
 import net.minecraft.network.protocol.game.ClientboundRespawnPacket;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.jetbrains.annotations.NotNull;
@@ -18,7 +21,6 @@ import org.jetbrains.annotations.Nullable;
 import org.lwjgl.glfw.GLFW;
 
 import java.util.*;
-import java.util.stream.Collectors;
 
 import static gjum.minecraft.mapsync.common.Cartography.chunkTileFromLevel;
 
@@ -27,7 +29,7 @@ public abstract class MapSyncMod {
 
 	private static final Minecraft mc = Minecraft.getInstance();
 
-	public static final Logger logger = LogManager.getLogger(MapSyncMod.class);
+	public static final Logger LOGGER = LogManager.getLogger(MapSyncMod.class);
 
 	private static MapSyncMod INSTANCE;
 
@@ -123,30 +125,41 @@ public abstract class MapSyncMod {
 		if (syncServerAddresses.isEmpty()) return shutDownSyncClients();
 
 		// will be filled with clients that are still wanted (address) and are still connected
-		var existingClients = new HashMap<String, SyncClient>();
+		var existingClients = new HashMap<SyncAddress, SyncClient>();
 
-		for (SyncClient client : syncClients) {
-			if (client.isShutDown) continue;
+		for (final SyncClient client : this.syncClients) {
+			if (client.isShutDown) {
+				continue;
+			}
 			// avoid reconnecting to same sync server, to keep shared state (expensive to resync)
-			if (!client.gameAddress.equals(serverConfig.gameAddress)) {
-				debugLog("Disconnecting sync client; different game server");
+			if (!StringUtils.equals(client.gameAddress, serverConfig.gameAddress)) {
+				LOGGER.warn("Disconnecting sync client; different game server");
 				client.shutDown();
-			} else if (!syncServerAddresses.contains(client.address)) {
-				debugLog("Disconnecting sync client; different sync address");
+			}
+			else if (!syncServerAddresses.contains(client.syncAddress.toString())) {
+				LOGGER.warn("Disconnecting sync client; different sync address");
 				client.shutDown();
-			} else {
-				existingClients.put(client.address, client);
+			}
+			else {
+				existingClients.put(client.syncAddress, client);
 			}
 		}
 
-		syncClients = syncServerAddresses.stream().map(address -> {
-			var client = existingClients.get(address);
-			if (client == null) client = new SyncClient(address, serverConfig.gameAddress);
-			client.autoReconnect = true;
-			return client;
-		}).collect(Collectors.toList());
+		this.syncClients = syncServerAddresses.stream()
+			.map(SyncAddress::of)
+			.filter(Objects::nonNull)
+			.distinct()
+			.map((address) -> {
+				SyncClient client = existingClients.get(address);
+				if (client == null) {
+					client = new SyncClient(address, serverConfig.gameAddress);
+				}
+				client.autoReconnect = true;
+				return client;
+			})
+			.collect(Collectors.toCollection(ArrayList::new));
 
-		return syncClients;
+		return this.syncClients;
 	}
 
 	public List<SyncClient> shutDownSyncClients() {
@@ -214,11 +227,6 @@ public abstract class MapSyncMod {
 		// TODO update ChunkTile in a second or so; remember dimension in case it changes til then
 	}
 
-	public void handleSyncServerEncryptionSuccess() {
-		debugLog("tcp encrypted");
-		// TODO tell server our current dimension
-	}
-
 	public void handleRegionTimestamps(ClientboundRegionTimestampsPacket packet, SyncClient client) {
 		DimensionState dimension = getDimensionState();
 		if (dimension == null) return;
@@ -258,7 +266,7 @@ public abstract class MapSyncMod {
 	public void handleCatchupData(ClientboundChunkTimestampsResponsePacket packet) {
 		var dimensionState = getDimensionState();
 		if (dimensionState == null) return;
-		debugLog("received catchup: " + packet.chunks.size() + " " + packet.chunks.get(0).syncClient.address);
+		debugLog("received catchup: " + packet.chunks.size() + " " + packet.chunks.get(0).syncClient.syncAddress);
 		dimensionState.addCatchupChunks(packet.chunks);
 	}
 
@@ -269,9 +277,9 @@ public abstract class MapSyncMod {
 		}
 
 		debugLog("requesting more catchup: " + chunks.size());
-		var byServer = new HashMap<String, List<CatchupChunk>>();
+		var byServer = new HashMap<SyncAddress, List<CatchupChunk>>();
 		for (CatchupChunk chunk : chunks) {
-			var list = byServer.computeIfAbsent(chunk.syncClient.address, (a) -> new ArrayList<>());
+			var list = byServer.computeIfAbsent(chunk.syncClient.syncAddress, (a) -> new ArrayList<>());
 			list.add(chunk);
 		}
 		for (List<CatchupChunk> chunksForServer : byServer.values()) {
@@ -283,7 +291,7 @@ public abstract class MapSyncMod {
 	public static void debugLog(String msg) {
 		// we could also make use of slf4j's debug() but I don't know how to reconfigure that at runtime based on globalConfig
 		if (modConfig.isShowDebugLog()) {
-			logger.info(msg);
+			LOGGER.info(msg);
 		}
 	}
 }

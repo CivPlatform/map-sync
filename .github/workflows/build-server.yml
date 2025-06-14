@@ -1,4 +1,4 @@
-name: Build+Test Server
+name: "Build+Test Server"
 
 on:
   push:
@@ -7,23 +7,31 @@ on:
   pull_request:
     paths:
       - "server/**/*"
+  workflow_call:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        version: ["lts/*", "latest"]
+    runs-on: "ubuntu-latest"
     steps:
-      - uses: actions/checkout@v3
-      - name: Use latest Node.js LTS
-        uses: actions/setup-node@v3
+      - uses: "actions/checkout@v4"
+
+      - name: "Setting up Bun"
+        uses: oven-sh/setup-bun@v2
         with:
-          node-version: ${{ matrix.version }}
-          # cache: "yarn"
-      - run: yarn
-        working-directory: ./server
-      - run: yarn build
-        working-directory: ./server
-      - run: yarn test
-        working-directory: ./server
+          bun-version: latest
+
+      - name: "Installing dependencies"
+        working-directory: "./server"
+        run: "bun install"
+
+      - name: "Checking types"
+        working-directory: "./server"
+        run: "bun run check:types"
+
+      - name: "Checking style"
+        working-directory: "./server"
+        run: "bun run check:style"
+
+      - name: "Running tests"
+        working-directory: "./server"
+        run: "bun run test"

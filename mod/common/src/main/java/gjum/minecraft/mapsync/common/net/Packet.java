@@ -81,4 +81,13 @@ public interface Packet {
 				resourceKey.location().toString()
 		);
 	}
+
+	static void assertNoRemainder(
+		final @NotNull ByteBuf in
+	) {
+		final int remainder = in.readableBytes();
+		if (remainder > 0) {
+			throw new IllegalStateException("Found [" + remainder + "] remaining bytes!");
+		}
+	}
 }

@@ -1,5 +1,5 @@
 [package]
-name = "civmap-render"
+name = "mapsync-render"
 version = "0.1.0"
 edition = "2021"
 authors = ["Gjum <code.gjum@gmail.com>"]

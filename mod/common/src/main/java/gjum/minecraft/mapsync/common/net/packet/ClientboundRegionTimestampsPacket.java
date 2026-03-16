@@ -10,39 +10,39 @@ import io.netty.buffer.ByteBuf;
  * {@link ServerboundChunkTimestampsRequestPacket}.
  */
 public class ClientboundRegionTimestampsPacket implements Packet {
-  public static final int PACKET_ID = 7;
+	public static final int PACKET_ID = 7;
 
-  private final String dimension;
+	private final String dimension;
 
-  private final RegionTimestamp[] timestamps;
+	private final RegionTimestamp[] timestamps;
 
-  public ClientboundRegionTimestampsPacket(String dimension, RegionTimestamp[] timestamps) {
-    this.dimension = dimension;
-    this.timestamps = timestamps;
-  }
+	public ClientboundRegionTimestampsPacket(String dimension, RegionTimestamp[] timestamps) {
+		this.dimension = dimension;
+		this.timestamps = timestamps;
+	}
 
-  public String getDimension() {
-    return dimension;
-  }
+	public String getDimension() {
+		return dimension;
+	}
 
-  public RegionTimestamp[] getTimestamps() {
-    return timestamps;
-  }
+	public RegionTimestamp[] getTimestamps() {
+		return timestamps;
+	}
 
-  public static Packet read(ByteBuf buf) {
-    String dimension = Packet.readUtf8String(buf);
+	public static Packet read(ByteBuf buf) {
+		String dimension = Packet.readUtf8String(buf);
 
-    short totalRegions = buf.readShort();
-    RegionTimestamp[] timestamps = new RegionTimestamp[totalRegions];
-    // row = x
-    for (short i = 0; i < totalRegions; i++) {
-      short regionX = buf.readShort();
-      short regionZ = buf.readShort();
+		short totalRegions = buf.readShort();
+		RegionTimestamp[] timestamps = new RegionTimestamp[totalRegions];
+		// row = x
+		for (short i = 0; i < totalRegions; i++) {
+			short regionX = buf.readShort();
+			short regionZ = buf.readShort();
 
-      long timestamp = buf.readLong();
-      timestamps[i] = new RegionTimestamp(regionX, regionZ, timestamp);
-    }
+			long timestamp = buf.readLong();
+			timestamps[i] = new RegionTimestamp(regionX, regionZ, timestamp);
+		}
 
-    return new ClientboundRegionTimestampsPacket(dimension, timestamps);
-  }
+		return new ClientboundRegionTimestampsPacket(dimension, timestamps);
+	}
 }

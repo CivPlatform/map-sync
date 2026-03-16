@@ -11,19 +11,15 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        version: ["lts/*", "latest"]
     steps:
       - uses: actions/checkout@v3
-      - name: Use latest Node.js LTS
-        uses: actions/setup-node@v3
+      - name: Using nodejs v18
+        uses: actions/setup-node@v6
         with:
-          node-version: ${{ matrix.version }}
-          # cache: "yarn"
-      - run: yarn
+          node-version: "18"
+      - run: npm install
         working-directory: ./server
-      - run: yarn build
+      - run: npm run build
         working-directory: ./server
-      - run: yarn test
+      - run: npm run test
         working-directory: ./server

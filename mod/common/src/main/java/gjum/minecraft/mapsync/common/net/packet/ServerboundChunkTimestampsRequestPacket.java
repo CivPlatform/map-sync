@@ -13,23 +13,23 @@ import java.util.List;
  * expect a {@link ClientboundChunkTimestampsResponsePacket}.
  */
 public class ServerboundChunkTimestampsRequestPacket implements Packet {
-  public static final int PACKET_ID = 8;
+	public static final int PACKET_ID = 8;
 
-  private final String dimension;
-  private final List<RegionPos> regions;
+	private final String dimension;
+	private final List<RegionPos> regions;
 
-  public ServerboundChunkTimestampsRequestPacket(String dimension, List<RegionPos> regions) {
-    this.dimension = dimension;
-    this.regions = regions;
-  }
+	public ServerboundChunkTimestampsRequestPacket(String dimension, List<RegionPos> regions) {
+		this.dimension = dimension;
+		this.regions = regions;
+	}
 
-  @Override
-  public void write(@NotNull ByteBuf buf) {
-    Packet.writeUtf8String(buf, dimension);
-    buf.writeShort(regions.size());
-    for (var region : regions) {
-      buf.writeShort(region.x());
-      buf.writeShort(region.z());
-    }
-  }
+	@Override
+	public void write(@NotNull ByteBuf buf) {
+		Packet.writeUtf8String(buf, dimension);
+		buf.writeShort(regions.size());
+		for (var region : regions) {
+			buf.writeShort(region.x());
+			buf.writeShort(region.z());
+		}
+	}
 }

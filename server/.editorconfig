@@ -1,0 +1,4 @@
+# https://editorconfig.org
+
+[*.{ts,json}]
+indent_style = space

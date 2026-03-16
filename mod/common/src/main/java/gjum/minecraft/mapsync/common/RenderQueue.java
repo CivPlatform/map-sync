@@ -58,7 +58,7 @@ public class RenderQueue {
 
 				if (!JourneyMapHelper.isJourneyMapNotAvailable && !JourneyMapHelper.isMapping()
 						|| !VoxelMapHelper.isVoxelMapNotAvailable && !VoxelMapHelper.isMapping()
-                        || !XaerosWorldMapHelper.isXaerosWorldMapNotAvailable && !XaerosWorldMapHelper.isMapping()
+						|| !XaerosWorldMapHelper.isXaerosWorldMapNotAvailable && !XaerosWorldMapHelper.isMapping()
 				) {
 					debugLog("render is waiting til map mod is ready");
 					Thread.sleep(1000);
@@ -80,7 +80,7 @@ public class RenderQueue {
 				} else {
 					boolean voxelRendered = VoxelMapHelper.updateWithChunkTile(chunkTile);
 					boolean renderedJM = JourneyMapHelper.updateWithChunkTile(chunkTile);
-                    boolean xaeroRendered = XaerosWorldMapHelper.updateWithChunkTile(chunkTile);
+					boolean xaeroRendered = XaerosWorldMapHelper.updateWithChunkTile(chunkTile);
 
 					debugLog("rendered? " + (voxelRendered||renderedJM|| xaeroRendered) + " " + chunkTile.chunkPos() + " queue=" + queue.size());
 

@@ -9,7 +9,7 @@ public class XaerosWorldMapHelper {
 
 	static {
 		try {
-            // TODO: update when found needed
+			// TODO: update when found needed
 			Class.forName("xaero.map.WorldMap");
 			isXaerosWorldMapNotAvailable = false;
 		} catch (NoClassDefFoundError | ClassNotFoundException ignored) {

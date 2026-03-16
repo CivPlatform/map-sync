@@ -1,5 +1,5 @@
 import "./cli";
-import { setServer } from './cli';
+import { setServer } from "./cli";
 import * as database from "./database";
 import * as metadata from "./metadata";
 import { ClientPacket } from "./protocol";

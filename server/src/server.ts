@@ -219,7 +219,7 @@ export class TcpClient {
         const writer = new BufWriter(); // TODO size hint
         writer.writeUInt32(0); // set later, but reserve space in buffer
         encodePacket(pkt, writer);
-        let buf = writer.getBuffer();
+        let buf: Buffer = writer.getBuffer();
         buf.writeUInt32BE(buf.length - 4, 0); // write into space reserved above
 
         if (doCrypto) {

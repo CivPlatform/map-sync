@@ -43,7 +43,7 @@ public class JsonConfig {
 			System.out.println("[map-sync] Created default " + file);
 			return config;
 		} catch (NoSuchMethodException | InstantiationException | IllegalAccessException |
-		         InvocationTargetException ex) {
+				 InvocationTargetException ex) {
 			throw new IllegalArgumentException(ex);
 		}
 	}

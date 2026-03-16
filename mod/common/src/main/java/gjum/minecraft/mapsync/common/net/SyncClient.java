@@ -242,45 +242,45 @@ public class SyncClient {
 	}
 
 	void setUpEncryption(ChannelHandlerContext ctx, ClientboundEncryptionRequestPacket packet) {
-        byte[] sharedSecret = new byte[16];
-        ThreadLocalRandom.current().nextBytes(sharedSecret);
+		byte[] sharedSecret = new byte[16];
+		ThreadLocalRandom.current().nextBytes(sharedSecret);
 
-        if (!MapSyncMod.getMod().isDevMode()) {
-            // note that this is different from minecraft (we get no negative hashes)
-            final String shaHex = HexFormat.of().formatHex(Hasher.sha1()
-                    .update(sharedSecret)
-                    .update(packet.publicKey.getEncoded())
-                    .generateHash()
-            );
+		if (!MapSyncMod.getMod().isDevMode()) {
+			// note that this is different from minecraft (we get no negative hashes)
+			final String shaHex = HexFormat.of().formatHex(Hasher.sha1()
+					.update(sharedSecret)
+					.update(packet.publicKey.getEncoded())
+					.generateHash()
+			);
 
-            final User session = Minecraft.getInstance().getUser();
-            try {
-                Minecraft.getInstance().services().sessionService().joinServer(
-                        session.getProfileId(),
-                        session.getAccessToken(),
-                        shaHex
-                );
-            } catch (AuthenticationException e) {
-                SyncClient.logger.warn("Auth error (probably cracked): " + e.getMessage());
-            }
-        }
+			final User session = Minecraft.getInstance().getUser();
+			try {
+				Minecraft.getInstance().services().sessionService().joinServer(
+						session.getProfileId(),
+						session.getAccessToken(),
+						shaHex
+				);
+			} catch (AuthenticationException e) {
+				SyncClient.logger.warn("Auth error (probably cracked): " + e.getMessage());
+			}
+		}
 
-        try {
-            ctx.channel().writeAndFlush(new ServerboundEncryptionResponsePacket(
-                    encrypt(packet.publicKey, sharedSecret),
-                    encrypt(packet.publicKey, packet.verifyToken)));
-        } catch (NoSuchAlgorithmException | InvalidKeyException | NoSuchPaddingException | BadPaddingException |
-                 IllegalBlockSizeException e) {
-            shutDown();
-            throw new RuntimeException(e);
-        }
+		try {
+			ctx.channel().writeAndFlush(new ServerboundEncryptionResponsePacket(
+					encrypt(packet.publicKey, sharedSecret),
+					encrypt(packet.publicKey, packet.verifyToken)));
+		} catch (NoSuchAlgorithmException | InvalidKeyException | NoSuchPaddingException | BadPaddingException |
+				 IllegalBlockSizeException e) {
+			shutDown();
+			throw new RuntimeException(e);
+		}
 
-        SecretKey secretKey = new SecretKeySpec(sharedSecret, "AES");
-        ctx.pipeline()
-                .addFirst("encrypt", new EncryptionEncoder(secretKey))
-                .addFirst("decrypt", new EncryptionDecoder(secretKey));
+		SecretKey secretKey = new SecretKeySpec(sharedSecret, "AES");
+		ctx.pipeline()
+				.addFirst("encrypt", new EncryptionEncoder(secretKey))
+				.addFirst("decrypt", new EncryptionDecoder(secretKey));
 
-        handleEncryptionSuccess();
+		handleEncryptionSuccess();
 	}
 
 	private static byte[] encrypt(PublicKey key, byte[] data) throws NoSuchPaddingException, NoSuchAlgorithmException, BadPaddingException, IllegalBlockSizeException, InvalidKeyException {

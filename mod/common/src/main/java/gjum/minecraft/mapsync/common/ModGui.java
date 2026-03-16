@@ -48,11 +48,11 @@ public class ModGui extends Screen {
 			right = width / 2 + innerWidth / 2;
 			top = height / 3;
 
-            centerX = width / 2;
-            centerY = width / 2;
+			centerX = width / 2;
+			centerY = width / 2;
 
-            int buttonWidth = 100;
-            int buttonHeight = 20;
+			int buttonWidth = 100;
+			int buttonHeight = 20;
 
 			clearWidgets();
 

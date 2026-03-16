@@ -8,15 +8,15 @@ COPY ./server/package.json /usr/src/app/package.json
 
 FROM base AS build
 
-COPY ./server/yarn.lock /usr/src/app/yarn.lock
-RUN yarn
+COPY ./server/package-lock.json /usr/src/app/package-lock.json
+RUN npm install
 
 # copy source as late as possible, to reuse docker cache with node_modules
 COPY ./server /usr/src/app
-RUN yarn build
+RUN npm run build
 
 FROM build AS test
-RUN yarn test
+RUN npm run test
 
 # final image only includes minimal files
 FROM base AS deploy
@@ -33,4 +33,4 @@ ENV MAPSYNC_DATA_DIR=/data
 
 EXPOSE 12312/tcp
 
-CMD [ "yarn", "start" ]
+CMD [ "npm", "start" ]

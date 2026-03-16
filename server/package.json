@@ -1,5 +1,5 @@
 {
-    "name": "civmap-server",
+    "name": "mapsync-server",
     "version": "SNAPSHOT",
     "private": true,
     "author": "Gjum",
@@ -25,6 +25,9 @@
         "dotenv": "^16.0.1",
         "prettier": "^3.0.1",
         "typescript": "^5.1.6"
+    },
+    "engines": {
+        "node": "18.x"
     },
     "prettier": {
         "useTabs": false,

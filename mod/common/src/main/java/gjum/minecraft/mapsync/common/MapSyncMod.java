@@ -38,16 +38,16 @@ public abstract class MapSyncMod {
 		return INSTANCE;
 	}
 
-    public static final String MOD_ID = "mapsync";
+	public static final String MOD_ID = "mapsync";
 
-    public static final Identifier CATEGORY_ID = Identifier.fromNamespaceAndPath(MOD_ID, "general");
-    public static final KeyMapping.Category CATEGORY = KeyMapping.Category.register(CATEGORY_ID);
+	public static final Identifier CATEGORY_ID = Identifier.fromNamespaceAndPath(MOD_ID, "general");
+	public static final KeyMapping.Category CATEGORY = KeyMapping.Category.register(CATEGORY_ID);
 
 	private static final KeyMapping openGuiKey = new KeyMapping(
 			"key.map-sync.openGui",
 			InputConstants.Type.KEYSYM,
 			GLFW.GLFW_KEY_COMMA,
-            CATEGORY
+			CATEGORY
 			//"category.map-sync"
 	);
 

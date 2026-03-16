@@ -18,7 +18,9 @@ const term = lib_readline.createInterface({
 }) as TermType;
 
 let tcpServer: TcpServer;
-export function setServer(server: TcpServer): void { tcpServer = server; }
+export function setServer(server: TcpServer): void {
+    tcpServer = server;
+}
 
 if (!("MAPSYNC_DUMB_TERM" in process.env)) {
     //Adapted from https://stackoverflow.com/questions/10606814/readline-with-console-log-in-the-background/10608048#10608048
@@ -128,7 +130,7 @@ async function handle_input(input: string): Promise<void> {
         let i = 1;
         for (const key in tcpServer.clients) {
             let client = tcpServer.clients[key];
-            console.log(`${i++}. ${client.mcName}: ${client.uuid}`)
+            console.log(`${i++}. ${client.mcName}: ${client.uuid}`);
         }
     } else if (command === "send") {
         const target = extras.trim(); // IGN or UUID
@@ -136,10 +138,16 @@ async function handle_input(input: string): Promise<void> {
         const client = Object.values(tcpServer.clients).find(
             (c) => c.mcName === target || c.uuid === target,
         );
-        if (!client) { console.log("No online client with that name/UUID"); return; }
+        if (!client) {
+            console.log("No online client with that name/UUID");
+            return;
+        }
 
         const world = client.world;
-        if (!world) { console.log("Client has no world yet"); return; }
+        if (!world) {
+            console.log("Client has no world yet");
+            return;
+        }
 
         const regions = await database.getRegionTimestamps(world);
         await client.send({

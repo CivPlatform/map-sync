@@ -1,8 +1,0 @@
-# https://editorconfig.org
-
-[*.rs]
-indent_style = space
-
-[*.json]
-indent_style = space
-indent_size = 2

@@ -6,6 +6,9 @@ import gjum.minecraft.mapsync.common.config.ServerConfig;
 import gjum.minecraft.mapsync.common.data.*;
 import gjum.minecraft.mapsync.common.net.SyncClient;
 import gjum.minecraft.mapsync.common.net.packet.*;
+import java.io.IOException;
+import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ServerData;
@@ -24,7 +27,18 @@ import java.util.stream.Collectors;
 import static gjum.minecraft.mapsync.common.Cartography.chunkTileFromLevel;
 
 public abstract class MapSyncMod {
-	public static final String VERSION = "%VERSION%";
+	public static final String VERSION; static {
+		final InputStream in = MapSyncMod.class.getResourceAsStream("/mapsync.version.const");
+		if (in == null) {
+			throw new ExceptionInInitializerError(new NullPointerException("'mapsync.version.const' const is missing!"));
+		}
+		try (in) {
+			VERSION = new String(in.readAllBytes(), StandardCharsets.UTF_8).trim();
+		}
+		catch (final IOException e) {
+			throw new ExceptionInInitializerError(e);
+		}
+	}
 
 	private static final Minecraft mc = Minecraft.getInstance();
 

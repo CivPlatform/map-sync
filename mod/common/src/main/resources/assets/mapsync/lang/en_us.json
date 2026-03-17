@@ -1,4 +1,4 @@
 {
 	"key.map-sync.openGui": "Open GUI",
-	"category.map-sync": "${mod_display_name}"
+	"key.category.mapsync.general": "${mod_display_name}"
 }

@@ -21,7 +21,7 @@ subprojects {
 		minecraft "com.mojang:minecraft:${rootProject.minecraft_version}"
 		mappings loom.layered() {
 			officialMojangMappings()
-			parchment("org.parchmentmc.data:parchment-${project.minecraft_version}:${project.parchment_version}@zip")
+			parchment("org.parchmentmc.data:${project.parchment_name}:${project.parchment_version}@zip")
 		}
 	}
 }

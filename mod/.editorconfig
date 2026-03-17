@@ -1,0 +1,4 @@
+# https://editorconfig.org
+
+[*.const]
+insert_final_newline = false

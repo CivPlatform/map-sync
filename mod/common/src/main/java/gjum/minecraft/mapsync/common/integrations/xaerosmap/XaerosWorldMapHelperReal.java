@@ -1,4 +1,4 @@
-package gjum.minecraft.mapsync.common.integration;
+package gjum.minecraft.mapsync.common.integrations.xaerosmap;
 
 import gjum.minecraft.mapsync.common.data.BlockColumn;
 import gjum.minecraft.mapsync.common.data.BlockInfo;

@@ -1,4 +1,4 @@
-package gjum.minecraft.mapsync.common.integration;
+package gjum.minecraft.mapsync.common.integrations.journeymap;
 
 import java.util.regex.Pattern;
 

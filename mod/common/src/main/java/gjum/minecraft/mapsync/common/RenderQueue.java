@@ -1,9 +1,9 @@
 package gjum.minecraft.mapsync.common;
 
 import gjum.minecraft.mapsync.common.data.ChunkTile;
-import gjum.minecraft.mapsync.common.integration.JourneyMapHelper;
-import gjum.minecraft.mapsync.common.integration.VoxelMapHelper;
-import gjum.minecraft.mapsync.common.integration.XaerosWorldMapHelper;
+import gjum.minecraft.mapsync.common.integrations.journeymap.JourneyMapHelper;
+import gjum.minecraft.mapsync.common.integrations.voxelmap.VoxelMapHelper;
+import gjum.minecraft.mapsync.common.integrations.xaerosmap.XaerosWorldMapHelper;
 import net.minecraft.client.Minecraft;
 import org.jetbrains.annotations.NotNull;
 
@@ -57,7 +57,7 @@ public class RenderQueue {
 				}
 
 				if (!JourneyMapHelper.isJourneyMapNotAvailable && !JourneyMapHelper.isMapping()
-						|| !VoxelMapHelper.isVoxelMapNotAvailable && !VoxelMapHelper.isMapping()
+						|| VoxelMapHelper.isModAvailable && !VoxelMapHelper.isMapping()
 						|| !XaerosWorldMapHelper.isXaerosWorldMapNotAvailable && !XaerosWorldMapHelper.isMapping()
 				) {
 					debugLog("render is waiting til map mod is ready");

@@ -9,7 +9,8 @@ dependencies {
 	modImplementation "net.fabricmc:fabric-loader:${rootProject.fabric_loader_version}"
 
 	// https://modrinth.com/mod/voxelmap-updated/version/1.21.11-1.15.13
-	modCompileOnly("maven.modrinth:voxelmap-updated:tRdGJKGE")
+	// Don't forget to update the version in the fabric version
+	modCompileOnly("maven.modrinth:voxelmap-updated:At2wqJfr")
 	// https://modrinth.com/mod/journeymap/version/1.21.11-6.0.0-beta.56+fabric
 	modCompileOnly("maven.modrinth:journeymap:OSpjUIEM")
 	// https://modrinth.com/mod/xaeros-world-map/version/fabric-1.21.11-1.40.11

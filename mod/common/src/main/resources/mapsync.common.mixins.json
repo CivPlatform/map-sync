@@ -3,7 +3,12 @@
 	"minVersion": "0.8",
 	"package": "gjum.minecraft.mapsync.common.mixins",
 	"compatibilityLevel": "JAVA_21",
+	"plugin": "gjum.minecraft.mapsync.common.MixinManager",
 	"client": [
+		"voxelmap.CachedRegionAccessor",
+		"voxelmap.PersistentMapAccessor",
+		"voxelmap.VoxelMapMixin",
+
 		"MixinClientPacketListener"
 	],
 	"injectors": {

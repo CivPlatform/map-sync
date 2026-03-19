@@ -26,6 +26,9 @@ dependencies {
 
 	// https://modrinth.com/mod/modmenu/version/3.2.5 (3.2.5 fabric)
 	modCompileOnly("maven.modrinth:modmenu:nVxObSbX")
+
+	// This needs to be included or otherwise the mixins cannot compile
+	modCompileOnly("maven.modrinth:voxelmap-updated:At2wqJfr")
 }
 
 processResources {

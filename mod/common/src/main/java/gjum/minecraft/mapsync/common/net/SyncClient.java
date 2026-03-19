@@ -6,7 +6,7 @@ import gjum.minecraft.mapsync.common.data.ChunkTile;
 import gjum.minecraft.mapsync.common.net.encryption.EncryptionDecoder;
 import gjum.minecraft.mapsync.common.net.encryption.EncryptionEncoder;
 import gjum.minecraft.mapsync.common.net.packet.*;
-import gjum.minecraft.mapsync.common.utils.Hasher;
+import gjum.minecraft.mapsync.common.utils.Shortcuts;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.*;
 import io.netty.channel.nio.NioEventLoopGroup;
@@ -247,11 +247,12 @@ public class SyncClient {
 
 		if (!MapSyncMod.getMod().isDevMode()) {
 			// note that this is different from minecraft (we get no negative hashes)
-			final String shaHex = HexFormat.of().formatHex(Hasher.sha1()
-					.update(sharedSecret)
-					.update(packet.publicKey.getEncoded())
-					.generateHash()
-			);
+			final String shaHex; {
+				final MessageDigest md = Shortcuts.shaHash();
+				md.update(sharedSecret);
+				md.update(packet.publicKey.getEncoded());
+				shaHex = HexFormat.of().formatHex(md.digest());
+			}
 
 			final User session = Minecraft.getInstance().getUser();
 			try {

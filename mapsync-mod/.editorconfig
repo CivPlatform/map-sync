@@ -1,4 +1,7 @@
 # https://editorconfig.org
 
+[*.bat]
+end_of_line = crlf
+
 [*.const]
 insert_final_newline = false

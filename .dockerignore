@@ -2,6 +2,6 @@
 **/.git/
 **/dist/
 **/*.sqlite
-/mod
+/mapsync-mod
 /notes
 /data

@@ -8,9 +8,6 @@ insert_final_newline = true
 indent_style = tab
 indent_size = 4
 
-[*.bat]
-end_of_line = crlf
-
 [*.{yml,yaml}]
 indent_style = space
 indent_size = 2

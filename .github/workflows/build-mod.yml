@@ -3,10 +3,10 @@ name: "Build Mod"
 on:
   push:
     paths:
-      - "mod/**/*"
+      - "mapsync-mod/**/*"
   pull_request:
     paths:
-      - "mod/**/*"
+      - "mapsync-mod/**/*"
 
 jobs:
   build:
@@ -22,13 +22,13 @@ jobs:
 
       - name: "Compile mod"
         run: "./gradlew build"
-        working-directory: "./mod"
+        working-directory: "./mapsync-mod"
 
       - name: "Upload Build"
         uses: "actions/upload-artifact@v7"
         with:
           name: "Fabric"
-          path: "mod/dist/*.jar"
+          path: "mapsync-mod/dist/*.jar"
 
       - name: "Release Tag"
         if: "startsWith(github.ref, 'refs/tags/v')"
@@ -37,6 +37,6 @@ jobs:
           prerelease: true
           fail_on_unmatched_files: true
           files: |
-            mod/dist/*.jar
+            mapsync-mod/dist/*.jar
         env:
           GITHUB_TOKEN: "${{ secrets.GITHUB_TOKEN }}"

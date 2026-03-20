@@ -3,10 +3,10 @@ name: Build+Test Server
 on:
   push:
     paths:
-      - "server/**/*"
+      - "mapsync-server/**/*"
   pull_request:
     paths:
-      - "server/**/*"
+      - "mapsync-server/**/*"
 
 jobs:
   build:
@@ -18,8 +18,8 @@ jobs:
         with:
           node-version: "18"
       - run: npm install
-        working-directory: ./server
+        working-directory: ./mapsync-server
       - run: npm run build
-        working-directory: ./server
+        working-directory: ./mapsync-server
       - run: npm run test
-        working-directory: ./server
+        working-directory: ./mapsync-server

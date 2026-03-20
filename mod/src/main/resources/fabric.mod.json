@@ -15,7 +15,7 @@
 	"environment": "client",
 	"entrypoints": {
 		"client": [
-            "gjum.minecraft.mapsync.mod.MapSyncMod"
+			"gjum.minecraft.mapsync.mod.MapSyncMod"
 		],
 		"modmenu": [
 			"gjum.minecraft.mapsync.mod.integrations.modmenu.ModMenuIntegration"

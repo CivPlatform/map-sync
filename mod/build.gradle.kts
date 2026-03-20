@@ -1,0 +1,107 @@
+plugins {
+	alias(libs.plugins.fabricLoom)
+}
+
+private val mod_name = project.property("mod_name").toString()
+version = "${project.property("mod_version")}-${libs.versions.minecraft.get()}"
+
+base {
+	archivesName = project.property("archives_base_name").toString()
+}
+
+dependencies {
+	minecraft(libs.minecraft)
+	loom {
+		mappings(layered {
+			officialMojangMappings()
+			parchment(libs.parchment)
+		})
+	}
+	modImplementation(libs.fabricLoader)
+	modImplementation(libs.fabricApi)
+	modLocalRuntime(libs.fixChat)
+	modImplementation(libs.modmenu)
+
+	modImplementation(libs.voxelmap)
+	modCompileOnly(libs.journeymap)
+	modCompileOnly(libs.xaerosmap)
+}
+
+repositories {
+	maven(url = "https://maven.parchmentmc.org") {
+		name = "ParchmentMC"
+	}
+	maven(url = "https://api.modrinth.com/maven") {
+		name = "Modrinth"
+		content {
+			includeGroup("maven.modrinth")
+		}
+	}
+	mavenCentral()
+}
+
+java {
+	withSourcesJar()
+	sourceCompatibility = JavaVersion.VERSION_21
+	targetCompatibility = JavaVersion.VERSION_21
+	toolchain {
+		languageVersion = JavaLanguageVersion.of(21)
+	}
+}
+
+tasks {
+	compileJava {
+		options.encoding = "UTF-8"
+		options.release = 21
+	}
+	jar {
+		from(file("../LICENSE")) {
+			rename { "LICENSE_${mod_name}" }
+		}
+	}
+	processResources {
+		val expansions: Map<String, Any> = buildMap {
+			put("mod_name", mod_name)
+			put("mod_version", project.version)
+			putAll(listOf(
+				"mod_description",
+				"copyright_licence",
+				"mod_home_url",
+				"mod_source_url",
+				"mod_issues_url"
+			).associateWith { project.property(it).toString() })
+			put("minecraft_version", libs.versions.minecraft.get())
+			put("fabric_loader_version", libs.versions.fabricLoader.get())
+		}
+		inputs.properties(expansions)
+		filesMatching("fabric.mod.json") {
+			expand(expansions)
+			filter {
+				it.replace(
+					"\"%FABRIC_AUTHORS_ARRAY%\"",
+					groovy.json.JsonBuilder(project.property("mod_authors").toString().split(",")).toString()
+				)
+			}
+		}
+		filesMatching("assets/mapsync/lang/en_us.json") {
+			expand(expansions)
+		}
+		filesMatching("mapsync.version.const") {
+			expand(expansions)
+		}
+	}
+	val distDir = file("./dist")
+	val cleanDistDir = register<Delete>("cleanDistDir") {
+		delete(fileTree(distDir) {
+			include("*.jar")
+		})
+	}
+	val copyDistJar = register<Copy>("copyDistJar") {
+		dependsOn(cleanDistDir)
+		from(remapJar)
+		into(distDir)
+	}
+	build {
+		dependsOn(copyDistJar)
+	}
+}

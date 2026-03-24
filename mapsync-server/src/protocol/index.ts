@@ -31,7 +31,7 @@ export class ServerboundHandshakePacket extends Packet {
         public readonly modVersion: string,
         public readonly mojangName: string,
         public readonly gameAddress: string,
-        public readonly world: string,
+        public readonly dimension: string,
     ) {
         super(ServerboundHandshakePacket.PACKET_ID);
     }
@@ -88,7 +88,7 @@ export class ClientboundRegionTimestampsPacket extends Packet {
     public static readonly PACKET_ID = 7;
 
     public constructor(
-        public readonly world: string,
+        public readonly dimension: string,
         public readonly regionX: number,
         public readonly regionZ: number,
         public readonly timestamp: number,
@@ -97,7 +97,7 @@ export class ClientboundRegionTimestampsPacket extends Packet {
     }
 
     public encode(writer: BufWriter) {
-        writer.writeString(this.world);
+        writer.writeString(this.dimension);
         writer.writeInt16(this.regionX);
         writer.writeInt16(this.regionZ);
         writer.writeInt64(this.timestamp);
@@ -108,7 +108,7 @@ export class ServerboundChunkTimestampsRequestPacket extends Packet {
     public static readonly PACKET_ID = 8;
 
     public constructor(
-        public readonly world: string,
+        public readonly dimension: string,
         public readonly regionX: number,
         public readonly regionZ: number,
     ) {
@@ -130,7 +130,7 @@ export class ClientboundChunkTimestampsResponsePacket extends Packet {
     public static readonly PACKET_ID = 5;
 
     public constructor(
-        public readonly world: string,
+        public readonly dimension: string,
         public readonly chunks: CatchupChunk[],
     ) {
         super(ClientboundChunkTimestampsResponsePacket.PACKET_ID);
@@ -139,7 +139,7 @@ export class ClientboundChunkTimestampsResponsePacket extends Packet {
     }
 
     public encode(writer: BufWriter) {
-        writer.writeString(this.world);
+        writer.writeString(this.dimension);
         writer.writeUInt32(this.chunks.length);
         for (const row of this.chunks) {
             writer.writeInt32(row.chunkX);

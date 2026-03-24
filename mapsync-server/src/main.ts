@@ -131,7 +131,7 @@ export class Main {
             );
             if (!chunk) {
                 console.error(`${client.name} requested unavailable chunk`, {
-                    world: pkt.dimension,
+                    dimension: pkt.dimension,
                     ...req,
                 });
                 continue;
@@ -162,13 +162,13 @@ export class Main {
             throw new Error(`${client.name} is not authenticated`);
 
         const chunks = await database.getChunkTimestamps(
-            pkt.world,
+            pkt.dimension,
             pkt.regionX,
             pkt.regionZ,
         );
         if (chunks.length) {
             client.send(
-                new ClientboundChunkTimestampsResponsePacket(pkt.world, chunks),
+                new ClientboundChunkTimestampsResponsePacket(pkt.dimension, chunks),
             );
         }
     }

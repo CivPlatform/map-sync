@@ -248,7 +248,7 @@ export class TcpClient {
 
         this.gameAddress = packet.gameAddress;
         this.claimedMojangName = packet.mojangName;
-        this.dimension = packet.world;
+        this.dimension = packet.dimension;
         this.verifyToken = crypto.randomBytes(4);
 
         await this.sendInternal(

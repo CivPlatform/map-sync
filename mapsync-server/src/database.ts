@@ -102,10 +102,10 @@ export async function getChunkTimestamps(
     regionX: number,
     regionZ: number,
 ) {
-    const minChunkX = regionX << 4,
-        maxChunkX = minChunkX + 16;
-    const minChunkZ = regionZ << 4,
-        maxChunkZ = minChunkZ + 16;
+    const minChunkX = regionX << 5,
+        maxChunkX = minChunkX + 32;
+    const minChunkZ = regionZ << 5,
+        maxChunkZ = minChunkZ + 32;
     return get()
         .selectFrom("player_chunk")
         .select([
@@ -118,6 +118,7 @@ export async function getChunkTimestamps(
         .where("chunk_x", "<", maxChunkX)
         .where("chunk_z", ">=", minChunkZ)
         .where("chunk_z", "<", maxChunkZ)
+        .groupBy(["chunk_x", "chunk_z"])
         .orderBy("ts", "desc")
         .execute();
 }

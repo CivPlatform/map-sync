@@ -9,6 +9,15 @@ base {
 	archivesName = project.property("archives_base_name").toString()
 }
 
+loom {
+	runConfigs.configureEach {
+		programArgs += buildList {
+			// Use same username between runClient runs
+			addAll(listOf("--username", "LocalModTester"))
+		}
+	}
+}
+
 dependencies {
 	minecraft(libs.minecraft)
 	loom {

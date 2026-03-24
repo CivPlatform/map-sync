@@ -102,8 +102,6 @@ export class Main {
             if (client === otherClient) continue;
             otherClient.send(pkt);
         }
-
-        // TODO queue tile render for web map
     }
 
     async handleCatchupRequest(

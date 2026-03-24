@@ -98,7 +98,6 @@ export class ClientboundRegionTimestampsPacket extends Packet {
 
     public encode(writer: BufWriter) {
         writer.writeString(this.world);
-        console.log(`Sending region for [${this.world}]`, this);
         writer.writeInt16(this.regionX);
         writer.writeInt16(this.regionZ);
         writer.writeInt64(this.timestamp);

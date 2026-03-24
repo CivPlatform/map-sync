@@ -76,7 +76,6 @@ export class Main {
         client: ProtocolClient,
         pkt: ServerboundPacket,
     ) {
-        client.debug(client.mcName + " <- " + pkt.name);
         switch (true) {
             case pkt instanceof ServerboundChunkTimestampsRequestPacket:
                 return this.handleChunkTimestampsRequest(client, pkt);

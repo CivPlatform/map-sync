@@ -167,6 +167,7 @@ export class TcpClient {
     }
 
     private async handlePacketReceived(pkt: ServerboundPacket) {
+        this.debug(`Received ${pkt.name}:`, pkt);
         if (!this.uuid) {
             switch (true) {
                 case pkt instanceof ServerboundHandshakePacket:
@@ -197,7 +198,6 @@ export class TcpClient {
             this.debug("Not authenticated, dropping packet", pkt);
             return;
         }
-        this.debug(this.mcName + " -> " + pkt.name);
         await this.sendInternal(pkt, true);
     }
 
@@ -218,7 +218,7 @@ export class TcpClient {
             return this.debug("Socket closed, dropping", pkt);
         if (doCrypto && !this.cryptoPromise)
             throw new Error(`Can't encrypt: handshake not finished`);
-
+        this.debug(`Sending ${pkt.name}:`, pkt);
         const writer = new BufWriter(); // TODO size hint
         writer.writeUInt32(0); // set later, but reserve space in buffer
         encodePacket(pkt, writer);

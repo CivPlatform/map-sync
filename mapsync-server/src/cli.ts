@@ -5,6 +5,7 @@ import * as metadata from "./metadata";
 import { TcpServer } from "./server";
 
 import * as database from "./database";
+import { ClientboundRegionTimestampsPacket } from "./protocol";
 
 //idk where these come from lol
 interface TerminalExtras {
@@ -143,20 +144,23 @@ async function handle_input(input: string): Promise<void> {
             return;
         }
 
-        const world = client.world;
-        if (!world) {
+        const dimension = client.dimension;
+        if (!dimension) {
             console.log("Client has no world yet");
             return;
         }
 
-        const regions = await database.getRegionTimestamps(client.world!);
+        const regions = await database.getRegionTimestamps(client.dimension!);
         await Promise.allSettled(
             regions.map((region) =>
-                client.send({
-                    type: "RegionTimestamps",
-                    world: client.world!,
-                    region,
-                }),
+                client.send(
+                    new ClientboundRegionTimestampsPacket(
+                        client.dimension!,
+                        region.regionX,
+                        region.regionZ,
+                        region.timestamp,
+                    ),
+                ),
             ),
         );
     } else if (command === "kick") {

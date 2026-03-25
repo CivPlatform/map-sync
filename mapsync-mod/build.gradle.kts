@@ -5,6 +5,8 @@ plugins {
 private val mod_name = project.property("mod_name").toString()
 version = "${project.property("mod_version")}-${libs.versions.minecraft.get()}"
 
+private val modLocalDep = configurations.create("modLocalDep")
+
 base {
 	archivesName = project.property("archives_base_name").toString()
 }
@@ -28,12 +30,21 @@ dependencies {
 	}
 	modImplementation(libs.fabricLoader)
 	modImplementation(libs.fabricApi)
-	modLocalRuntime(libs.fixChat)
+	modLocalDep(libs.fixChat)
 	modImplementation(libs.modmenu)
 
-	modImplementation(libs.voxelmap)
-	modCompileOnly(libs.journeymap)
-	modCompileOnly(libs.xaerosmap)
+	libs.voxelmap.also {
+		modCompileOnly(it)
+		//modLocalDep(it) // Uncomment to test VoxelMap
+	}
+	libs.journeymap.also {
+		modCompileOnly(it)
+		//modLocalDep(it) // Uncomment to test JourneyMap
+	}
+	libs.xaerosmap.also {
+		modCompileOnly(it)
+		//modLocalDep(it) // Uncomment to test XaerosMap
+	}
 }
 
 repositories {
@@ -99,16 +110,16 @@ tasks {
 			expand(expansions)
 		}
 	}
-	val distDir = file("./dist")
-	val cleanDistDir = register<Delete>("cleanDistDir") {
-		delete(fileTree(distDir) {
-			include("*.jar")
-		})
+	val copyRunClientDeps = register<Sync>("copyMapSyncRunClientDependencies") {
+		from(modLocalDep)
+		into(file("run/mods/"))
 	}
-	val copyDistJar = register<Copy>("copyDistJar") {
-		dependsOn(cleanDistDir)
+	runClient {
+		dependsOn(copyRunClientDeps)
+	}
+	val copyDistJar = register<Sync>("distJar") {
 		from(remapJar)
-		into(distDir)
+		into(file("dist/"))
 	}
 	build {
 		dependsOn(copyDistJar)

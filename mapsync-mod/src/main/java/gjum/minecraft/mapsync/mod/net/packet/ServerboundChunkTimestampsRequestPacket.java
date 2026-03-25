@@ -1,6 +1,7 @@
 package gjum.minecraft.mapsync.mod.net.packet;
 
 import gjum.minecraft.mapsync.mod.data.RegionPos;
+import gjum.minecraft.mapsync.mod.net.IntType;
 import gjum.minecraft.mapsync.mod.net.Packet;
 import io.netty.buffer.ByteBuf;
 import org.jetbrains.annotations.NotNull;
@@ -23,7 +24,7 @@ public class ServerboundChunkTimestampsRequestPacket implements Packet {
 
 	@Override
 	public void write(@NotNull ByteBuf buf) {
-		Packet.writeUtf8String(buf, dimension);
+		Packet.writeLengthPrefixedString(buf, IntType.U8, dimension);
 		buf.writeShort(region.x());
 		buf.writeShort(region.z());
 	}

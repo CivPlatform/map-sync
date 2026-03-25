@@ -9,13 +9,13 @@ import org.apache.commons.lang3.NotImplementedException;
 import org.jetbrains.annotations.NotNull;
 
 public interface Packet {
-	default void write(@NotNull ByteBuf out) {
+	public default void write(@NotNull ByteBuf out) {
 		throw new NotImplementedException();
 	}
 
-	static byte @NotNull [] readByteArrayOfSize(
-			final @NotNull ByteBuf in,
-			final int size
+	public static byte @NotNull [] readBytesOfLength(
+		final @NotNull ByteBuf in,
+		final int size
 	) {
 		final var bytes = new byte[size];
 		if (size > 0) {
@@ -24,61 +24,69 @@ public interface Packet {
 		return bytes;
 	}
 
-	static byte @NotNull [] readIntLengthByteArray(
-			final @NotNull ByteBuf in
+	public static byte @NotNull [] readLengthPrefixedBytes(
+		final @NotNull ByteBuf in,
+		final @NotNull IntType lengthPrefix
 	) {
-		return readByteArrayOfSize(in, in.readInt());
+		return readBytesOfLength(in, lengthPrefix.read(in));
 	}
 
-	static void writeIntLengthByteArray(
-			final @NotNull ByteBuf out,
-			final byte @NotNull [] array
+	public static void writeLengthPrefixedBytes(
+		final @NotNull ByteBuf out,
+		final @NotNull IntType lengthPrefix,
+		final byte @NotNull [] array
 	) {
 		if (array.length > 0) {
-			out.writeInt(array.length);
+			lengthPrefix.write(out, array.length);
 			out.writeBytes(array);
 		}
 		else {
-			out.writeInt(0);
+			lengthPrefix.write(out, 0);
 		}
 	}
 
-	static @NotNull String readUtf8String(
-			final @NotNull ByteBuf in
+	public static @NotNull String readLengthPrefixedString(
+		final @NotNull ByteBuf in,
+		final @NotNull IntType lengthPrefix
 	) {
 		return new String(
-				readIntLengthByteArray(in),
-				StandardCharsets.UTF_8
+			readLengthPrefixedBytes(in, lengthPrefix),
+			StandardCharsets.UTF_8
 		);
 	}
 
-	static void writeUtf8String(
-			final @NotNull ByteBuf out,
-			final @NotNull String string
+	public static void writeLengthPrefixedString(
+		final @NotNull ByteBuf out,
+		final @NotNull IntType lengthPrefix,
+		final @NotNull String string
 	) {
-		writeIntLengthByteArray(
-				out,
-				string.getBytes(StandardCharsets.UTF_8)
+		writeLengthPrefixedBytes(
+			out,
+			lengthPrefix,
+			string.getBytes(StandardCharsets.UTF_8)
 		);
 	}
 
-	static <T, R extends ResourceKey<Registry<T>>> @NotNull ResourceKey<T> readResourceKey(
-			final @NotNull ByteBuf in,
-			final @NotNull R registry
+	public static <T, R extends ResourceKey<Registry<T>>> @NotNull ResourceKey<T> readResourceKey(
+		final @NotNull ByteBuf in,
+		final @NotNull IntType lengthPrefix,
+		final @NotNull R registry
 	) {
 		return ResourceKey.create(
-				registry,
-				Identifier.tryParse(readUtf8String(in))
+			registry,
+			Identifier.parse(readLengthPrefixedString(in, lengthPrefix))
 		);
 	}
 
-	static void writeResourceKey(
-			final @NotNull ByteBuf out,
-			final @NotNull ResourceKey<?> resourceKey
+	public static void writeResourceKey(
+		final @NotNull ByteBuf out,
+		final @NotNull IntType lengthPrefix,
+		final @NotNull ResourceKey<?> resourceKey
 	) {
-		writeUtf8String(
-				out,
-				resourceKey.identifier().toString()
+		writeLengthPrefixedString(
+			out,
+			lengthPrefix,
+			resourceKey.identifier().toString()
 		);
 	}
 }

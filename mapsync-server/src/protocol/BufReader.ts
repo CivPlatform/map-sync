@@ -1,3 +1,5 @@
+import { IntType } from "./ints";
+
 /** Each read advances the internal offset into the buffer. */
 export class BufReader {
     private off = 0;
@@ -72,29 +74,26 @@ export class BufReader {
         return Number(valBig);
     }
 
-    /** length-prefixed (32 bits), UTF-8 encoded */
-    readString() {
-        const len = this.readUInt32();
-        const str = this.buf.toString("utf8", this.off, this.off + len);
-        this.off += len;
-        return str;
-    }
-
-    readBufWithLen() {
-        const len = this.readUInt32();
-        return this.readBufLen(len);
-    }
-
-    readBufLen(length: number) {
+    public readBytesOfLength(length: number) {
         // simply returning a slice() would retain the entire buf in memory
-        const buf = Buffer.allocUnsafe(length);
-        this.buf.copy(buf, 0, this.off, this.off + length);
+        const bytes = Buffer.allocUnsafe(length);
+        this.buf.copy(bytes, 0, this.off, this.off + length);
         this.off += length;
-        return buf;
+        return bytes;
+    }
+
+    public readLengthPrefixedBytes(lengthPrefix: IntType): Buffer {
+        const [bytesRead, length] = lengthPrefix.decode(this.buf, this.off);
+        this.off += bytesRead;
+        return this.readBytesOfLength(length);
+    }
+
+    public readLengthPrefixedString(lengthPrefix: IntType): string {
+        return this.readLengthPrefixedBytes(lengthPrefix).toString("utf8");
     }
 
     /** any reads after this will fail */
     readRemainder() {
-        return this.readBufLen(this.buf.length - this.off);
+        return this.readBytesOfLength(this.buf.length - this.off);
     }
 }

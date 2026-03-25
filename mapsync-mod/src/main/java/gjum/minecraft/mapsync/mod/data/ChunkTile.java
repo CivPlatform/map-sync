@@ -1,5 +1,6 @@
 package gjum.minecraft.mapsync.mod.data;
 
+import gjum.minecraft.mapsync.mod.net.IntType;
 import gjum.minecraft.mapsync.mod.net.Packet;
 import gjum.minecraft.mapsync.mod.utils.Assertions;
 import gjum.minecraft.mapsync.mod.utils.MagicValues;
@@ -35,7 +36,7 @@ public record ChunkTile(
 	 * without columns
 	 */
 	public void writeMetadata(ByteBuf buf) {
-		Packet.writeResourceKey(buf, dimension);
+		Packet.writeResourceKey(buf, IntType.U8, dimension);
 		buf.writeInt(x);
 		buf.writeInt(z);
 		buf.writeLong(timestamp);
@@ -51,12 +52,12 @@ public record ChunkTile(
 	}
 
 	public static ChunkTile fromBuf(ByteBuf buf) {
-		final ResourceKey<Level> dimension = Packet.readResourceKey(buf, Registries.DIMENSION);
+		final ResourceKey<Level> dimension = Packet.readResourceKey(buf, IntType.U8, Registries.DIMENSION);
 		int x = buf.readInt();
 		int z = buf.readInt();
 		long timestamp = buf.readLong();
 		int dataVersion = buf.readUnsignedShort();
-		byte[] hash = Packet.readByteArrayOfSize(buf, MagicValues.SHA1_HASH_LENGTH);
+		byte[] hash = Packet.readBytesOfLength(buf, MagicValues.SHA1_HASH_LENGTH);
 		var columns = new BlockColumn[256];
 		for (int i = 0; i < 256; i++) {
 			columns[i] = BlockColumn.fromBuf(buf);

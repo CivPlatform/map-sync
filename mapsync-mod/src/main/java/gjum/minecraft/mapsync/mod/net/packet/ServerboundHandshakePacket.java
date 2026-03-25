@@ -1,5 +1,6 @@
 package gjum.minecraft.mapsync.mod.net.packet;
 
+import gjum.minecraft.mapsync.mod.net.IntType;
 import gjum.minecraft.mapsync.mod.net.Packet;
 import io.netty.buffer.ByteBuf;
 import org.jetbrains.annotations.NotNull;
@@ -25,10 +26,10 @@ public class ServerboundHandshakePacket implements Packet {
 
 	@Override
 	public void write(@NotNull ByteBuf out) {
-		Packet.writeUtf8String(out, modVersion);
-		Packet.writeUtf8String(out, username);
-		Packet.writeUtf8String(out, gameAddress);
-		Packet.writeUtf8String(out, dimension);
+		Packet.writeLengthPrefixedString(out, IntType.U8, modVersion);
+		Packet.writeLengthPrefixedString(out, IntType.U8, username);
+		Packet.writeLengthPrefixedString(out, IntType.U8, gameAddress);
+		Packet.writeLengthPrefixedString(out, IntType.U8, dimension);
 	}
 
 	@Override

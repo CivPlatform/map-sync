@@ -2,6 +2,7 @@ import { BufReader } from "./BufReader";
 import { BufWriter } from "./BufWriter";
 import type { CatchupChunk } from "../model";
 import { SHA1_HASH_LENGTH } from "../constants";
+import { U8, U16 } from "./ints";
 
 export type ServerboundPacket =
     | ServerboundHandshakePacket
@@ -38,10 +39,10 @@ export class ServerboundHandshakePacket extends Packet {
 
     public static decode(reader: BufReader): ServerboundHandshakePacket {
         return new ServerboundHandshakePacket(
-            reader.readString(),
-            reader.readString(),
-            reader.readString(),
-            reader.readString(),
+            reader.readLengthPrefixedString(U8),
+            reader.readLengthPrefixedString(U8),
+            reader.readLengthPrefixedString(U8),
+            reader.readLengthPrefixedString(U8),
         );
     }
 }
@@ -57,8 +58,8 @@ export class ClientboundEncryptionRequestPacket extends Packet {
     }
 
     public encode(writer: BufWriter) {
-        writer.writeBufWithLen(this.publicKey);
-        writer.writeBufWithLen(this.verifyToken);
+        writer.writeLengthPrefixedData(U16, this.publicKey);
+        writer.writeLengthPrefixedData(U8, this.verifyToken);
     }
 }
 
@@ -78,8 +79,8 @@ export class ServerboundEncryptionResponsePacket extends Packet {
         reader: BufReader,
     ): ServerboundEncryptionResponsePacket {
         return new ServerboundEncryptionResponsePacket(
-            reader.readBufWithLen(),
-            reader.readBufWithLen(),
+            reader.readLengthPrefixedBytes(U8),
+            reader.readLengthPrefixedBytes(U8),
         );
     }
 }
@@ -97,7 +98,7 @@ export class ClientboundRegionTimestampsPacket extends Packet {
     }
 
     public encode(writer: BufWriter) {
-        writer.writeString(this.dimension);
+        writer.writeLengthPrefixedData(U8, this.dimension);
         writer.writeInt16(this.regionX);
         writer.writeInt16(this.regionZ);
         writer.writeInt64(this.timestamp);
@@ -119,7 +120,7 @@ export class ServerboundChunkTimestampsRequestPacket extends Packet {
         reader: BufReader,
     ): ServerboundChunkTimestampsRequestPacket {
         return new ServerboundChunkTimestampsRequestPacket(
-            reader.readString(),
+            reader.readLengthPrefixedString(U8),
             reader.readInt16(),
             reader.readInt16(),
         );
@@ -139,8 +140,8 @@ export class ClientboundChunkTimestampsResponsePacket extends Packet {
     }
 
     public encode(writer: BufWriter) {
-        writer.writeString(this.dimension);
-        writer.writeUInt32(this.chunks.length);
+        writer.writeLengthPrefixedData(U8, this.dimension);
+        writer.writeUInt16(this.chunks.length);
         for (const row of this.chunks) {
             writer.writeInt32(row.chunkX);
             writer.writeInt32(row.chunkZ);
@@ -160,8 +161,8 @@ export class ServerboundCatchupRequestPacket extends Packet {
     }
 
     public static decode(reader: BufReader): ServerboundCatchupRequestPacket {
-        const dimension = reader.readString();
-        const chunks: CatchupChunk[] = new Array(reader.readUInt32());
+        const dimension = reader.readLengthPrefixedString(U8);
+        const chunks: CatchupChunk[] = new Array(reader.readUInt16());
         for (let i = 0; i < chunks.length; i++) {
             chunks[i] = {
                 chunkX: reader.readInt32(),
@@ -190,18 +191,18 @@ export class ChunkTilePacket extends Packet {
 
     public static decode(reader: BufReader): ChunkTilePacket {
         return new ChunkTilePacket(
-            reader.readString(),
+            reader.readLengthPrefixedString(U8),
             reader.readInt32(),
             reader.readInt32(),
             reader.readInt64(),
             reader.readUInt16(),
-            reader.readBufLen(SHA1_HASH_LENGTH),
+            reader.readBytesOfLength(SHA1_HASH_LENGTH),
             reader.readRemainder(),
         );
     }
 
     public encode(writer: BufWriter) {
-        writer.writeString(this.dimension);
+        writer.writeLengthPrefixedData(U8, this.dimension);
         writer.writeInt32(this.chunkX);
         writer.writeInt32(this.chunkZ);
         writer.writeInt64(this.timestamp);

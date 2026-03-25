@@ -1,3 +1,5 @@
+import { IntType } from "./ints";
+
 /** Each write advances the internal offset into the buffer.
  * Grows the buffer to twice the current size if a write would exceed the buffer. */
 export class BufWriter {
@@ -61,23 +63,16 @@ export class BufWriter {
         this.off += 8;
     }
 
-    /** length-prefixed (32 bits), UTF-8 encoded */
-    writeString(str: string) {
-        const strBuf = Buffer.from(str, "utf8");
-        this.ensureSpace(4 + strBuf.length);
-        this.buf.writeUInt32BE(strBuf.length, this.off);
-        this.off += 4;
-        this.buf.set(strBuf, this.off);
-        this.off += strBuf.length;
-    }
-
-    /** length-prefixed (32 bits), UTF-8 encoded */
-    writeBufWithLen(buf: Buffer) {
-        this.ensureSpace(4 + buf.length);
-        this.buf.writeUInt32BE(buf.length, this.off);
-        this.off += 4;
-        this.buf.set(buf, this.off);
-        this.off += buf.length;
+    public writeLengthPrefixedData(lengthPrefix: IntType, data: Buffer | string) {
+        if (typeof data === "string") {
+            data = Buffer.from(data, "utf8");
+        }
+        const lengthBytes: Buffer = lengthPrefix.encodeAs(data.length);
+        this.ensureSpace(lengthBytes.length + data.length);
+        this.buf.set(lengthBytes, this.off);
+        this.off += lengthBytes.length;
+        this.buf.set(data, this.off);
+        this.off += data.length;
     }
 
     writeBufRaw(buf: Buffer) {

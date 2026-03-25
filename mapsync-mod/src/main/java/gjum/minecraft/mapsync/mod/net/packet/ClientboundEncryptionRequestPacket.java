@@ -1,5 +1,6 @@
 package gjum.minecraft.mapsync.mod.net.packet;
 
+import gjum.minecraft.mapsync.mod.net.IntType;
 import gjum.minecraft.mapsync.mod.net.Packet;
 import io.netty.buffer.ByteBuf;
 import java.security.KeyFactory;
@@ -27,12 +28,12 @@ public class ClientboundEncryptionRequestPacket implements Packet {
 	public static Packet read(ByteBuf buf) {
 		return new ClientboundEncryptionRequestPacket(
 				readKey(buf),
-				Packet.readIntLengthByteArray(buf));
+				Packet.readLengthPrefixedBytes(buf, IntType.U8));
 	}
 
 	protected static PublicKey readKey(ByteBuf in) {
 		try {
-			byte[] encodedKey = Packet.readIntLengthByteArray(in);
+			byte[] encodedKey = Packet.readLengthPrefixedBytes(in, IntType.U16);
 			X509EncodedKeySpec keySpec = new X509EncodedKeySpec(encodedKey);
 			KeyFactory keyFactory = KeyFactory.getInstance("RSA");
 			return keyFactory.generatePublic(keySpec);

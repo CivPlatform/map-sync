@@ -124,7 +124,7 @@ export class TcpClient {
 
                     const frameReader = new BufReader(accBuf);
                     frameReader.readUInt32(); // skip frame size
-                    let pktBuf = frameReader.readBufLen(frameSize);
+                    let pktBuf = frameReader.readBytesOfLength(frameSize);
                     accBuf = frameReader.readRemainder();
 
                     const reader = new BufReader(pktBuf);

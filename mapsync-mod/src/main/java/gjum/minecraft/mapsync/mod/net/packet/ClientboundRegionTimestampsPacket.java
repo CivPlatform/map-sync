@@ -1,6 +1,7 @@
 package gjum.minecraft.mapsync.mod.net.packet;
 
 import gjum.minecraft.mapsync.mod.data.RegionTimestamp;
+import gjum.minecraft.mapsync.mod.net.IntType;
 import gjum.minecraft.mapsync.mod.net.Packet;
 import io.netty.buffer.ByteBuf;
 
@@ -31,7 +32,7 @@ public class ClientboundRegionTimestampsPacket implements Packet {
 
 	public static Packet read(ByteBuf buf) {
 		return new ClientboundRegionTimestampsPacket(
-			Packet.readUtf8String(buf),
+			Packet.readLengthPrefixedString(buf, IntType.U8),
 			new RegionTimestamp(
 				buf.readShort(),
 				buf.readShort(),

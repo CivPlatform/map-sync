@@ -1,7 +1,7 @@
 package gjum.minecraft.mapsync.mod.data;
 
 import gjum.minecraft.mapsync.mod.net.Packet;
-import gjum.minecraft.mapsync.mod.utils.Arguments;
+import gjum.minecraft.mapsync.mod.utils.Assertions;
 import gjum.minecraft.mapsync.mod.utils.MagicValues;
 import io.netty.buffer.ByteBuf;
 import net.minecraft.core.registries.Registries;
@@ -18,8 +18,8 @@ public record ChunkTile(
 		BlockColumn[] columns
 ) {
 	public ChunkTile {
-		Arguments.checkNotNull("dataHash", dataHash);
-		Arguments.checkLength("dataHash", dataHash.length, MagicValues.SHA1_HASH_LENGTH);
+		Assertions.assertNotNull("dataHash", dataHash);
+		Assertions.assertLength("dataHash", dataHash.length, MagicValues.SHA1_HASH_LENGTH);
 	}
 
 	public ChunkPos chunkPos() {

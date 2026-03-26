@@ -1,6 +1,9 @@
 package gjum.minecraft.mapsync.mod.utils;
 
 public final class MagicValues {
+	public static final int REGION_AXIS = 32;
+	public static final int REGION_GRID = REGION_AXIS * REGION_AXIS;
+
 	// SHA1 produces 160-bit (20-byte) hashes
 	// https://en.wikipedia.org/wiki/SHA-1
 	public static final int SHA1_HASH_LENGTH = 20;

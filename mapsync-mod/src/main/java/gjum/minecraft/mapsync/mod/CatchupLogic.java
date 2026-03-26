@@ -71,7 +71,7 @@ public class CatchupLogic {
 			// if none get received within a second (all outdated etc.) then request more anyway
 			tsRequestMore = now + 1000;
 			var chunksToRequest = pollCatchupChunks(WATERMARK_REQUEST_MORE);
-			getMod().requestCatchupData(chunksToRequest);
+			getMod().requestCatchupData(dimensionState, chunksToRequest);
 		}
 	}
 

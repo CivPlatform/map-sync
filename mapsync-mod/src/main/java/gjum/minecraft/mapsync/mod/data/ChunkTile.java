@@ -18,8 +18,8 @@ public record ChunkTile(
 		BlockColumn[] columns
 ) {
 	public ChunkTile {
-		Assertions.assertNotNull("dataHash", dataHash);
-		Assertions.assertLength("dataHash", dataHash.length, MagicValues.SHA1_HASH_LENGTH);
+		Assertions.assertNotNull(dataHash);
+		Assertions.assertLength(dataHash.length, MagicValues.SHA1_HASH_LENGTH);
 	}
 
 	public ChunkPos chunkPos() {

@@ -1,50 +1,48 @@
 package gjum.minecraft.mapsync.mod.net.packet;
 
-import gjum.minecraft.mapsync.mod.data.CatchupChunk;
 import gjum.minecraft.mapsync.mod.net.Packet;
 import gjum.minecraft.mapsync.mod.net.buffers.BufferWriter;
-import java.util.List;
-import net.minecraft.resources.ResourceKey;
-import net.minecraft.world.level.Level;
+import gjum.minecraft.mapsync.mod.utils.Assertions;
+import gjum.minecraft.mapsync.mod.utils.MagicValues;
+import java.util.Map;
+import net.minecraft.resources.Identifier;
+import net.minecraft.world.level.ChunkPos;
+import org.apache.commons.lang3.LongRange;
 import org.jetbrains.annotations.NotNull;
 
-/**
- * This is the final stage in the synchronisation process, sent in response to
- * a received {@link ClientboundChunkTimestampsResponsePacket}. Here you list
- * what chunks you'd like to receive from the server, who'll then respond with
- * a bunch of {@link ChunkTilePacket}.
- */
-public class ServerboundCatchupRequestPacket implements Packet {
+/// The client sends this in response to a [ClientboundChunkTimestampsResponsePacket], requesting the server to send
+/// chunk-tile data for each of the specified chunks within a specified region. The server may respond by sending a
+/// [ChunkTilePacket] for each chunk.
+///
+/// - Prev: [ClientboundChunkTimestampsResponsePacket]
+/// - Next: [ChunkTilePacket]
+public record ServerboundCatchupRequestPacket(
+	@NotNull Identifier dimension,
+	short regionX,
+	short regionZ,
+	@NotNull Map<@NotNull ChunkPos, @NotNull Long> chunks
+) implements Packet {
 	public static final int PACKET_ID = 6;
 
-	/**
-	 * Chunks must all be in the same dimension
-	 */
-	public final List<CatchupChunk> chunks;
-
-	/**
-	 * Chunks must all be in the same dimension
-	 */
-	public ServerboundCatchupRequestPacket(@NotNull List<CatchupChunk> chunks) {
-		if (chunks.isEmpty()) throw new Error("Chunks list must not be empty");
-		ResourceKey<Level> dim = null;
-		for (CatchupChunk chunk : chunks) {
-			if (dim == null) dim = chunk.dimension();
-			else if (!dim.equals(chunk.dimension())) {
-				throw new Error("Chunks must all be in the same dimension " + dim + " but this one was " + chunk.dimension());
-			}
-		}
-		this.chunks = chunks;
+	public ServerboundCatchupRequestPacket {
+		Assertions.assertNotNull(dimension);
+		chunks = Assertions.assertNonNullMap(chunks);
+		Assertions.assertRange(LongRange.of(1, MagicValues.REGION_GRID), chunks.size());
 	}
 
 	@Override
-	public void write(@NotNull BufferWriter writer) throws Exception {
-		writer.writeString(chunks.getFirst().dimension().identifier().toString());
-		writer.writeUnt16(chunks.size());
-		for (CatchupChunk chunk : chunks) {
-			writer.writeInt32(chunk.chunk_x());
-			writer.writeInt32(chunk.chunk_z());
-			writer.writeInt64(chunk.timestamp());
+	public void write(
+		final @NotNull BufferWriter writer
+	) throws Exception {
+		writer.writeString(this.dimension().toString());
+		writer.writeInt16(this.regionX());
+		writer.writeInt16(this.regionZ());
+		writer.writeUnt10(this.chunks().size());
+		for (final var entry : this.chunks().entrySet()) {
+			final ChunkPos chunkPos = entry.getKey();
+			writer.writeUnt5(chunkPos.getRegionLocalX());
+			writer.writeUnt5(chunkPos.getRegionLocalZ());
+			writer.writeInt64(entry.getValue());
 		}
 	}
 }

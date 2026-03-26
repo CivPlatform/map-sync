@@ -34,7 +34,7 @@ public class ClientHandler extends ChannelInboundHandlerAdapter {
 			} else if (packet instanceof ClientboundRegionTimestampsPacket pktRegionTimestamps) {
 				getMod().handleRegionTimestamps(pktRegionTimestamps, client);
 			} else if (packet instanceof ClientboundChunkTimestampsResponsePacket pktCatchup) {
-				for (CatchupChunk chunk : pktCatchup.chunks) {
+				for (CatchupChunk chunk : pktCatchup.chunks()) {
 					chunk.syncClient = this.client;
 				}
 				getMod().handleCatchupData((ClientboundChunkTimestampsResponsePacket) packet);

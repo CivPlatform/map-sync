@@ -3,43 +3,45 @@ package gjum.minecraft.mapsync.mod.net.packet;
 import gjum.minecraft.mapsync.mod.data.CatchupChunk;
 import gjum.minecraft.mapsync.mod.net.Packet;
 import gjum.minecraft.mapsync.mod.net.buffers.BufferReader;
-import java.util.ArrayList;
+import gjum.minecraft.mapsync.mod.utils.Assertions;
 import java.util.List;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.level.Level;
 import org.jetbrains.annotations.NotNull;
 
-/**
- * You'll receive this in response to a sent {@link ServerboundChunkTimestampsRequestPacket},
- * containing an elaboration of chunk timestamps of all the regions you listed.
- * You should respond with a {@link ServerboundCatchupRequestPacket}.
- */
-public class ClientboundChunkTimestampsResponsePacket implements Packet {
+/// The server will send this packet, containing an elaboration of chunk timestamps of a particular region as requested
+/// via [ServerboundChunkTimestampsRequestPacket]. The client should respond with a [ServerboundCatchupRequestPacket]
+/// if it finds any chunks with a timestamp newer than its own.
+///
+/// - Prev: [ServerboundChunkTimestampsRequestPacket]
+/// - Next: [ServerboundCatchupRequestPacket]
+public record ClientboundChunkTimestampsResponsePacket(
+	@NotNull List<@NotNull CatchupChunk> chunks
+) implements Packet {
 	public static final int PACKET_ID = 5;
 
-	/**
-	 * sorted by newest to oldest
-	 */
-	public final @NotNull List<CatchupChunk> chunks;
-
-	public ClientboundChunkTimestampsResponsePacket(@NotNull List<CatchupChunk> chunks) {
-		this.chunks = chunks;
+	public ClientboundChunkTimestampsResponsePacket {
+		chunks = Assertions.assertNonNullList(chunks);
 	}
 
-	public static Packet read(BufferReader reader) throws Exception {
+	public static @NotNull ClientboundChunkTimestampsResponsePacket read(
+		final @NotNull BufferReader reader
+	) throws Exception {
 		final ResourceKey<Level> dimension = reader.readResourceKey(Registries.DIMENSION);
-
-		int length = reader.readUnt16();
-		List<CatchupChunk> chunks = new ArrayList<>(length);
-		for (int i = 0; i < length; i++) {
-			int chunk_x = reader.readInt32();
-			int chunk_z = reader.readInt32();
-			long timestamp = reader.readInt64();
-			CatchupChunk chunk = new CatchupChunk(
-					dimension, chunk_x, chunk_z, timestamp);
-			chunks.add(chunk);
+		final int anchorChunkX = reader.readInt16() << 5;
+		final int anchorChunkZ = reader.readInt16() << 5;
+		final var chunks = new CatchupChunk[reader.readUnt10()];
+		for (int i = 0; i < chunks.length; i++) {
+			chunks[i] = new CatchupChunk(
+				dimension,
+				anchorChunkX + reader.readUnt5(),
+				anchorChunkZ + reader.readUnt5(),
+				reader.readInt64()
+			);
 		}
-		return new ClientboundChunkTimestampsResponsePacket(chunks);
+		return new ClientboundChunkTimestampsResponsePacket(
+			List.of(chunks)
+		);
 	}
 }

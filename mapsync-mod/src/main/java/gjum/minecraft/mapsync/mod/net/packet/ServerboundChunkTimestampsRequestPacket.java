@@ -24,7 +24,7 @@ public class ServerboundChunkTimestampsRequestPacket implements Packet {
 	@Override
 	public void write(@NotNull BufferWriter writer) throws Exception {
 		writer.writeString(dimension);
-		writer.writeInt16(region.x());
-		writer.writeInt16(region.z());
+		writer.writeInt16((short) region.x());
+		writer.writeInt16((short) region.z());
 	}
 }

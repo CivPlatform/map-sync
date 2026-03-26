@@ -7,7 +7,7 @@ import net.minecraft.world.level.block.state.BlockState;
 
 public record BlockInfo(int y, BlockState state) {
 	public void write(BufferWriter writer) throws Exception {
-		writer.writeInt16(y);
+		writer.writeInt16((short) y);
 		writer.writeUnt16(Block.BLOCK_STATE_REGISTRY.getId(state)); // we can assume this never becomes large enough to overflow
 	}
 

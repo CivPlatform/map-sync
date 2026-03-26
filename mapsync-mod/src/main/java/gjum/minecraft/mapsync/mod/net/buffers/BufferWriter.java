@@ -41,9 +41,9 @@ public final class BufferWriter {
 	}
 
 	public void writeInt16(
-		final int value
+		final short value
 	) throws Exception {
-		this.internal.writeShort((int) Assertions.assertMasked(MagicValues.UNT16_MASK, value));
+		this.internal.writeShort(value);
 	}
 
 	public void writeInt32(

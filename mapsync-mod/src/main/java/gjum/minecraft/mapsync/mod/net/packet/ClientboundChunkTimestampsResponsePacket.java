@@ -1,9 +1,8 @@
 package gjum.minecraft.mapsync.mod.net.packet;
 
 import gjum.minecraft.mapsync.mod.data.CatchupChunk;
-import gjum.minecraft.mapsync.mod.net.IntType;
 import gjum.minecraft.mapsync.mod.net.Packet;
-import io.netty.buffer.ByteBuf;
+import gjum.minecraft.mapsync.mod.net.buffers.BufferReader;
 import java.util.ArrayList;
 import java.util.List;
 import net.minecraft.core.registries.Registries;
@@ -28,15 +27,15 @@ public class ClientboundChunkTimestampsResponsePacket implements Packet {
 		this.chunks = chunks;
 	}
 
-	public static Packet read(ByteBuf buf) {
-		final ResourceKey<Level> dimension = Packet.readResourceKey(buf, IntType.U8, Registries.DIMENSION);
+	public static Packet read(BufferReader reader) throws Exception {
+		final ResourceKey<Level> dimension = reader.readResourceKey(Registries.DIMENSION);
 
-		int length = IntType.U16.read(buf);
+		int length = reader.readUnt16();
 		List<CatchupChunk> chunks = new ArrayList<>(length);
 		for (int i = 0; i < length; i++) {
-			int chunk_x = buf.readInt();
-			int chunk_z = buf.readInt();
-			long timestamp = buf.readLong();
+			int chunk_x = reader.readInt32();
+			int chunk_z = reader.readInt32();
+			long timestamp = reader.readInt64();
 			CatchupChunk chunk = new CatchupChunk(
 					dimension, chunk_x, chunk_z, timestamp);
 			chunks.add(chunk);

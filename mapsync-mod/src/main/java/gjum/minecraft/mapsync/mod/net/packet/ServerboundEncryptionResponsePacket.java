@@ -1,8 +1,7 @@
 package gjum.minecraft.mapsync.mod.net.packet;
 
-import gjum.minecraft.mapsync.mod.net.IntType;
 import gjum.minecraft.mapsync.mod.net.Packet;
-import io.netty.buffer.ByteBuf;
+import gjum.minecraft.mapsync.mod.net.buffers.BufferWriter;
 import org.jetbrains.annotations.NotNull;
 
 /**
@@ -28,8 +27,8 @@ public class ServerboundEncryptionResponsePacket implements Packet {
 	}
 
 	@Override
-	public void write(@NotNull ByteBuf out) {
-		Packet.writeLengthPrefixedBytes(out, IntType.U8, sharedSecret);
-		Packet.writeLengthPrefixedBytes(out, IntType.U8, verifyToken);
+	public void write(@NotNull BufferWriter writer) throws Exception {
+		writer.writeLengthPrefixedBytes(BufferWriter::writeUnt8, sharedSecret);
+		writer.writeLengthPrefixedBytes(BufferWriter::writeUnt8, verifyToken);
 	}
 }

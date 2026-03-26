@@ -1,9 +1,8 @@
 package gjum.minecraft.mapsync.mod.net.packet;
 
 import gjum.minecraft.mapsync.mod.data.RegionPos;
-import gjum.minecraft.mapsync.mod.net.IntType;
 import gjum.minecraft.mapsync.mod.net.Packet;
-import io.netty.buffer.ByteBuf;
+import gjum.minecraft.mapsync.mod.net.buffers.BufferWriter;
 import org.jetbrains.annotations.NotNull;
 
 /**
@@ -23,9 +22,9 @@ public class ServerboundChunkTimestampsRequestPacket implements Packet {
 	}
 
 	@Override
-	public void write(@NotNull ByteBuf buf) {
-		Packet.writeLengthPrefixedString(buf, IntType.U8, dimension);
-		buf.writeShort(region.x());
-		buf.writeShort(region.z());
+	public void write(@NotNull BufferWriter writer) throws Exception {
+		writer.writeString(dimension);
+		writer.writeInt16(region.x());
+		writer.writeInt16(region.z());
 	}
 }

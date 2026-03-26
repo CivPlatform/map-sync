@@ -1,5 +1,6 @@
 package gjum.minecraft.mapsync.mod.net;
 
+import gjum.minecraft.mapsync.mod.net.buffers.BufferWriter;
 import gjum.minecraft.mapsync.mod.net.packet.ChunkTilePacket;
 import gjum.minecraft.mapsync.mod.net.packet.ServerboundCatchupRequestPacket;
 import gjum.minecraft.mapsync.mod.net.packet.ServerboundChunkTimestampsRequestPacket;
@@ -23,7 +24,7 @@ public class ServerboundPacketEncoder extends MessageToByteEncoder<Packet> {
 	protected void encode(ChannelHandlerContext ctx, Packet packet, ByteBuf out) {
 		try {
 			out.writeByte(getClientPacketId(packet));
-			packet.write(out);
+			packet.write(new BufferWriter(out));
 		} catch (Throwable err) {
 			err.printStackTrace();
 			ctx.close();

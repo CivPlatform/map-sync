@@ -1,9 +1,8 @@
 package gjum.minecraft.mapsync.mod.net.packet;
 
 import gjum.minecraft.mapsync.mod.data.CatchupChunk;
-import gjum.minecraft.mapsync.mod.net.IntType;
 import gjum.minecraft.mapsync.mod.net.Packet;
-import io.netty.buffer.ByteBuf;
+import gjum.minecraft.mapsync.mod.net.buffers.BufferWriter;
 import java.util.List;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.level.Level;
@@ -39,13 +38,13 @@ public class ServerboundCatchupRequestPacket implements Packet {
 	}
 
 	@Override
-	public void write(@NotNull ByteBuf buf) {
-		Packet.writeResourceKey(buf, IntType.U8, chunks.get(0).dimension());
-		IntType.U16.write(buf, chunks.size());
+	public void write(@NotNull BufferWriter writer) throws Exception {
+		writer.writeString(chunks.getFirst().dimension().identifier().toString());
+		writer.writeUnt16(chunks.size());
 		for (CatchupChunk chunk : chunks) {
-			buf.writeInt(chunk.chunk_x());
-			buf.writeInt(chunk.chunk_z());
-			buf.writeLong(chunk.timestamp());
+			writer.writeInt32(chunk.chunk_x());
+			writer.writeInt32(chunk.chunk_z());
+			writer.writeInt64(chunk.timestamp());
 		}
 	}
 }

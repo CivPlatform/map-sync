@@ -2,7 +2,8 @@ package gjum.minecraft.mapsync.mod.net.packet;
 
 import gjum.minecraft.mapsync.mod.data.ChunkTile;
 import gjum.minecraft.mapsync.mod.net.Packet;
-import io.netty.buffer.ByteBuf;
+import gjum.minecraft.mapsync.mod.net.buffers.BufferReader;
+import gjum.minecraft.mapsync.mod.net.buffers.BufferWriter;
 import org.jetbrains.annotations.NotNull;
 
 /**
@@ -21,13 +22,13 @@ public class ChunkTilePacket implements Packet {
 		this.chunkTile = chunkTile;
 	}
 
-	public static Packet read(ByteBuf buf) {
+	public static Packet read(BufferReader reader) throws Exception {
 		return new ChunkTilePacket(
-				ChunkTile.fromBuf(buf));
+				ChunkTile.read(reader));
 	}
 
 	@Override
-	public void write(@NotNull ByteBuf buf) {
-		chunkTile.write(buf);
+	public void write(@NotNull BufferWriter writer) throws Exception {
+		chunkTile.write(writer);
 	}
 }

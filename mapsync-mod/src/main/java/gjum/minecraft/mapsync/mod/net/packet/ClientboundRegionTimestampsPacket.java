@@ -1,9 +1,8 @@
 package gjum.minecraft.mapsync.mod.net.packet;
 
 import gjum.minecraft.mapsync.mod.data.RegionTimestamp;
-import gjum.minecraft.mapsync.mod.net.IntType;
 import gjum.minecraft.mapsync.mod.net.Packet;
-import io.netty.buffer.ByteBuf;
+import gjum.minecraft.mapsync.mod.net.buffers.BufferReader;
 
 /**
  * This is the packet for the first-stage of the synchronisation process. It's
@@ -30,13 +29,13 @@ public class ClientboundRegionTimestampsPacket implements Packet {
 		return timestamp;
 	}
 
-	public static Packet read(ByteBuf buf) {
+	public static Packet read(BufferReader reader) throws Exception {
 		return new ClientboundRegionTimestampsPacket(
-			Packet.readLengthPrefixedString(buf, IntType.U8),
+			reader.readString(),
 			new RegionTimestamp(
-				buf.readShort(),
-				buf.readShort(),
-				buf.readLong()
+				(short) reader.readInt16(),
+				(short) reader.readInt16(),
+				reader.readInt64()
 			)
 		);
 	}

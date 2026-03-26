@@ -33,6 +33,21 @@ public final class Assertions {
 			));
 		}
 	}
+
+	/// Asserts whether a given value fits within the given mask. For example: `256` would not fit within a mask of
+	/// `0xFF`, making this a good way to test the validity of unsigned integers in larger integer types.
+	public static long assertMasked(
+		final long mask,
+		final long value
+	) {
+		if ((value & ~mask) != 0L) {
+			throw new AssertionException("%d does not fit within mask %d".formatted(
+				value,
+				mask
+			));
+		}
+		return value;
+	}
 }
 
 final class AssertionException extends RuntimeException {

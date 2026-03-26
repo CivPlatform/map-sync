@@ -35,7 +35,7 @@ dependencies {
 
 	libs.voxelmap.also {
 		modCompileOnly(it)
-		//modLocalDep(it) // Uncomment to test VoxelMap
+		modLocalDep(it) // Uncomment to test VoxelMap
 	}
 	libs.journeymap.also {
 		modCompileOnly(it)

@@ -10,10 +10,10 @@ import {
     ServerboundEncryptionResponsePacket,
     ClientboundEncryptionRequestPacket,
 } from "./protocol";
-import { BufReader } from "./protocol/BufReader";
-import { BufWriter } from "./protocol/BufWriter";
+import { BufferReader, BufferWriter } from "./protocol/buffers";
 import { SUPPORTED_VERSIONS } from "./constants";
 import * as metadata from "./metadata";
+import { asUnt31 } from "./deps/ints";
 
 const { PORT = "12312", HOST = "127.0.0.1" } = process.env;
 
@@ -122,12 +122,12 @@ export class TcpClient {
 
                     if (accBuf.length < 4 + frameSize) return; // wait for more data
 
-                    const frameReader = new BufReader(accBuf);
-                    frameReader.readUInt32(); // skip frame size
+                    const frameReader = new BufferReader(accBuf);
+                    frameReader.readUnt31(); // skip frame size
                     let pktBuf = frameReader.readBytesOfLength(frameSize);
                     accBuf = frameReader.readRemainder();
 
-                    const reader = new BufReader(pktBuf);
+                    const reader = new BufferReader(pktBuf);
 
                     try {
                         const packet = decodePacket(reader);
@@ -219,17 +219,22 @@ export class TcpClient {
         if (doCrypto && !this.cryptoPromise)
             throw new Error(`Can't encrypt: handshake not finished`);
         this.debug(`Sending ${pkt.name}:`, pkt);
-        const writer = new BufWriter(); // TODO size hint
-        writer.writeUInt32(0); // set later, but reserve space in buffer
-        encodePacket(pkt, writer);
-        let buf: Buffer = writer.getBuffer();
-        buf.writeUInt32BE(buf.length - 4, 0); // write into space reserved above
-
+        let buf: Buffer;
+        {
+            const packetWriter = new BufferWriter();
+            encodePacket(pkt, packetWriter);
+            buf = packetWriter.getBuffer();
+        }
+        {
+            const frameWriter = new BufferWriter(asUnt31(4 + buf.length));
+            frameWriter.writeUnt31(buf.length);
+            frameWriter.writeBytes(buf);
+            buf = frameWriter.getBuffer();
+        }
         if (doCrypto) {
             const { cipher } = await this.cryptoPromise!;
             buf = cipher!.update(buf);
         }
-
         this.socket.write(buf);
     }
 

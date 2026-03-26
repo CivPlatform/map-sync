@@ -1,8 +1,7 @@
-import { BufReader } from "./BufReader";
-import { BufWriter } from "./BufWriter";
+import { BufferReader, BufferWriter } from "./buffers";
 import type { CatchupChunk } from "../model";
 import { SHA1_HASH_LENGTH } from "../constants";
-import { U8, U16 } from "./ints";
+import { asUnt8, int16, int32, int64, unt16, unt8 } from "../deps/ints";
 
 export type ServerboundPacket =
     | ServerboundHandshakePacket
@@ -18,7 +17,7 @@ export type ClientboundPacket =
     | ChunkTilePacket;
 
 abstract class Packet {
-    protected constructor(public readonly packetId: number) {}
+    protected constructor(public readonly packetId: unt8) {}
 
     public get name(): string {
         return this.constructor.name ?? `Packet[${this.packetId}]`;
@@ -26,7 +25,7 @@ abstract class Packet {
 }
 
 export class ServerboundHandshakePacket extends Packet {
-    public static readonly PACKET_ID = 1;
+    public static readonly PACKET_ID = asUnt8(1);
 
     public constructor(
         public readonly modVersion: string,
@@ -37,18 +36,18 @@ export class ServerboundHandshakePacket extends Packet {
         super(ServerboundHandshakePacket.PACKET_ID);
     }
 
-    public static decode(reader: BufReader): ServerboundHandshakePacket {
+    public static decode(reader: BufferReader): ServerboundHandshakePacket {
         return new ServerboundHandshakePacket(
-            reader.readLengthPrefixedString(U8),
-            reader.readLengthPrefixedString(U8),
-            reader.readLengthPrefixedString(U8),
-            reader.readLengthPrefixedString(U8),
+            reader.readString(),
+            reader.readString(),
+            reader.readString(),
+            reader.readString(),
         );
     }
 }
 
 export class ClientboundEncryptionRequestPacket extends Packet {
-    public static readonly PACKET_ID = 2;
+    public static readonly PACKET_ID = asUnt8(2);
 
     public constructor(
         public readonly publicKey: Buffer,
@@ -57,14 +56,20 @@ export class ClientboundEncryptionRequestPacket extends Packet {
         super(ClientboundEncryptionRequestPacket.PACKET_ID);
     }
 
-    public encode(writer: BufWriter) {
-        writer.writeLengthPrefixedData(U16, this.publicKey);
-        writer.writeLengthPrefixedData(U8, this.verifyToken);
+    public encode(writer: BufferWriter) {
+        writer.writeLengthPrefixedBytes(
+            BufferWriter.prototype.writeUnt16,
+            this.publicKey,
+        );
+        writer.writeLengthPrefixedBytes(
+            BufferWriter.prototype.writeUnt8,
+            this.verifyToken,
+        );
     }
 }
 
 export class ServerboundEncryptionResponsePacket extends Packet {
-    public static readonly PACKET_ID = 3;
+    public static readonly PACKET_ID = asUnt8(3);
 
     public constructor(
         /** encrypted with server's public key */
@@ -76,29 +81,29 @@ export class ServerboundEncryptionResponsePacket extends Packet {
     }
 
     public static decode(
-        reader: BufReader,
+        reader: BufferReader,
     ): ServerboundEncryptionResponsePacket {
         return new ServerboundEncryptionResponsePacket(
-            reader.readLengthPrefixedBytes(U8),
-            reader.readLengthPrefixedBytes(U8),
+            reader.readBytesOfLength(reader.readUnt8()),
+            reader.readBytesOfLength(reader.readUnt8()),
         );
     }
 }
 
 export class ClientboundRegionTimestampsPacket extends Packet {
-    public static readonly PACKET_ID = 7;
+    public static readonly PACKET_ID = asUnt8(7);
 
     public constructor(
         public readonly dimension: string,
-        public readonly regionX: number,
-        public readonly regionZ: number,
-        public readonly timestamp: number,
+        public readonly regionX: int16,
+        public readonly regionZ: int16,
+        public readonly timestamp: int64,
     ) {
         super(ClientboundRegionTimestampsPacket.PACKET_ID);
     }
 
-    public encode(writer: BufWriter) {
-        writer.writeLengthPrefixedData(U8, this.dimension);
+    public encode(writer: BufferWriter) {
+        writer.writeString(this.dimension);
         writer.writeInt16(this.regionX);
         writer.writeInt16(this.regionZ);
         writer.writeInt64(this.timestamp);
@@ -106,21 +111,21 @@ export class ClientboundRegionTimestampsPacket extends Packet {
 }
 
 export class ServerboundChunkTimestampsRequestPacket extends Packet {
-    public static readonly PACKET_ID = 8;
+    public static readonly PACKET_ID = asUnt8(8);
 
     public constructor(
         public readonly dimension: string,
-        public readonly regionX: number,
-        public readonly regionZ: number,
+        public readonly regionX: int16,
+        public readonly regionZ: int16,
     ) {
         super(ServerboundChunkTimestampsRequestPacket.PACKET_ID);
     }
 
     public static decode(
-        reader: BufReader,
+        reader: BufferReader,
     ): ServerboundChunkTimestampsRequestPacket {
         return new ServerboundChunkTimestampsRequestPacket(
-            reader.readLengthPrefixedString(U8),
+            reader.readString(),
             reader.readInt16(),
             reader.readInt16(),
         );
@@ -128,20 +133,24 @@ export class ServerboundChunkTimestampsRequestPacket extends Packet {
 }
 
 export class ClientboundChunkTimestampsResponsePacket extends Packet {
-    public static readonly PACKET_ID = 5;
+    public static readonly PACKET_ID = asUnt8(5);
 
     public constructor(
         public readonly dimension: string,
         public readonly chunks: CatchupChunk[],
     ) {
         super(ClientboundChunkTimestampsResponsePacket.PACKET_ID);
-        if (this.chunks.length < 1)
-            throw new Error(`Catchup chunks must not be empty`);
+        switch (true) {
+            case this.chunks.length < 1:
+                throw new Error(`Catchup chunks must not be empty`);
+            case this.chunks.length > 1024:
+                throw new Error(`Catchup chunks contains too many chunks!`);
+        }
     }
 
-    public encode(writer: BufWriter) {
-        writer.writeLengthPrefixedData(U8, this.dimension);
-        writer.writeUInt16(this.chunks.length);
+    public encode(writer: BufferWriter) {
+        writer.writeString(this.dimension);
+        writer.writeUnt16(this.chunks.length);
         for (const row of this.chunks) {
             writer.writeInt32(row.chunkX);
             writer.writeInt32(row.chunkZ);
@@ -151,7 +160,7 @@ export class ClientboundChunkTimestampsResponsePacket extends Packet {
 }
 
 export class ServerboundCatchupRequestPacket extends Packet {
-    public static readonly PACKET_ID = 6;
+    public static readonly PACKET_ID = asUnt8(6);
 
     public constructor(
         public readonly dimension: string,
@@ -160,9 +169,11 @@ export class ServerboundCatchupRequestPacket extends Packet {
         super(ServerboundCatchupRequestPacket.PACKET_ID);
     }
 
-    public static decode(reader: BufReader): ServerboundCatchupRequestPacket {
-        const dimension = reader.readLengthPrefixedString(U8);
-        const chunks: CatchupChunk[] = new Array(reader.readUInt16());
+    public static decode(
+        reader: BufferReader,
+    ): ServerboundCatchupRequestPacket {
+        const dimension = reader.readString();
+        const chunks: CatchupChunk[] = new Array(Number(reader.readUnt10()));
         for (let i = 0; i < chunks.length; i++) {
             chunks[i] = {
                 chunkX: reader.readInt32(),
@@ -175,45 +186,45 @@ export class ServerboundCatchupRequestPacket extends Packet {
 }
 
 export class ChunkTilePacket extends Packet {
-    public static readonly PACKET_ID = 4;
+    public static readonly PACKET_ID = asUnt8(4);
 
     public constructor(
         public readonly dimension: string,
-        public readonly chunkX: number,
-        public readonly chunkZ: number,
-        public readonly timestamp: number,
-        public readonly dataVersion: number,
+        public readonly chunkX: int32,
+        public readonly chunkZ: int32,
+        public readonly timestamp: int64,
+        public readonly dataVersion: unt16,
         public readonly dataHash: Buffer,
         public readonly data: Buffer,
     ) {
         super(ChunkTilePacket.PACKET_ID);
     }
 
-    public static decode(reader: BufReader): ChunkTilePacket {
+    public static decode(reader: BufferReader): ChunkTilePacket {
         return new ChunkTilePacket(
-            reader.readLengthPrefixedString(U8),
+            reader.readString(),
             reader.readInt32(),
             reader.readInt32(),
             reader.readInt64(),
-            reader.readUInt16(),
+            reader.readUnt16(),
             reader.readBytesOfLength(SHA1_HASH_LENGTH),
             reader.readRemainder(),
         );
     }
 
-    public encode(writer: BufWriter) {
-        writer.writeLengthPrefixedData(U8, this.dimension);
+    public encode(writer: BufferWriter) {
+        writer.writeString(this.dimension);
         writer.writeInt32(this.chunkX);
         writer.writeInt32(this.chunkZ);
         writer.writeInt64(this.timestamp);
-        writer.writeUInt16(this.dataVersion);
-        writer.writeBufRaw(this.dataHash);
-        writer.writeBufRaw(this.data); // XXX do we need to prefix with length?
+        writer.writeUnt16(this.dataVersion);
+        writer.writeBytes(this.dataHash);
+        writer.writeBytes(this.data); // XXX do we need to prefix with length?
     }
 }
 
-export function decodePacket(reader: BufReader): ServerboundPacket {
-    const packetId = reader.readUInt8();
+export function decodePacket(reader: BufferReader): ServerboundPacket {
+    const packetId: unt8 = reader.readUnt8();
     switch (packetId) {
         case ServerboundHandshakePacket.PACKET_ID:
             return ServerboundHandshakePacket.decode(reader);
@@ -230,7 +241,10 @@ export function decodePacket(reader: BufReader): ServerboundPacket {
     }
 }
 
-export function encodePacket(pkt: ClientboundPacket, writer: BufWriter): void {
-    writer.writeUInt8(pkt.packetId);
+export function encodePacket(
+    pkt: ClientboundPacket,
+    writer: BufferWriter,
+): void {
+    writer.writeUnt8(pkt.packetId);
     pkt.encode(writer);
 }

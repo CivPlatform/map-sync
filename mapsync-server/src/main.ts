@@ -137,8 +137,8 @@ export class Main {
                 continue;
             }
 
-            if (chunk.ts > req.timestamp) continue; // someone sent a new chunk, which presumably got relayed to the client
-            if (chunk.ts < req.timestamp) continue; // the client already has a chunk newer than this
+            if (chunk.timestamp > req.timestamp) continue; // someone sent a new chunk, which presumably got relayed to the client
+            if (chunk.timestamp < req.timestamp) continue; // the client already has a chunk newer than this
 
             client.send(
                 new ChunkTilePacket(
@@ -168,7 +168,10 @@ export class Main {
         );
         if (chunks.length) {
             client.send(
-                new ClientboundChunkTimestampsResponsePacket(pkt.dimension, chunks),
+                new ClientboundChunkTimestampsResponsePacket(
+                    pkt.dimension,
+                    chunks,
+                ),
             );
         }
     }

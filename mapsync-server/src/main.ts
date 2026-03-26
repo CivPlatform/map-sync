@@ -170,6 +170,8 @@ export class Main {
             client.send(
                 new ClientboundChunkTimestampsResponsePacket(
                     pkt.dimension,
+                    pkt.regionX,
+                    pkt.regionZ,
                     chunks,
                 ),
             );

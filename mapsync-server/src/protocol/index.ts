@@ -1,7 +1,15 @@
 import { BufferReader, BufferWriter } from "./buffers";
 import type { CatchupChunk } from "../model";
 import { SHA1_HASH_LENGTH } from "../constants";
-import { asUnt8, int16, int32, int64, unt16, unt8 } from "../deps/ints";
+import {
+    asInt32,
+    asUnt8,
+    int16,
+    int32,
+    int64,
+    unt16,
+    unt8,
+} from "../deps/ints";
 
 export type ServerboundPacket =
     | ServerboundHandshakePacket
@@ -137,6 +145,8 @@ export class ClientboundChunkTimestampsResponsePacket extends Packet {
 
     public constructor(
         public readonly dimension: string,
+        public readonly regionX: int16,
+        public readonly regionZ: int16,
         public readonly chunks: CatchupChunk[],
     ) {
         super(ClientboundChunkTimestampsResponsePacket.PACKET_ID);
@@ -150,10 +160,12 @@ export class ClientboundChunkTimestampsResponsePacket extends Packet {
 
     public encode(writer: BufferWriter) {
         writer.writeString(this.dimension);
-        writer.writeUnt16(this.chunks.length);
+        writer.writeInt16(this.regionX);
+        writer.writeInt16(this.regionZ);
+        writer.writeUnt10(this.chunks.length);
         for (const row of this.chunks) {
-            writer.writeInt32(row.chunkX);
-            writer.writeInt32(row.chunkZ);
+            writer.writeUnt5(row.chunkX & 31n);
+            writer.writeUnt5(row.chunkZ & 31n);
             writer.writeInt64(row.timestamp);
         }
     }
@@ -173,11 +185,13 @@ export class ServerboundCatchupRequestPacket extends Packet {
         reader: BufferReader,
     ): ServerboundCatchupRequestPacket {
         const dimension = reader.readString();
+        const anchorChunkX = reader.readInt16() << 5n;
+        const anchorChunkZ = reader.readInt16() << 5n;
         const chunks: CatchupChunk[] = new Array(Number(reader.readUnt10()));
         for (let i = 0; i < chunks.length; i++) {
             chunks[i] = {
-                chunkX: reader.readInt32(),
-                chunkZ: reader.readInt32(),
+                chunkX: asInt32(anchorChunkX + reader.readUnt5()),
+                chunkZ: asInt32(anchorChunkZ + reader.readUnt5()),
                 timestamp: reader.readInt64(),
             };
         }

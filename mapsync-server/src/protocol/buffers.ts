@@ -112,57 +112,57 @@ export class BufferWriter {
         return this.buffer.subarray(0, this.offset);
     }
 
-    public writeUnt5(value: numeric, offset = this.offset) {
+    public writeUnt5(value: numeric) {
         value = asUnt5(value);
-        this.writeUnt8(value as unknown as unt8, offset);
+        this.writeUnt8(value as unknown as unt8);
     }
 
-    public writeUnt8(value: numeric, offset = this.offset) {
+    public writeUnt8(value: numeric) {
         value = asUnt8(value);
         this.ensureSpace(1);
-        this.buffer.writeUInt8(Number(value), offset);
+        this.buffer.writeUInt8(Number(value), this.offset);
         this.offset += 1;
     }
 
-    public writeUnt10(value: numeric, offset = this.offset) {
+    public writeUnt10(value: numeric) {
         value = asUnt10(value);
-        this.writeUnt16(value as unknown as unt16, offset);
+        this.writeUnt16(value as unknown as unt16);
     }
 
-    public writeUnt16(value: numeric, offset = this.offset) {
+    public writeUnt16(value: numeric) {
         value = asUnt16(value);
         this.ensureSpace(2);
-        this.buffer.writeUInt16BE(Number(value), offset);
+        this.buffer.writeUInt16BE(Number(value), this.offset);
         this.offset += 2;
     }
 
-    public writeInt16(value: numeric, offset = this.offset) {
+    public writeInt16(value: numeric) {
         value = asInt16(value);
         this.ensureSpace(2);
-        this.buffer.writeInt16BE(Number(value), offset);
+        this.buffer.writeInt16BE(Number(value), this.offset);
         this.offset += 2;
     }
 
-    public writeUnt31(value: numeric, offset = this.offset) {
+    public writeUnt31(value: numeric) {
         value = asUnt31(value);
         this.writeInt32(value as unknown as int32);
     }
 
-    public writeInt32(value: numeric, offset = this.offset) {
+    public writeInt32(value: numeric) {
         value = asInt32(value);
         this.ensureSpace(4);
-        this.buffer.writeInt32BE(Number(value), offset);
+        this.buffer.writeInt32BE(Number(value), this.offset);
         this.offset += 4;
     }
 
-    public writeInt64(value: numeric, offset = this.offset) {
+    public writeInt64(value: numeric) {
         value = asInt64(value);
         this.ensureSpace(8);
-        this.buffer.writeBigInt64BE(value, offset);
+        this.buffer.writeBigInt64BE(value, this.offset);
         this.offset += 8;
     }
 
-    public writeBytes(buf: Buffer, offset = this.offset) {
+    public writeBytes(buf: Buffer) {
         this.ensureSpace(buf.length);
         this.buffer.set(buf, this.offset);
         this.offset += buf.length;
@@ -171,16 +171,15 @@ export class BufferWriter {
     public writeLengthPrefixedBytes(
         lengthSetter: LengthPrefixSetter,
         data: Buffer,
-        offset = this.offset,
     ) {
         lengthSetter.bind(this)(data.length);
-        this.buffer.set(data, offset);
+        this.buffer.set(data, this.offset);
         this.offset += data.length;
     }
 
-    public writeString(value: string, offset = this.offset) {
+    public writeString(value: string) {
         const bytes: Buffer = Buffer.from(value, "utf8");
-        this.writeUnt8(bytes.length, offset);
+        this.writeUnt8(bytes.length);
         this.writeBytes(bytes);
     }
 

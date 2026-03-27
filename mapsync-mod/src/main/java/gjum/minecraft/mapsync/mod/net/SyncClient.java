@@ -265,7 +265,7 @@ public class SyncClient {
 			final String shaHex; {
 				final MessageDigest md = Shortcuts.shaHash();
 				md.update(sharedSecret);
-				md.update(packet.publicKey.getEncoded());
+				md.update(packet.publicKey().getEncoded());
 				shaHex = HexFormat.of().formatHex(md.digest());
 			}
 
@@ -283,8 +283,8 @@ public class SyncClient {
 
 		try {
 			ctx.channel().writeAndFlush(new ServerboundEncryptionResponsePacket(
-					encrypt(packet.publicKey, sharedSecret),
-					encrypt(packet.publicKey, packet.verifyToken)));
+					encrypt(packet.publicKey(), sharedSecret),
+					encrypt(packet.publicKey(), packet.verifyToken())));
 		} catch (NoSuchAlgorithmException | InvalidKeyException | NoSuchPaddingException | BadPaddingException |
 				 IllegalBlockSizeException e) {
 			shutDown();

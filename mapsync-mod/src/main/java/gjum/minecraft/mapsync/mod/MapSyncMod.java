@@ -274,11 +274,11 @@ public final class MapSyncMod implements ClientModInitializer {
 	public void handleRegionTimestamps(ClientboundRegionTimestampsPacket packet, SyncClient client) {
 		DimensionState dimension = getDimensionState();
 		if (dimension == null) return;
-		if (!dimension.dimension.identifier().toString().equals(packet.getDimension())) {
+		if (!dimension.dimension.identifier().toString().equals(packet.dimension())) {
 			return;
 		}
 
-		var regionTs = packet.getTimestamp();
+		var regionTs = packet.timestamp();
 
 		var regionPos = new RegionPos(regionTs.x(), regionTs.z());
 		long oldestChunkTs = dimension.getOldestChunkTsInRegion(regionPos);
@@ -290,7 +290,7 @@ public final class MapSyncMod implements ClientModInitializer {
 				+ ", newest server chunk ts: " + regionTs.timestamp());
 
 		if (requiresUpdate) {
-			client.send(new ServerboundChunkTimestampsRequestPacket(packet.getDimension(), regionPos));
+			client.send(new ServerboundChunkTimestampsRequestPacket(packet.dimension(), regionPos));
 		}
 	}
 

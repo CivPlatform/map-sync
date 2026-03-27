@@ -30,7 +30,7 @@ public class ClientHandler extends ChannelInboundHandlerAdapter {
 					client.setUpEncryption(ctx, pktEncryptionRequest);
 				} else throw new Error("Expected encryption request, got " + packet);
 			} else if (packet instanceof ChunkTilePacket pktChunkTile) {
-				getMod().handleSharedChunk(pktChunkTile.chunkTile);
+				getMod().handleSharedChunk(pktChunkTile.chunkTile());
 			} else if (packet instanceof ClientboundRegionTimestampsPacket pktRegionTimestamps) {
 				getMod().handleRegionTimestamps(pktRegionTimestamps, client);
 			} else if (packet instanceof ClientboundChunkTimestampsResponsePacket pktCatchup) {

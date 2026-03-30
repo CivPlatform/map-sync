@@ -13,13 +13,46 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-      - name: Using nodejs v18
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          package_json_file: ./mapsync-server/package.json
+
+      - name: Setup Node.js
         uses: actions/setup-node@v6
         with:
-          node-version: "18"
-      - run: npm install
+          node-version: "24"
+          cache: "pnpm"
+
+      - name: Install deps
+        run: pnpm install
         working-directory: ./mapsync-server
-      - run: npm run build
+
+      - name: Build
+        run: pnpm run build
         working-directory: ./mapsync-server
-      - run: npm run test
+
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          package_json_file: ./mapsync-server/package.json
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version-file: ./mapsync-server/.nvmrc
+          cache: "pnpm"
+
+      - name: Install deps
+        run: pnpm install
+        working-directory: ./mapsync-server
+
+      - name: Test
+        run: pnpm run test
         working-directory: ./mapsync-server

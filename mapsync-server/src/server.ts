@@ -82,8 +82,8 @@ export class TcpClient {
     /** we need to wait for the mojang auth response
      * before we can en/decrypt packets following the handshake */
     private cryptoPromise?: Promise<{
-        cipher: crypto.Cipher;
-        decipher: crypto.Decipher;
+        cipher: crypto.Cipheriv;
+        decipher: crypto.Decipheriv;
     }>;
 
     constructor(

@@ -1,5 +1,5 @@
 # base is shared between build/test and deploy
-FROM node:18-alpine AS base
+FROM node:24-alpine AS base
 
 WORKDIR /usr/src/app/
 

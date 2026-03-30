@@ -25,6 +25,7 @@ jobs:
         with:
           node-version: "24"
           cache: "pnpm"
+          cache-dependency-path: ./mapsync-server/pnpm-lock.yaml
 
       - name: Install deps
         run: pnpm install
@@ -50,6 +51,7 @@ jobs:
         with:
           node-version-file: ./mapsync-server/.nvmrc
           cache: "pnpm"
+          cache-dependency-path: ./mapsync-server/pnpm-lock.yaml
 
       - name: Install deps
         run: pnpm install

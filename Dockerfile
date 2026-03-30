@@ -1,27 +1,39 @@
 # base is shared between build/test and deploy
 FROM node:24-alpine AS base
 
+ENV PNPM_HOME="/pnpm"
+ENV PATH="$PNPM_HOME:$PATH"
+
 WORKDIR /usr/src/app/
 
-# contains various scripts, so include in all images
-COPY ./mapsync-server/package.json /usr/src/app/package.json
+## so corepack knows pnpm's version
+COPY ./mapsync-server/package.json ./mapsync-server/pnpm-lock.yaml ./mapsync-server/pnpm-workspace.yaml ./
+## prevent prompt to download
+ENV COREPACK_ENABLE_DOWNLOAD_PROMPT=0
+## enable corepack and pnpm
+RUN corepack enable
+## setup for offline
+RUN corepack pack
+## don't call out to network anymore
+ENV COREPACK_ENABLE_NETWORK=0
+
+FROM base AS prod-deps
+RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --prod --frozen-lockfile
 
 FROM base AS build
-
-COPY ./mapsync-server/package-lock.json /usr/src/app/package-lock.json
-RUN npm install
+RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --frozen-lockfile
 
 # copy source as late as possible, to reuse docker cache with node_modules
 COPY ./mapsync-server /usr/src/app
-RUN npm run build
+RUN pnpm run build
 
 FROM build AS test
-RUN npm run test
+RUN pnpm run test
 
 # final image only includes minimal files
 FROM base AS deploy
 
-COPY --from=build /usr/src/app/node_modules /usr/src/app/node_modules
+COPY --from=prod-deps /usr/src/app/node_modules /usr/src/app/node_modules
 COPY --from=build /usr/src/app/dist /usr/src/app/dist
 
 ENV NODE_ENV=production
@@ -33,4 +45,4 @@ ENV MAPSYNC_DATA_DIR=/data
 
 EXPOSE 12312/tcp
 
-CMD [ "npm", "start" ]
+CMD [ "pnpm", "start" ]

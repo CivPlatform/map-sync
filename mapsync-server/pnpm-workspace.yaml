@@ -1,2 +1,8 @@
 allowBuilds:
-  better-sqlite3: true
+    better-sqlite3: true
+
+blockExoticSubdeps: true
+# prevent packages newer than 1 day old from being installed
+minimumReleaseAge: 1440
+# https://pnpm.io/settings#trustpolicy
+trustPolicy: no-downgrade

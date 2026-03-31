@@ -1,5 +1,6 @@
 import crypto from "crypto";
 import net from "net";
+import { WebSocketServer, WebSocket } from "ws";
 import { Main } from "./main";
 import {
     decodePacket,
@@ -15,13 +16,14 @@ import { SUPPORTED_VERSIONS } from "./constants";
 import * as metadata from "./metadata";
 import { asUnt31 } from "./deps/ints";
 
+const maxFrameSize = 2 ** 21; // 20KB
 const { PORT = "12312", HOST = "127.0.0.1" } = process.env;
 
 type ProtocolHandler = Main; // TODO cleanup
 
-export class TcpServer {
-    server: net.Server;
-    clients: Record<number, TcpClient> = {};
+export class WSServer {
+    wss: WebSocketServer;
+    clients: Record<number, WSClient> = {};
 
     keyPair = crypto.generateKeyPairSync("rsa", { modulusLength: 1024 });
     // precomputed for networking
@@ -31,19 +33,27 @@ export class TcpServer {
     });
 
     constructor(readonly handler: ProtocolHandler) {
-        this.server = net.createServer({}, (socket) => {
-            const client = new TcpClient(socket, this, handler);
+        this.wss = new WebSocketServer(
+            {
+                port: parseInt(PORT),
+                host: HOST,
+                path: "/ws",
+                maxPayload: maxFrameSize,
+            },
+            () => {
+                console.log("[WSServer] Listening on", HOST, PORT);
+            },
+        );
+
+        this.wss.on("connection", (ws, req) => {
+            const client = new WSClient(ws, this, handler);
             this.clients[client.id] = client;
-            socket.on("close", () => delete this.clients[client.id]);
+            ws.on("close", () => delete this.clients[client.id]);
         });
 
-        this.server.on("error", (err: Error) => {
-            console.error("[TcpServer] Error:", err);
-            this.server.close();
-        });
-
-        this.server.listen({ port: PORT, hostname: HOST }, () => {
-            console.log("[TcpServer] Listening on", HOST, PORT);
+        this.wss.on("error", (err: Error) => {
+            console.error("[WSServer] Error:", err);
+            this.wss.close();
         });
     }
 
@@ -52,7 +62,7 @@ export class TcpServer {
             {
                 key: this.keyPair.privateKey,
                 padding: crypto.constants.RSA_PKCS1_OAEP_PADDING,
-                oaepHash: "sha256"
+                oaepHash: "sha256",
             },
             buf,
         );
@@ -61,9 +71,7 @@ export class TcpServer {
 
 let nextClientId = 1;
 
-/** Prefixes packets with their length (UInt32BE);
- * handles Mojang authentication */
-export class TcpClient {
+export class WSClient {
     readonly id = nextClientId++;
     /** contains mojang name once logged in */
     name = "Client" + this.id;
@@ -75,7 +83,7 @@ export class TcpClient {
     dimension: string | undefined;
 
     /** prevent Out of Memory when client sends a large packet */
-    maxFrameSize = 2 ** 21;
+    maxFrameSize = maxFrameSize;
 
     /** sent by client during handshake */
     private claimedMojangName?: string;
@@ -88,17 +96,26 @@ export class TcpClient {
     }>;
 
     constructor(
-        private socket: net.Socket,
-        private server: TcpServer,
-        private handler: ProtocolHandler,
+        private readonly ws: WebSocket,
+        private readonly server: WSServer,
+        private readonly handler: ProtocolHandler,
     ) {
-        this.log("Connected from", socket.remoteAddress);
-        handler.handleClientConnected(this);
+        // this.log("Connected from", ws.remoteAddress);
+        // handler.handleClientConnected(this);
 
         /** Accumulates received data, containing none, one, or multiple frames; the last frame may be partial only. */
         let accBuf: Buffer = Buffer.alloc(0);
 
-        socket.on("data", async (data: Buffer) => {
+        ws.on("message", async (rawData) => {
+            let data: Buffer;
+            if (rawData instanceof ArrayBuffer) data = Buffer.from(rawData);
+            else if (rawData instanceof Buffer) data = rawData;
+            else if (Array.isArray(rawData)) data = Buffer.concat(rawData);
+            else {
+                this.warn("Unknown data type:", typeof rawData);
+                return;
+            }
+
             try {
                 if (this.cryptoPromise) {
                     const { decipher } = await this.cryptoPromise;
@@ -144,26 +161,13 @@ export class TcpClient {
             }
         });
 
-        socket.on("close", (hadError: boolean) => {
-            this.log("Closed.", { hadError });
+        ws.on("close", (code, reason) => {
+            this.log("Closed.", { code, reason: reason.toString() });
         });
 
-        socket.on("end", () => {
-            // This event is called when the other end signals the end of transmission, meaning this client is
-            // still writeable, but no longer readable. In this situation we just want to close the socket.
-            // https://nodejs.org/dist/latest-v18.x/docs/api/net.html#event-end
-            this.kick("Ended");
-        });
-
-        socket.on("timeout", () => {
-            // As per the docs, the socket needs to be manually closed.
-            // https://nodejs.org/dist/latest-v18.x/docs/api/net.html#event-timeout
-            this.kick("Timed out");
-        });
-
-        socket.on("error", (err: Error) => {
+        ws.on("error", (err) => {
             this.warn("Error:", err);
-            this.kick("Socket error");
+            this.kick("WebSocket error");
         });
     }
 
@@ -187,7 +191,7 @@ export class TcpClient {
 
     kick(internalReason: string) {
         this.log(`Kicking:`, internalReason);
-        this.socket.destroy();
+        this.ws.close(0, internalReason);
     }
 
     async send(pkt: ClientboundPacket) {
@@ -215,8 +219,8 @@ export class TcpClient {
      * - Drops the packet if the socket is not writable.
      */
     private async sendInternal(pkt: ClientboundPacket, doCrypto = false) {
-        if (!this.socket.writable)
-            return this.debug("Socket closed, dropping", pkt);
+        if (this.ws.readyState !== WebSocket.OPEN)
+            return this.debug("WebSocket not open, dropping", pkt);
         if (doCrypto && !this.cryptoPromise)
             throw new Error(`Can't encrypt: handshake not finished`);
         this.debug(`Sending ${pkt.name}:`, pkt);
@@ -236,7 +240,7 @@ export class TcpClient {
             const { cipher } = await this.cryptoPromise!;
             buf = cipher!.update(buf);
         }
-        this.socket.write(buf);
+        this.ws.send(buf);
     }
 
     private async handleHandshakePacket(packet: ServerboundHandshakePacket) {

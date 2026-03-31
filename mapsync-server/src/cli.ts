@@ -2,7 +2,7 @@ import lib_readline from "readline";
 import lib_stream from "stream";
 
 import * as metadata from "./metadata";
-import { TcpServer } from "./server";
+import { WSServer } from "./server";
 
 import * as database from "./database";
 import { ClientboundRegionTimestampsPacket } from "./protocol";
@@ -18,9 +18,9 @@ const term = lib_readline.createInterface({
     output: process.stdout,
 }) as TermType;
 
-let tcpServer: TcpServer;
-export function setServer(server: TcpServer): void {
-    tcpServer = server;
+let wsServer: WSServer;
+export function setServer(server: WSServer): void {
+    wsServer = server;
 }
 
 if (!("MAPSYNC_DUMB_TERM" in process.env)) {
@@ -129,14 +129,14 @@ async function handle_input(input: string): Promise<void> {
         await metadata.saveWhitelist();
     } else if (command === "list") {
         let i = 1;
-        for (const key in tcpServer.clients) {
-            let client = tcpServer.clients[key];
+        for (const key in wsServer.clients) {
+            let client = wsServer.clients[key];
             console.log(`${i++}. ${client.mcName}: ${client.uuid}`);
         }
     } else if (command === "send") {
         const target = extras.trim(); // IGN or UUID
 
-        const client = Object.values(tcpServer.clients).find(
+        const client = Object.values(wsServer.clients).find(
             (c) => c.mcName === target || c.uuid === target,
         );
         if (!client) {
@@ -166,12 +166,15 @@ async function handle_input(input: string): Promise<void> {
     } else if (command === "kick") {
         const target = extras.trim(); // IGN or UUID
 
-        const client = Object.values(tcpServer.clients).find(
+        const client = Object.values(wsServer.clients).find(
             (c) => c.mcName === target || c.uuid === target,
         );
         client?.kick("Kicked by administrator");
     } else {
-        throw new Error(`Unknown command "${command}"`);
+        console.log(
+            `Unknown command "${command}". Type "help" for a list of commands.`,
+        );
+        // throw new Error(`Unknown command "${command}"`);
     }
 }
 

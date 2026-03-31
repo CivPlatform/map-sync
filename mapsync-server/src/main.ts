@@ -3,7 +3,7 @@ import "./cli";
 import { setServer } from "./cli";
 import * as database from "./database";
 import * as metadata from "./metadata";
-import { TcpClient, TcpServer } from "./server";
+import { WSServer, WSClient } from "./server";
 import {
     ChunkTilePacket,
     ClientboundChunkTimestampsResponsePacket,
@@ -29,13 +29,13 @@ Promise.resolve().then(async () => {
     setServer(main.server);
 });
 
-type ProtocolClient = TcpClient; // TODO cleanup
+type ProtocolClient = WSClient; // TODO cleanup
 
 export class Main {
-    server: TcpServer = new TcpServer(this);
+    server: WSServer = new WSServer(this);
 
-    //Cannot be async, as it's caled from a synchronous constructor
-    handleClientConnected(client: ProtocolClient) {}
+    // //Cannot be async, as it's caled from a synchronous constructor
+    // handleClientConnected(client: ProtocolClient) {}
 
     async handleClientAuthenticated(client: ProtocolClient) {
         if (!client.uuid) throw new Error("Client not authenticated");

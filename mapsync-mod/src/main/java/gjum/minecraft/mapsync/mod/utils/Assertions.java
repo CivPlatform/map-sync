@@ -3,6 +3,7 @@ package gjum.minecraft.mapsync.mod.utils;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import org.apache.commons.lang3.IntegerRange;
 import org.apache.commons.lang3.LongRange;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Unmodifiable;
@@ -70,7 +71,20 @@ public final class Assertions {
 		}
 	}
 
-	public static void assertRange(
+	public static void assertIntRange(
+		final @NotNull IntegerRange range,
+		final int value
+	) {
+		if (!range.contains(value)) {
+			throw new AssertionException("%d is not within range %d..%d".formatted(
+				value,
+				range.getMinimum(),
+				range.getMaximum()
+			));
+		}
+	}
+
+	public static void assertLongRange(
 		final @NotNull LongRange range,
 		final long value
 	) {
@@ -79,6 +93,16 @@ public final class Assertions {
 				value,
 				range.getMinimum(),
 				range.getMaximum()
+			));
+		}
+	}
+
+	public static void assertPositive(
+		final long value
+	) {
+		if (value < 1) {
+			throw new AssertionException("%d is not positive!".formatted(
+				value
 			));
 		}
 	}

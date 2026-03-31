@@ -2,7 +2,7 @@ package gjum.minecraft.mapsync.mod.net.buffers;
 
 import gjum.minecraft.mapsync.mod.utils.Assertions;
 import gjum.minecraft.mapsync.mod.utils.MagicValues;
-import io.netty.buffer.ByteBuf;
+import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.util.Objects;
 import net.minecraft.core.Registry;
@@ -11,12 +11,16 @@ import net.minecraft.resources.ResourceKey;
 import org.jetbrains.annotations.NotNull;
 
 public final class BufferReader {
-	private final ByteBuf internal;
+	private final ByteBuffer internal;
 
 	public BufferReader(
-		final @NotNull ByteBuf internal
+		final @NotNull ByteBuffer internal
 	) {
 		this.internal = Objects.requireNonNull(internal);
+	}
+
+	public boolean readBoolean() throws Exception {
+		return Assertions.assertMasked(MagicValues.UNT1_MASK, this.readUnt8()) == 1L;
 	}
 
 	public int readUnt5() throws Exception {
@@ -24,7 +28,7 @@ public final class BufferReader {
 	}
 
 	public int readUnt8() throws Exception {
-		return this.internal.readUnsignedByte();
+		return Byte.toUnsignedInt(this.internal.get());
 	}
 
 	public int readUnt10() throws Exception {
@@ -32,27 +36,27 @@ public final class BufferReader {
 	}
 
 	public int readUnt16() throws Exception {
-		return this.internal.readUnsignedShort();
+		return Short.toUnsignedInt(this.internal.getShort());
 	}
 
 	public int readInt16() throws Exception {
-		return this.internal.readShort();
+		return this.internal.getShort();
 	}
 
 	public int readInt32() throws Exception {
-		return this.internal.readInt();
+		return this.internal.getInt();
 	}
 
 	public long readInt64() throws Exception {
-		return this.internal.readLong();
+		return this.internal.getLong();
 	}
 
 	public byte @NotNull [] readBytesOfLength(
-		final int size
+		final int length
 	) throws Exception {
-		final var bytes = new byte[size];
-		if (size > 0) {
-			this.internal.readBytes(bytes);
+		final var bytes = new byte[length];
+		if (length > 0) {
+			this.internal.get(bytes);
 		}
 		return bytes;
 	}

@@ -27,7 +27,7 @@ public record ServerboundCatchupRequestPacket(
 	public ServerboundCatchupRequestPacket {
 		Assertions.assertNotNull(dimension);
 		chunks = Assertions.assertNonNullMap(chunks);
-		Assertions.assertRange(LongRange.of(1, MagicValues.REGION_GRID), chunks.size());
+		Assertions.assertLongRange(LongRange.of(1, MagicValues.REGION_GRID), chunks.size());
 	}
 
 	@Override

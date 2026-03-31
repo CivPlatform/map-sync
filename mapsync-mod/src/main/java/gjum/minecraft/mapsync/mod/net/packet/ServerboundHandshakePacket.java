@@ -6,12 +6,11 @@ import gjum.minecraft.mapsync.mod.utils.Assertions;
 import org.jetbrains.annotations.NotNull;
 
 /// The client should send this to the server *IMMEDIATELY* upon a successful connection. The server should respond
-/// with a [ClientboundEncryptionRequestPacket].
+/// with a [ClientboundIdentityRequestPacket].
 ///
-/// - Next: [ClientboundEncryptionRequestPacket]
+/// - Next: [ClientboundIdentityRequestPacket]
 public record ServerboundHandshakePacket(
 	@NotNull String modVersion,
-	@NotNull String username,
 	@NotNull String gameAddress,
 	@NotNull String dimension
 ) implements Packet {
@@ -19,7 +18,6 @@ public record ServerboundHandshakePacket(
 
 	public ServerboundHandshakePacket {
 		Assertions.assertNotNull(modVersion);
-		Assertions.assertNotNull(username);
 		Assertions.assertNotNull(gameAddress);
 		Assertions.assertNotNull(dimension);
 	}
@@ -29,7 +27,6 @@ public record ServerboundHandshakePacket(
 		final @NotNull BufferWriter writer
 	) throws Exception {
 		writer.writeString(this.modVersion());
-		writer.writeString(this.username());
 		writer.writeString(this.gameAddress());
 		writer.writeString(this.dimension());
 	}

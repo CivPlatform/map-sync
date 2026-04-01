@@ -98,7 +98,7 @@ public class ModGui extends Screen {
 	public void connectClicked(Button btn) {
 		try {
 			if (syncServerAddressField == null) return;
-			var addresses = List.of(syncServerAddressField.getValue().split("[^-_.:A-Za-z0-9]+"));
+			var addresses = List.of(syncServerAddressField.getValue().split("[^-_.:A-Za-z0-9/]+"));
 			serverConfig.setSyncServerAddresses(addresses);
 			getMod().shutDownSyncClients();
 			getMod().getSyncClients();
@@ -152,17 +152,28 @@ public class ModGui extends Screen {
 			for (var client : syncClients) {
 				int statusColor;
 				String statusText;
-				if (client.isEncrypted()) {
-					statusColor = 0xFF008800;
-					statusText = "Connected";
-				} else if (client.getError() != null) {
-					statusColor = 0xFFff8888;
-					statusText = client.getError();
-				} else {
-					statusColor = 0xFFffffff;
-					statusText = "Connecting...";
+
+				var connectionState = client.state();
+				switch (connectionState) {
+					case DISCONNECTED -> {
+						statusColor = 0xFFff8888;
+						statusText = "Disconnected";
+					}
+					case CONNECTED -> {
+						statusColor = 0xFF8888ff;
+						statusText = "Connected (not authed)";
+					}
+					case AUTHED -> {
+						statusColor = 0xFF88ff88;
+						statusText = "Connected and authed";
+					}
+					default -> {
+						statusColor = 0xFFFFFF00;
+						statusText = "Unknown state: " + connectionState;
+					}
 				}
-				statusText = client.address + "  " + statusText;
+
+				statusText = client.syncAddress + "  " + statusText;
 				guiGraphics.drawString(font, statusText, left, msgY, statusColor);
 				msgY += 10;
 			}

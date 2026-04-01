@@ -1,6 +1,7 @@
+import node_utils from "node:util";
 import { BufferReader, BufferWriter } from "./buffers.ts";
-import type { CatchupChunk } from "../model.ts";
-import { SHA1_HASH_LENGTH } from "../constants.ts";
+import type { CatchupChunk } from "./model.ts";
+import { SHA1_HASH_LENGTH } from "./constants.ts";
 import {
     asInt32,
     asUnt8,
@@ -9,20 +10,29 @@ import {
     type int64,
     type unt16,
     type unt8,
-} from "../deps/ints.ts";
+} from "./deps/ints.ts";
 
 export type ServerboundPacket =
     | ServerboundHandshakePacket
-    | ServerboundEncryptionResponsePacket
+    | ServerboundIdentityResponsePacket
     | ServerboundChunkTimestampsRequestPacket
     | ServerboundCatchupRequestPacket
     | ChunkTilePacket;
 
 export type ClientboundPacket =
-    | ClientboundEncryptionRequestPacket
+    | ClientboundIdentityRequestPacket
+    | ClientboundWelcomePacket
     | ClientboundRegionTimestampsPacket
     | ClientboundChunkTimestampsResponsePacket
     | ChunkTilePacket;
+
+export class UnexpectedPacketError extends Error {
+    public constructor(packet: Packet) {
+        super(
+            `Unexpected packet [${packet.name}]: ${node_utils.inspect(packet)}`,
+        );
+    }
+}
 
 abstract class Packet {
     protected constructor(public readonly packetId: unt8) {}
@@ -37,7 +47,6 @@ export class ServerboundHandshakePacket extends Packet {
 
     public constructor(
         public readonly modVersion: string,
-        public readonly mojangName: string,
         public readonly gameAddress: string,
         public readonly dimension: string,
     ) {
@@ -49,53 +58,53 @@ export class ServerboundHandshakePacket extends Packet {
             reader.readString(),
             reader.readString(),
             reader.readString(),
-            reader.readString(),
         );
     }
 }
 
-export class ClientboundEncryptionRequestPacket extends Packet {
+export class ClientboundIdentityRequestPacket extends Packet {
     public static readonly PACKET_ID = asUnt8(2);
 
-    public constructor(
-        public readonly publicKey: Buffer,
-        public readonly verifyToken: Buffer,
-    ) {
-        super(ClientboundEncryptionRequestPacket.PACKET_ID);
+    public constructor(public readonly serverSalt: Buffer) {
+        super(ClientboundIdentityRequestPacket.PACKET_ID);
     }
 
     public encode(writer: BufferWriter) {
         writer.writeLengthPrefixedBytes(
             BufferWriter.prototype.writeUnt16,
-            this.publicKey,
-        );
-        writer.writeLengthPrefixedBytes(
-            BufferWriter.prototype.writeUnt8,
-            this.verifyToken,
+            this.serverSalt,
         );
     }
 }
 
-export class ServerboundEncryptionResponsePacket extends Packet {
+export class ServerboundIdentityResponsePacket extends Packet {
     public static readonly PACKET_ID = asUnt8(3);
 
     public constructor(
-        /** encrypted with server's public key */
-        public readonly sharedSecret: Buffer,
-        /** encrypted with server's public key */
-        public readonly verifyToken: Buffer,
+        public readonly claimedUsername: string,
+        public readonly clientSalt: Buffer,
     ) {
-        super(ServerboundEncryptionResponsePacket.PACKET_ID);
+        super(ServerboundIdentityResponsePacket.PACKET_ID);
     }
 
     public static decode(
         reader: BufferReader,
-    ): ServerboundEncryptionResponsePacket {
-        return new ServerboundEncryptionResponsePacket(
-            reader.readBytesOfLength(reader.readUnt8()),
+    ): ServerboundIdentityResponsePacket {
+        return new ServerboundIdentityResponsePacket(
+            reader.readString(),
             reader.readBytesOfLength(reader.readUnt8()),
         );
     }
+}
+
+export class ClientboundWelcomePacket extends Packet {
+    public static readonly PACKET_ID = asUnt8(9);
+
+    public constructor() {
+        super(ClientboundWelcomePacket.PACKET_ID);
+    }
+
+    public encode(writer: BufferWriter) {}
 }
 
 export class ClientboundRegionTimestampsPacket extends Packet {
@@ -242,8 +251,8 @@ export function decodePacket(reader: BufferReader): ServerboundPacket {
     switch (packetId) {
         case ServerboundHandshakePacket.PACKET_ID:
             return ServerboundHandshakePacket.decode(reader);
-        case ServerboundEncryptionResponsePacket.PACKET_ID:
-            return ServerboundEncryptionResponsePacket.decode(reader);
+        case ServerboundIdentityResponsePacket.PACKET_ID:
+            return ServerboundIdentityResponsePacket.decode(reader);
         case ServerboundChunkTimestampsRequestPacket.PACKET_ID:
             return ServerboundChunkTimestampsRequestPacket.decode(reader);
         case ServerboundCatchupRequestPacket.PACKET_ID:

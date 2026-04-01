@@ -5,9 +5,7 @@
         "experimentalDecorators": true,
         "forceConsistentCasingInFileNames": true,
         "isolatedModules": true,
-        "lib": [
-            "esnext",
-        ],
+        "lib": ["esnext"],
         "module": "nodenext",
         "moduleResolution": "nodenext",
         "noImplicitReturns": true,
@@ -21,6 +19,6 @@
         "target": "ESNext",
         "rootDir": "./src",
         "rewriteRelativeImportExtensions": true,
-        "verbatimModuleSyntax": true,
-    },
+        "verbatimModuleSyntax": true
+    }
 }

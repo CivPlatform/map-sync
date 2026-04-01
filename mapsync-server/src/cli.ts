@@ -5,7 +5,8 @@ import * as metadata from "./metadata.ts";
 import { WSServer } from "./server.ts";
 
 import * as database from "./database.ts";
-import { ClientboundRegionTimestampsPacket } from "./protocol/index.ts";
+import { ClientboundRegionTimestampsPacket } from "./packets.ts";
+import { Welcomed } from "./auth.ts";
 
 //idk where these come from lol
 interface TerminalExtras {
@@ -129,9 +130,10 @@ async function handle_input(input: string): Promise<void> {
         await metadata.saveWhitelist();
     } else if (command === "list") {
         let i = 1;
-        for (const key in wsServer.clients) {
-            let client = wsServer.clients[key];
-            console.log(`${i++}. ${client.mcName}: ${client.uuid}`);
+        for (const client of wsServer.clients.values()) {
+            console.log(
+                `${i++}. ${client.name}: ${client.auth instanceof Welcomed ? client.auth.uuid : "?"}`,
+            );
         }
     } else if (command === "send") {
         const target = extras.trim(); // IGN or UUID

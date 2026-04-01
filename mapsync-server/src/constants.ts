@@ -1,4 +1,4 @@
-export const SUPPORTED_VERSIONS = new Set(["2.2.0-SNAPSHOT-1.21.11+fabric"]);
+export const SUPPORTED_VERSIONS = new Set(["2.2.0-SNAPSHOT-1.21.11"]);
 
 // SHA1 produces 160-bit (20-byte) hashes
 // https://en.wikipedia.org/wiki/SHA-1

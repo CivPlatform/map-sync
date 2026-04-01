@@ -16,7 +16,7 @@ import {
     type unt31,
     type unt5,
     type unt8,
-} from "../deps/ints.ts";
+} from "./deps/ints.ts";
 
 /** Each read advances the internal offset into the buffer. */
 export class BufferReader {

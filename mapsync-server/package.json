@@ -7,11 +7,12 @@
     "license": "GPL-3.0-only",
     "scripts": {
         "build": "tsc",
-        "typecheck": "tsc --noEmit",
+        "check:types": "tsc --noEmit --checkJs",
+        "check:style": "prettier --check .",
         "format": "prettier -w .",
         "test": "true",
         "start": "node -r source-map-support/register dist/main.js",
-        "dev": "node --experimental-transform-types --inspect src/main.ts"
+        "start:dev": "node --experimental-transform-types --inspect src/main.ts"
     },
     "dependencies": {
         "async-mutex": "^0.4.0",
@@ -30,6 +31,9 @@
         "prettier": "^3.0.1",
         "typescript": "^6.0.2"
     },
+    "optionalDependencies": {
+        "bufferutil": "^4.1.0"
+    },
     "engines": {
         "node": "24.x"
     },
@@ -40,8 +44,5 @@
         "singleQuote": false,
         "semi": true
     },
-    "packageManager": "pnpm@10.33.0+sha512.10568bb4a6afb58c9eb3630da90cc9516417abebd3fabbe6739f0ae795728da1491e9db5a544c76ad8eb7570f5c4bb3d6c637b2cb41bfdcdb47fa823c8649319",
-    "optionalDependencies": {
-        "bufferutil": "^4.1.0"
-    }
+    "packageManager": "pnpm@10.33.0+sha512.10568bb4a6afb58c9eb3630da90cc9516417abebd3fabbe6739f0ae795728da1491e9db5a544c76ad8eb7570f5c4bb3d6c637b2cb41bfdcdb47fa823c8649319"
 }

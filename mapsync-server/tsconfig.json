@@ -5,9 +5,11 @@
         "experimentalDecorators": true,
         "forceConsistentCasingInFileNames": true,
         "isolatedModules": true,
-        "lib": ["esnext", "webworker"],
-        "module": "CommonJS",
-        "moduleResolution": "node",
+        "lib": [
+            "esnext",
+        ],
+        "module": "nodenext",
+        "moduleResolution": "nodenext",
         "noImplicitReturns": true,
         "noFallthroughCasesInSwitch": true,
         "noImplicitAny": true,
@@ -16,7 +18,9 @@
         "skipLibCheck": true,
         "sourceMap": true,
         "strict": true,
-        "target": "ESNext"
+        "target": "ESNext",
+        "rootDir": "./src",
+        "rewriteRelativeImportExtensions": true,
+        "verbatimModuleSyntax": true,
     },
-    "include": ["src"]
 }

@@ -1,17 +1,16 @@
 import node_utils from "node:util";
-import "./cli";
-import { setServer } from "./cli";
-import * as database from "./database";
-import * as metadata from "./metadata";
-import { WSServer, WSClient } from "./server";
+import { setServer } from "./cli.ts";
+import * as database from "./database.ts";
+import * as metadata from "./metadata.ts";
+import { WSServer, WSClient } from "./server.ts";
 import {
     ChunkTilePacket,
     ClientboundChunkTimestampsResponsePacket,
     ClientboundRegionTimestampsPacket,
     ServerboundCatchupRequestPacket,
     ServerboundChunkTimestampsRequestPacket,
-    ServerboundPacket,
-} from "./protocol";
+    type ServerboundPacket,
+} from "./protocol/index.ts";
 
 let config: metadata.Config = null!;
 let main: Main = null!;

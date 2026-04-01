@@ -1,4 +1,4 @@
-import { int16, int32, int64, unt16 } from "./deps/ints";
+import type { int16, int32, int64, unt16 } from "./deps/ints.ts";
 
 export interface CatchupRegion {
     readonly regionX: int16;

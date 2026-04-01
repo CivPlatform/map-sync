@@ -1,7 +1,7 @@
 import crypto from "crypto";
 import net from "net";
 import { WebSocketServer, WebSocket } from "ws";
-import { Main } from "./main";
+import { Main } from "./main.ts";
 import {
     decodePacket,
     encodePacket,
@@ -10,11 +10,11 @@ import {
     ServerboundHandshakePacket,
     ServerboundEncryptionResponsePacket,
     ClientboundEncryptionRequestPacket,
-} from "./protocol";
-import { BufferReader, BufferWriter } from "./protocol/buffers";
-import { SUPPORTED_VERSIONS } from "./constants";
-import * as metadata from "./metadata";
-import { asUnt31 } from "./deps/ints";
+} from "./protocol/index.ts";
+import { BufferReader, BufferWriter } from "./protocol/buffers.ts";
+import { SUPPORTED_VERSIONS } from "./constants.ts";
+import * as metadata from "./metadata.ts";
+import { asUnt31 } from "./deps/ints.ts";
 
 const maxFrameSize = 2 ** 21; // 20KB
 const { PORT = "12312", HOST = "127.0.0.1" } = process.env;

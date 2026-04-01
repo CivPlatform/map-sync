@@ -1,11 +1,11 @@
 import lib_readline from "readline";
 import lib_stream from "stream";
 
-import * as metadata from "./metadata";
-import { WSServer } from "./server";
+import * as metadata from "./metadata.ts";
+import { WSServer } from "./server.ts";
 
-import * as database from "./database";
-import { ClientboundRegionTimestampsPacket } from "./protocol";
+import * as database from "./database.ts";
+import { ClientboundRegionTimestampsPacket } from "./protocol/index.ts";
 
 //idk where these come from lol
 interface TerminalExtras {

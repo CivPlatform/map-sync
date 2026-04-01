@@ -1,15 +1,15 @@
-import { BufferReader, BufferWriter } from "./buffers";
-import type { CatchupChunk } from "../model";
-import { SHA1_HASH_LENGTH } from "../constants";
+import { BufferReader, BufferWriter } from "./buffers.ts";
+import type { CatchupChunk } from "../model.ts";
+import { SHA1_HASH_LENGTH } from "../constants.ts";
 import {
     asInt32,
     asUnt8,
-    int16,
-    int32,
-    int64,
-    unt16,
-    unt8,
-} from "../deps/ints";
+    type int16,
+    type int32,
+    type int64,
+    type unt16,
+    type unt8,
+} from "../deps/ints.ts";
 
 export type ServerboundPacket =
     | ServerboundHandshakePacket

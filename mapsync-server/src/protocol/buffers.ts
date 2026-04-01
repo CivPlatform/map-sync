@@ -7,16 +7,16 @@ import {
     asUnt31,
     asUnt5,
     asUnt8,
-    int16,
-    int32,
-    int64,
-    numeric,
-    unt10,
-    unt16,
-    unt31,
-    unt5,
-    unt8,
-} from "../deps/ints";
+    type int16,
+    type int32,
+    type int64,
+    type numeric,
+    type unt10,
+    type unt16,
+    type unt31,
+    type unt5,
+    type unt8,
+} from "../deps/ints.ts";
 
 /** Each read advances the internal offset into the buffer. */
 export class BufferReader {

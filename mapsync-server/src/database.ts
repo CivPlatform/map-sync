@@ -1,17 +1,17 @@
 import * as kysely from "kysely";
 import sqlite from "better-sqlite3";
-import { DATA_FOLDER } from "./metadata";
+import { DATA_FOLDER } from "./metadata.ts";
 import {
     asInt16,
     asInt32,
     asInt64,
     asUnt16,
-    int16,
-    int32,
-    int64,
-    unt16,
-} from "./deps/ints";
-import { CatchupChunk, CatchupRegion, StoredChunk } from "./model";
+    type int16,
+    type int32,
+    type int64,
+    type unt16,
+} from "./deps/ints.ts";
+import type { CatchupChunk, CatchupRegion, StoredChunk } from "./model.ts";
 
 let database: kysely.Kysely<Database> | null = null;
 

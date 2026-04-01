@@ -1,8 +1,8 @@
 import node_fs from "node:fs";
 import node_path from "node:path";
 import { Mutex } from "async-mutex";
-import * as errors from "./deps/errors";
-import * as json from "./deps/json";
+import * as errors from "./deps/errors.ts";
+import * as json from "./deps/json.ts";
 import * as z from "zod";
 import { fromZodError } from "zod-validation-error";
 

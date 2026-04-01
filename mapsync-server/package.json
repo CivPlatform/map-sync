@@ -1,6 +1,7 @@
 {
     "name": "mapsync-server",
     "version": "SNAPSHOT",
+    "type": "module",
     "private": true,
     "author": "Gjum",
     "license": "GPL-3.0-only",
@@ -10,7 +11,7 @@
         "format": "prettier -w .",
         "test": "true",
         "start": "node -r source-map-support/register dist/main.js",
-        "start:dev": "tsc && pnpm run start --inspect"
+        "dev": "node --experimental-transform-types --inspect src/main.ts"
     },
     "dependencies": {
         "async-mutex": "^0.4.0",
@@ -27,7 +28,7 @@
         "@types/ws": "^8.18.1",
         "dotenv": "^16.0.1",
         "prettier": "^3.0.1",
-        "typescript": "^5.1.6"
+        "typescript": "^6.0.2"
     },
     "engines": {
         "node": "24.x"

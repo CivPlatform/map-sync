@@ -48,11 +48,9 @@ export class WSClient {
 
     public get name() {
         let name = "Client" + this.id;
-        if (this.auth !== null) {
-            const suffix = this.auth.logName;
-            if (suffix !== null) {
-                name += ":" + suffix;
-            }
+        const suffix = this.auth?.logName ?? null;
+        if (suffix !== null) {
+            name += ":" + suffix;
         }
         return name;
     }

@@ -11,6 +11,7 @@ import java.lang.reflect.InvocationTargetException;
 import java.util.Timer;
 import java.util.TimerTask;
 import org.jetbrains.annotations.NotNull;
+import static gjum.minecraft.mapsync.mod.MapSyncMod.logger;
 
 /**
  * subclasses must have constructor without args, to create default config
@@ -34,16 +35,16 @@ public class JsonConfig {
 		try (FileReader reader = new FileReader(file)) {
 			T config = GSON.fromJson(reader, clazz);
 			config.configFile = file;
-			System.out.println("[map-sync] Loaded existing " + file);
+			logger.info("Loaded existing {}", file);
 			return config;
 		} catch (FileNotFoundException ignored) {
 		} catch (IOException e) {
-			e.printStackTrace();
+			logger.error("Failed to load config file {}", file, e);
 		}
 		try {
 			final T config = clazz.getConstructor().newInstance();
 			config.configFile = file;
-			System.out.println("[map-sync] Created default " + file);
+			logger.info("Created default {}", file);
 			return config;
 		} catch (NoSuchMethodException | InstantiationException | IllegalAccessException |
 				 InvocationTargetException ex) {
@@ -66,14 +67,14 @@ public class JsonConfig {
 	public void saveNow() {
 		try {
 			lastSaveTime = System.currentTimeMillis();
-			System.out.println("Saving " + getClass().getSimpleName() + " to " + configFile);
+			logger.info("Saving {} to {}", getClass().getSimpleName(), configFile);
 			configFile.getParentFile().mkdirs();
 			String json = GSON.toJson(this);
 			FileOutputStream fos = new FileOutputStream(configFile);
 			fos.write(json.getBytes());
 			fos.close();
 		} catch (IOException e) {
-			e.printStackTrace();
+			logger.error("Failed to save config file {}", configFile, e);
 		}
 	}
 }

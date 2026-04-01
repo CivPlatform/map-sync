@@ -17,6 +17,7 @@ import net.minecraft.world.level.biome.Biome;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.chunk.LevelChunk;
+import static gjum.minecraft.mapsync.mod.MapSyncMod.logger;
 
 public class JourneyMapHelperReal {
 	static boolean isMapping() {
@@ -42,15 +43,15 @@ public class JourneyMapHelperReal {
 
 		final boolean renderedDay = renderController.renderChunk(rCoord,
 				MapType.day(chunkTile.dimension()), chunkMd, regionData);
-		if (!renderedDay) System.out.println("Failed rendering day at " + chunkTile.chunkPos());
+		if (!renderedDay) logger.warn("Failed rendering day at {}", chunkTile.chunkPos());
 
 		final boolean renderedBiome = renderController.renderChunk(rCoord,
 				MapType.biome(chunkTile.dimension()), chunkMd, regionData);
-		if (!renderedBiome) System.out.println("Failed rendering biome at " + chunkTile.chunkPos());
+		if (!renderedBiome) logger.warn("Failed rendering biome at {}", chunkTile.chunkPos());
 
 		final boolean renderedTopo = renderController.renderChunk(rCoord,
 				MapType.topo(chunkTile.dimension()), chunkMd, regionData);
-		if (!renderedTopo) System.out.println("Failed rendering topo at " + chunkTile.chunkPos());
+		if (!renderedTopo) logger.warn("Failed rendering topo at {}", chunkTile.chunkPos());
 
 		return renderedDay && renderedBiome && renderedTopo;
 	}

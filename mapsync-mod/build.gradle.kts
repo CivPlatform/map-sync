@@ -30,6 +30,12 @@ dependencies {
 	}
 	modImplementation(libs.fabricLoader)
 	modImplementation(libs.fabricApi)
+
+	project(":dep-websockets", configuration = "shadedElements").also {
+		compileOnly(it)
+		include(it)
+	}
+
 	modLocalDep(libs.fixChat)
 	modImplementation(libs.modmenu)
 

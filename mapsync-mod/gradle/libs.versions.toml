@@ -22,6 +22,10 @@ voxelmap = { group = "maven.modrinth", name = "voxelmap-updated", version = "KgO
 journeymap = { group = "maven.modrinth", name = "journeymap", version = "6vu2HyQi" }
 # https://modrinth.com/mod/xaeros-world-map/versions?l=fabric
 xaerosmap = { group = "maven.modrinth", name = "xaeros-world-map", version = "CkZVhVE0" }
+# https://mvnrepository.com/artifact/org.java-websocket/Java-WebSocket
+java-ws = { group = "org.java-websocket", name = "Java-WebSocket", version = "1.6.0" }
 
 [plugins]
 fabricLoom = { id = "fabric-loom", version.ref = "fabricLoom" }
+# https://plugins.gradle.org/plugin/com.gradleup.shadow
+shadow = { id = "com.gradleup.shadow", version = "9.4.1" }

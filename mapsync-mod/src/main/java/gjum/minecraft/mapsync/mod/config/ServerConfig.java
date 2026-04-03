@@ -1,7 +1,5 @@
 package gjum.minecraft.mapsync.mod.config;
 
-import static gjum.minecraft.mapsync.mod.MapSyncMod.getMod;
-
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
 import com.google.gson.annotations.Expose;
@@ -34,8 +32,6 @@ public class ServerConfig extends JsonConfig {
 				.collect(Collectors.toCollection(ArrayList::new));
 
 		saveLater();
-
-		getMod().getSyncClients(); // trigger dis/connection if address changed
 	}
 
 	public static ServerConfig load(String gameAddress) {

@@ -11,6 +11,7 @@ import gjum.minecraft.mapsync.mod.data.RegionPos;
 import gjum.minecraft.mapsync.mod.net.CloseContext;
 import gjum.minecraft.mapsync.mod.net.Packet;
 import gjum.minecraft.mapsync.mod.net.SyncClient;
+import gjum.minecraft.mapsync.mod.net.SyncClients;
 import gjum.minecraft.mapsync.mod.net.UnexpectedPacketException;
 import gjum.minecraft.mapsync.mod.net.auth.AuthProcess;
 import gjum.minecraft.mapsync.mod.net.packet.ChunkTilePacket;
@@ -23,19 +24,16 @@ import gjum.minecraft.mapsync.mod.net.packet.ServerboundChunkTimestampsRequestPa
 import it.unimi.dsi.fastutil.objects.Object2LongArrayMap;
 import it.unimi.dsi.fastutil.objects.Object2LongMap;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.HashMap;
 import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ServerData;
-import net.minecraft.network.protocol.game.ClientboundLoginPacket;
 import net.minecraft.network.protocol.game.ClientboundRespawnPacket;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.level.ChunkPos;
@@ -103,6 +101,7 @@ public final class MapSyncMod implements ClientModInitializer {
 				e.printStackTrace();
 			}
 		});
+		SyncClients.initEvents();
 	}
 
 	public void handleTick(
@@ -147,10 +146,6 @@ public final class MapSyncMod implements ClientModInitializer {
 		}
 	}
 
-	public void handleConnectedToServer(ClientboundLoginPacket packet) {
-		getSyncClients();
-	}
-
 	public void handleRespawn(ClientboundRespawnPacket packet) {
 		debugLog("handleRespawn");
 		// TODO tell sync server to only send chunks for this dimension now
@@ -172,56 +167,6 @@ public final class MapSyncMod implements ClientModInitializer {
 			serverConfig = ServerConfig.load(gameAddress);
 		}
 		return serverConfig;
-	}
-
-	private @NotNull Map<String, SyncClient> syncClients = new HashMap<>();
-	public @NotNull Collection<SyncClient> getSyncClients() {
-		if (!(getServerConfig() instanceof final ServerConfig serverConfig)) {
-			return this.shutDownSyncClients();
-		}
-		final Collection<String> syncAddresses = serverConfig.getSyncServerAddresses();
-		this.syncClients.values().removeIf((syncClient) -> {
-			if (syncAddresses.contains(syncClient.syncAddress)) {
-				return false;
-			}
-			syncClient.websocket.close();
-			return true;
-		});
-		for (final String syncAddress : syncAddresses) {
-			this.syncClients.compute(syncAddress, ($, syncClient) -> {
-				if (syncClient != null) {
-					if (Objects.equals(serverConfig.gameAddress, syncClient.gameAddress)) {
-						switch (syncClient.websocket.getReadyState()) {
-							case NOT_YET_CONNECTED:
-								syncClient.websocket.connect();
-								break;
-							case OPEN:
-								return syncClient;
-							case CLOSING:
-								break;
-							case CLOSED:
-								if (syncClient.isShutDown) {
-									return null;
-								}
-								syncClient.websocket.reconnect();
-								return syncClient;
-						}
-					}
-				}
-				syncClient = new SyncClient(syncAddress, serverConfig.gameAddress);
-				syncClient.websocket.connect();
-				return syncClient;
-			});
-		}
-		return this.syncClients.values();
-	}
-
-	public List<SyncClient> shutDownSyncClients() {
-		this.syncClients.values().removeIf((syncClient) -> {
-			syncClient.websocket.close();
-			return true;
-		});
-		return new ArrayList<>(0);
 	}
 
 	/**
@@ -268,7 +213,7 @@ public final class MapSyncMod implements ClientModInitializer {
 		if (RenderQueue.areAllMapModsMapping()) {
 			dimensionState.setChunkTimestamp(chunkTile.chunkPos(), chunkTile.timestamp());
 		}
-		for (SyncClient client : getSyncClients()) {
+		for (SyncClient client : SyncClients.get().orElseThrow()) {
 			client.sendChunkTile(chunkTile);
 		}
 	}
@@ -311,7 +256,7 @@ public final class MapSyncMod implements ClientModInitializer {
 
 	public void handleSharedChunk(ChunkTile chunkTile) {
 		debugLog("received shared chunk: " + chunkTile.chunkPos());
-		for (SyncClient syncClient : getSyncClients()) {
+		for (SyncClient syncClient : SyncClients.get().orElseThrow()) {
 			syncClient.setServerKnownChunkHash(chunkTile.chunkPos(), chunkTile.dataHash());
 		}
 

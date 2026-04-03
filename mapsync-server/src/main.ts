@@ -173,13 +173,17 @@ export class ProtocolHandler {
 
         client.send(new ClientboundWelcomePacket());
 
-        for (const region of await database.getRegionTimestamps(client.dimension!)) {
-            client.send(new ClientboundRegionTimestampsPacket(
-                client.dimension!,
-                region.regionX,
-                region.regionZ,
-                region.timestamp,
-            ))
+        for (const region of await database.getRegionTimestamps(
+            client.dimension!,
+        )) {
+            client.send(
+                new ClientboundRegionTimestampsPacket(
+                    client.dimension!,
+                    region.regionX,
+                    region.regionZ,
+                    region.timestamp,
+                ),
+            );
         }
     }
 
@@ -206,7 +210,11 @@ export class ProtocolHandler {
 
         // TODO small timeout, then skip if other client already has it
         for (const otherClient of this.server.clients.values()) {
-            if (client === otherClient || !(otherClient.auth instanceof Welcomed)) continue;
+            if (
+                client === otherClient ||
+                !(otherClient.auth instanceof Welcomed)
+            )
+                continue;
             otherClient.send(pkt);
         }
     }

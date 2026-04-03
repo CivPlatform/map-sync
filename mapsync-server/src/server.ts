@@ -84,7 +84,7 @@ export class WSClient {
             }
             try {
                 const packet = decodePacket(new BufferReader(data));
-                this.debug(`Received`, packet);
+                this.debug("Received", packet);
                 await server.handler.handleClientPacketReceived(this, packet);
             } catch (err) {
                 this.warn(err);

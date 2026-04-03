@@ -5,9 +5,6 @@ import gjum.minecraft.mapsync.mod.data.BlockInfo;
 import gjum.minecraft.mapsync.mod.data.ChunkTile;
 import gjum.minecraft.mapsync.mod.net.buffers.BufferWriter;
 import gjum.minecraft.mapsync.mod.utils.Shortcuts;
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
-
 import java.io.ByteArrayOutputStream;
 import java.security.MessageDigest;
 import java.util.ArrayList;

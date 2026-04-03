@@ -1,5 +1,6 @@
 package gjum.minecraft.mapsync.mod.integrations.journeymap;
 
+import static gjum.minecraft.mapsync.mod.MapSyncMod.logger;
 import static gjum.minecraft.mapsync.mod.Utils.mc;
 
 import gjum.minecraft.mapsync.mod.data.BlockColumn;
@@ -17,7 +18,6 @@ import net.minecraft.world.level.biome.Biome;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.chunk.LevelChunk;
-import static gjum.minecraft.mapsync.mod.MapSyncMod.logger;
 
 public class JourneyMapHelperReal {
 	static boolean isMapping() {

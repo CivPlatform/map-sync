@@ -1,5 +1,7 @@
 package gjum.minecraft.mapsync.mod.config;
 
+import static gjum.minecraft.mapsync.mod.MapSyncMod.logger;
+
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import java.io.File;
@@ -11,7 +13,6 @@ import java.lang.reflect.InvocationTargetException;
 import java.util.Timer;
 import java.util.TimerTask;
 import org.jetbrains.annotations.NotNull;
-import static gjum.minecraft.mapsync.mod.MapSyncMod.logger;
 
 /**
  * subclasses must have constructor without args, to create default config

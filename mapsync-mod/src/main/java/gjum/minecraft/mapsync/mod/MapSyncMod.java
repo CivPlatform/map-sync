@@ -2,15 +2,13 @@ package gjum.minecraft.mapsync.mod;
 
 import static gjum.minecraft.mapsync.mod.Cartography.chunkTileFromLevel;
 
-import com.google.common.collect.Collections2;
-import com.google.common.collect.Iterables;
 import com.mojang.blaze3d.platform.InputConstants;
 import gjum.minecraft.mapsync.mod.config.ModConfig;
 import gjum.minecraft.mapsync.mod.config.ServerConfig;
 import gjum.minecraft.mapsync.mod.data.CatchupChunk;
 import gjum.minecraft.mapsync.mod.data.ChunkTile;
 import gjum.minecraft.mapsync.mod.data.RegionPos;
-import gjum.minecraft.mapsync.mod.net.CloseReason;
+import gjum.minecraft.mapsync.mod.net.CloseContext;
 import gjum.minecraft.mapsync.mod.net.Packet;
 import gjum.minecraft.mapsync.mod.net.SyncClient;
 import gjum.minecraft.mapsync.mod.net.UnexpectedPacketException;
@@ -24,25 +22,16 @@ import gjum.minecraft.mapsync.mod.net.packet.ServerboundCatchupRequestPacket;
 import gjum.minecraft.mapsync.mod.net.packet.ServerboundChunkTimestampsRequestPacket;
 import it.unimi.dsi.fastutil.objects.Object2LongArrayMap;
 import it.unimi.dsi.fastutil.objects.Object2LongMap;
-import java.net.URI;
-import java.net.URISyntaxException;
-import java.net.http.HttpClient;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Set;
-import java.util.concurrent.Executors;
-import java.util.stream.Collectors;
 import net.fabricmc.api.ClientModInitializer;
-import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientLifecycleEvents;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper;
-import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ServerData;
@@ -114,11 +103,6 @@ public final class MapSyncMod implements ClientModInitializer {
 				e.printStackTrace();
 			}
 		});
-		ClientLifecycleEvents.CLIENT_STOPPING.register((minecraft) -> httpClient.close());
-	}
-
-	public boolean isDevMode() {
-		return FabricLoader.getInstance().isDevelopmentEnvironment();
 	}
 
 	public void handleTick(
@@ -143,11 +127,12 @@ public final class MapSyncMod implements ClientModInitializer {
 
 	public void handleSyncDisconnection(
 		final @NotNull SyncClient client,
-		final @NotNull CloseReason cause
+		final @NotNull CloseContext context
 	) {
 
 	}
 
+	/// Keep in mind this could be
 	public void handleSyncPacket(
 		final @NotNull SyncClient client,
 		final @NotNull Packet received
@@ -189,48 +174,43 @@ public final class MapSyncMod implements ClientModInitializer {
 		return serverConfig;
 	}
 
-	private static final HttpClient httpClient = HttpClient.newBuilder()
-		.executor(Executors.newVirtualThreadPerTaskExecutor())
-		.followRedirects(HttpClient.Redirect.NORMAL)
-		.build();
-	private @NotNull Map<URI, SyncClient> syncClients = new HashMap<>();
+	private @NotNull Map<String, SyncClient> syncClients = new HashMap<>();
 	public @NotNull Collection<SyncClient> getSyncClients() {
 		if (!(getServerConfig() instanceof final ServerConfig serverConfig)) {
 			return this.shutDownSyncClients();
 		}
-		final Set<URI> syncAddresses = serverConfig.getSyncServerAddresses()
-			.stream()
-			.map((raw) -> {
-				try {
-					return new URI(raw);
-				}
-				catch (final URISyntaxException e) {
-					return null;
-				}
-			})
-			.filter(Objects::nonNull)
-			.collect(Collectors.toUnmodifiableSet());
-		this.syncClients.values().removeIf((client) -> {
-			if (syncAddresses.contains(client.syncAddress)) {
+		final Collection<String> syncAddresses = serverConfig.getSyncServerAddresses();
+		this.syncClients.values().removeIf((syncClient) -> {
+			if (syncAddresses.contains(syncClient.syncAddress)) {
 				return false;
 			}
-			client.disconnect();
+			syncClient.websocket.close();
 			return true;
 		});
-		for (final URI syncAddress : syncAddresses) {
+		for (final String syncAddress : syncAddresses) {
 			this.syncClients.compute(syncAddress, ($, syncClient) -> {
 				if (syncClient != null) {
-					if (Objects.equals(serverConfig.gameAddress, syncClient.gameAddress) && !syncClient.kicked()) {
-						return syncClient;
+					if (Objects.equals(serverConfig.gameAddress, syncClient.gameAddress)) {
+						switch (syncClient.websocket.getReadyState()) {
+							case NOT_YET_CONNECTED:
+								syncClient.websocket.connect();
+								break;
+							case OPEN:
+								return syncClient;
+							case CLOSING:
+								break;
+							case CLOSED:
+								if (syncClient.isShutDown) {
+									return null;
+								}
+								syncClient.websocket.reconnect();
+								return syncClient;
+						}
 					}
-					syncClient.disconnect();
 				}
-				return SyncClient.create(
-					this,
-					httpClient,
-					syncAddress,
-					serverConfig.gameAddress
-				);
+				syncClient = new SyncClient(syncAddress, serverConfig.gameAddress);
+				syncClient.websocket.connect();
+				return syncClient;
 			});
 		}
 		return this.syncClients.values();
@@ -238,7 +218,7 @@ public final class MapSyncMod implements ClientModInitializer {
 
 	public List<SyncClient> shutDownSyncClients() {
 		this.syncClients.values().removeIf((syncClient) -> {
-			syncClient.disconnect();
+			syncClient.websocket.close();
 			return true;
 		});
 		return new ArrayList<>(0);

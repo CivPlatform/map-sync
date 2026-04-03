@@ -163,7 +163,7 @@ public class ModGui extends Screen {
 						statusColor = 0xFF8888ff;
 						statusText = "Connected (not authed)";
 					}
-					case AUTHED -> {
+					case WELCOMED -> {
 						statusColor = 0xFF88ff88;
 						statusText = "Connected and authed";
 					}

@@ -71,7 +71,7 @@ export class ClientboundIdentityRequestPacket extends Packet {
 
     public encode(writer: BufferWriter) {
         writer.writeLengthPrefixedBytes(
-            BufferWriter.prototype.writeUnt16,
+            BufferWriter.prototype.writeUnt8,
             this.serverSalt,
         );
     }

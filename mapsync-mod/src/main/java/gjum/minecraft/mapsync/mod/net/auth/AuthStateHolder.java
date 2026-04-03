@@ -24,12 +24,12 @@ public final class AuthStateHolder {
 	}
 
 	public boolean setIf(
-		final @NotNull Predicate<AuthState> currentValue,
+		final @NotNull Predicate<AuthState> requiredState,
 		final @NotNull Supplier<AuthState> nextValue
 	) {
 		synchronized (this) {
 			final AuthState value = this.ref;
-			if (!currentValue.test(value)) {
+			if (!requiredState.test(value)) {
 				return false;
 			}
 			this.ref = nextValue.get();

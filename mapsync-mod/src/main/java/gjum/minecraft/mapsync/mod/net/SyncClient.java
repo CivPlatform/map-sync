@@ -1,45 +1,43 @@
 package gjum.minecraft.mapsync.mod.net;
 
-import static gjum.minecraft.mapsync.mod.MapSyncMod.debugLog;
-
 import gjum.minecraft.mapsync.mod.MapSyncMod;
 import gjum.minecraft.mapsync.mod.data.ChunkTile;
+import gjum.minecraft.mapsync.mod.deps.websockets.client.WebSocketClient;
+import gjum.minecraft.mapsync.mod.deps.websockets.drafts.Draft;
+import gjum.minecraft.mapsync.mod.deps.websockets.drafts.Draft_6455;
+import gjum.minecraft.mapsync.mod.deps.websockets.exceptions.WebsocketNotConnectedException;
+import gjum.minecraft.mapsync.mod.deps.websockets.handshake.ServerHandshake;
+import gjum.minecraft.mapsync.mod.net.auth.AuthStateHolder;
+import gjum.minecraft.mapsync.mod.net.auth.Welcomed;
 import gjum.minecraft.mapsync.mod.net.buffers.BufferReader;
 import gjum.minecraft.mapsync.mod.net.buffers.BufferWriter;
 import gjum.minecraft.mapsync.mod.net.packet.ChunkTilePacket;
-import gjum.minecraft.mapsync.mod.net.packet.ClientboundChunkTimestampsResponsePacket;
-import gjum.minecraft.mapsync.mod.net.packet.ClientboundIdentityRequestPacket;
-import gjum.minecraft.mapsync.mod.net.packet.ClientboundRegionTimestampsPacket;
-import gjum.minecraft.mapsync.mod.net.packet.ServerboundCatchupRequestPacket;
-import gjum.minecraft.mapsync.mod.net.packet.ServerboundChunkTimestampsRequestPacket;
-import gjum.minecraft.mapsync.mod.net.packet.ServerboundIdentityResponsePacket;
-import gjum.minecraft.mapsync.mod.net.packet.ServerboundHandshakePacket;
-import gjum.minecraft.mapsync.mod.net.auth.AuthStateHolder;
 import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.net.URI;
-import java.net.http.HttpClient;
-import java.net.http.WebSocket;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Objects;
-import java.util.concurrent.CompletionStage;
 import java.util.concurrent.atomic.AtomicLong;
 import net.minecraft.world.level.ChunkPos;
+import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-/**
- * handles reconnection, authentication, encryption
- */
-public final class SyncClient {
+/// handles reconnection, authentication, encryption
+public class SyncClient {
 	private final HashMap<ChunkPos, byte[]> serverKnownChunkHashes = new HashMap<>();
 
 	public synchronized void sendChunkTile(ChunkTile chunkTile) {
+		if (this.state() != ConnectionState.WELCOMED) {
+			return;
+		}
+
 		var serverKnownHash = getServerKnownChunkHash(chunkTile.chunkPos());
 		if (Arrays.equals(chunkTile.dataHash(), serverKnownHash)) {
-			debugLog("server already has chunk (hash) " + chunkTile.chunkPos());
+			MapSyncMod.debugLog("server already has chunk (hash) " + chunkTile.chunkPos());
 			return; // server already has this chunk
 		}
 
@@ -60,201 +58,177 @@ public final class SyncClient {
 	// XXX end of hotfix
 
 	public static final Logger LOGGER = LoggerFactory.getLogger(SyncClient.class);
-	private static final AtomicLong lastClientId = new AtomicLong(0L);
+	private static final AtomicLong LAST_CLIENT_ID = new AtomicLong(0L);
+	private static final int MAX_PAYLOAD_LENGTH = (1 << Short.SIZE) - 1;
 
 	public final long clientId;
-	public final URI syncAddress;
+	public final String syncAddress;
 	public final String gameAddress;
-	public final AuthStateHolder auth = new AuthStateHolder();
-	private volatile WebSocket websocket;
-	private volatile boolean closing;
-	private volatile boolean kicked;
 
-	private SyncClient(
-		final @NotNull URI syncAddress,
-		final @NotNull String gameAddress
-	) {
-		this.clientId = lastClientId.incrementAndGet();
-		this.syncAddress = Objects.requireNonNull(syncAddress);
-		this.gameAddress = Objects.requireNonNull(gameAddress);
-		this.websocket = null;
-	}
+	/// false = don't auto-reconnect but maintain connection as long as it stays up.
+	/// can be set to true again later.
+	public boolean shouldReconnect = true;
+	/// false = don't reconnect under any circumstances,
+	/// and disconnect when coming across this during a check
+	public boolean isShutDown = false;
+	public volatile String lastError = null;
 
-	public static @NotNull SyncClient create(
-		final @NotNull MapSyncMod mod,
-		final @NotNull HttpClient httpClient,
+	public final AuthStateHolder authState = new AuthStateHolder();
+
+	public SyncClient(
 		final @NotNull String syncAddress,
 		final @NotNull String gameAddress
 	) {
-		return create(
-			mod,
-			httpClient,
-			URI.create(syncAddress),
-			gameAddress
-		);
-	}
-
-	public static @NotNull SyncClient create(
-		final @NotNull MapSyncMod mod,
-		final @NotNull HttpClient httpClient,
-		final @NotNull URI syncAddress,
-		final @NotNull String gameAddress
-	) {
-		Objects.requireNonNull(mod);
-		final var client = new SyncClient(syncAddress, gameAddress);
-		httpClient.newWebSocketBuilder()
-			.buildAsync(syncAddress, new WebSocket.Listener() {
-				@Override
-				public void onOpen(
-					final @NotNull WebSocket ws
-				) {
-					client.websocket = ws;
-					LOGGER.info("[{}] Connected!", client.name());
-					try {
-						mod.handleSyncConnection(client);
-					}
-					catch (final Exception e) {
-						LOGGER.error("[{}] Error in connection handler!", client.name(), e);
-						ws.sendClose(1003, null);
-					}
-				}
-				@Override
-				public CompletionStage<?> onText(
-					final @NotNull WebSocket ws,
-					final @NotNull CharSequence message,
-					final boolean last
-				) {
-					LOGGER.error("[{}] Received a text packet! Closing!", client.name());
-					return ws.sendClose(1003, null);
-				}
-				private final ByteArrayOutputStream accumulate = new ByteArrayOutputStream();
-				@Override
-				public CompletionStage<?> onBinary(
-					final @NotNull WebSocket ws,
-					final @NotNull ByteBuffer message,
-					final boolean last
-				) {
-					final byte[] totalReceivedBytes; {
-						final var receivedBytes = new byte[message.remaining()];
-						message.get(receivedBytes);
-						this.accumulate.writeBytes(receivedBytes);
-						if (!last) {
-							ws.request(1);
-							return null;
-						}
-						totalReceivedBytes = this.accumulate.toByteArray();
-						this.accumulate.reset();
-					}
-					final var reader = new BufferReader(ByteBuffer.wrap(totalReceivedBytes));
-					final Packet packet;
-					try {
-						final int packetId = reader.readUnt8();
-						packet = switch (packetId) {
-							case ChunkTilePacket.PACKET_ID -> ChunkTilePacket.read(reader);
-							case ClientboundIdentityRequestPacket.PACKET_ID -> ClientboundIdentityRequestPacket.read(reader);
-							case ClientboundChunkTimestampsResponsePacket.PACKET_ID -> ClientboundChunkTimestampsResponsePacket.read(reader);
-							case ClientboundRegionTimestampsPacket.PACKET_ID -> ClientboundRegionTimestampsPacket.read(reader);
-							default -> throw new UnexpectedPacketException(packetId);
-						};
-					}
-					catch (final Exception e) {
-						LOGGER.error("[{}] Could not decode packet!", client.name(), e);
-						ws.sendClose(1002, null);
-						return null;
-					}
-					try {
-						mod.handleSyncPacket(client, packet);
-					}
-					catch (final Exception e) {
-						LOGGER.error("[{}] Could not handle packet!", client.name(), e);
-						ws.sendClose(1008, null);
-					}
-					return null;
-				}
-				@Override
-				public CompletionStage<?> onClose(
-					final @NotNull WebSocket ws,
-					final int statusCode,
-					final String reason
-				) {
-					client.websocket = null;
-					client.auth.set(null);
-					client.kicked = true;
-					LOGGER.info("[{}] Closing! {}: {}", client.name(), statusCode, reason);
-					mod.handleSyncDisconnection(client, new CloseReason.Closed(statusCode, reason));
-					return null;
-				}
-				@Override
-				public void onError(
-					final @NotNull WebSocket ws,
-					final @NotNull Throwable thrown
-				) {
-					client.websocket = null;
-					client.auth.set(null);
-					LOGGER.error("[{}] Closing on error!", client.name(), thrown);
-					mod.handleSyncDisconnection(client, new CloseReason.Error(thrown));
-				}
-			});
-		return client;
+		this.clientId = LAST_CLIENT_ID.incrementAndGet();
+		this.syncAddress = Objects.requireNonNull(syncAddress);
+		this.gameAddress = Objects.requireNonNull(gameAddress);
+		this.websocket = new WsClient(URI.create(syncAddress));
 	}
 
 	public @NotNull String name() {
 		return "Client%d".formatted(this.clientId);
 	}
 
-	public boolean kicked() {
-		return this.kicked;
+	public enum ConnectionState { DISCONNECTED, CONNECTED, WELCOMED }
+	public synchronized @NotNull ConnectionState state() {
+		return switch (this.websocket.getReadyState()) {
+			case NOT_YET_CONNECTED, CLOSING, CLOSED -> ConnectionState.DISCONNECTED;
+			case OPEN -> switch (this.authState.get()) {
+				case final Welcomed $ -> ConnectionState.WELCOMED;
+				case null, default -> ConnectionState.CONNECTED;
+			};
+		};
 	}
 
-	public enum ConnectionState { DISCONNECTED, CONNECTED, AUTHED }
-	public @NotNull ConnectionState state() {
-		if (!(this.websocket instanceof final WebSocket ws)) {
-			return ConnectionState.DISCONNECTED;
+	@ApiStatus.Internal
+	public final WsClient websocket;
+	public final class WsClient extends WebSocketClient {
+		private WsClient(
+			final @NotNull URI syncAddress
+		) {
+			super(Objects.requireNonNull(syncAddress), createDraft());
+			this.setConnectionLostTimeout(30);
+			this.setAttachment(SyncClient.this);
 		}
-		if (ws.isInputClosed() || ws.isOutputClosed()) {
-			return ConnectionState.DISCONNECTED;
+
+		private static @NotNull Draft createDraft() {
+			return new Draft_6455();
 		}
-		if (this.auth.get() == null) {
-			return ConnectionState.CONNECTED;
+
+		@Override
+		public void onOpen(
+			final @NotNull ServerHandshake handshake
+		) {
+			LOGGER.info("[{}] Connected...", SyncClient.this.name());
+			try {
+				MapSyncMod.getMod().handleSyncConnection(SyncClient.this);
+			}
+			catch (final Exception e) {
+				this.onError(e);
+			}
 		}
-		return ConnectionState.AUTHED;
+
+		@Override
+		public void onClose(
+			final int closeCode,
+			final String reason,
+			final boolean wasKicked
+		) {
+			LOGGER.info("[{}] Closing... {}:{} (kicked: {})", SyncClient.this.name(), closeCode, reason, wasKicked);
+			SyncClient.this.authState.set(null);
+		}
+
+		@Override
+		public void onError(
+			final @NotNull Exception e
+		) {
+			LOGGER.warn("[{}] Closing due to error...", SyncClient.this.name(), e);
+			SyncClient.this.isShutDown = true;
+			SyncClient.this.lastError = e.getMessage();
+			SyncClient.this.authState.set(null);
+			this.close(CloseContext.CUSTOM_CLOSE_4000_ERROR);
+		}
+
+		@Override
+		public void onMessage(
+			final @NotNull String payload
+		) {
+			this.onError(new IOException("server sent a text message"));
+		}
+
+		@Override
+		public void onMessage(
+			final @NotNull ByteBuffer payload
+		) {
+			final int payloadLength = payload.remaining();
+			if (payloadLength > MAX_PAYLOAD_LENGTH) {
+				this.onError(new IOException("server sent a payload too large! [%d > %d]".formatted(
+					payloadLength,
+					MAX_PAYLOAD_LENGTH
+				)));
+				return;
+			}
+			final Packet packet;
+			try {
+				packet = Packet.decodePacket(new BufferReader(payload));
+			}
+			catch (final Exception e) {
+				this.onError(e);
+				return;
+			}
+			MapSyncMod.debugLog("[%s] Received %s: %s".formatted(
+				SyncClient.this.name(),
+				packet.getClass().getSimpleName(),
+				packet
+			));
+			if (payload.hasRemaining()) {
+				this.onError(new IllegalStateException("packet didn't consume all payload bytes! [remaining: %d]".formatted(
+					payload.remaining()
+				)));
+				return;
+			}
+			try {
+				MapSyncMod.getMod().handleSyncPacket(SyncClient.this, packet);
+			}
+			catch (final Exception e) {
+				this.onError(e);
+				return;
+			}
+		}
 	}
 
 	public synchronized void send(
 		final @NotNull Packet packet
 	) {
 		Objects.requireNonNull(packet);
-		if (!(this.websocket instanceof WebSocket ws)) {
-			throw new IllegalStateException("WebSocket not connected");
-		}
-		if (this.closing) {
-			throw new IllegalStateException("WebSocket is closing");
-		}
-		final var out = new ByteArrayOutputStream();
+		final byte[] packetBytes;
 		try {
-			final var writer = new BufferWriter(out);
-			writer.writeUnt8(switch (packet) {
-				case ChunkTilePacket $ -> ChunkTilePacket.PACKET_ID;
-				case ServerboundHandshakePacket $ -> ServerboundHandshakePacket.PACKET_ID;
-				case ServerboundIdentityResponsePacket $ -> ServerboundIdentityResponsePacket.PACKET_ID;
-				case ServerboundChunkTimestampsRequestPacket $ -> ServerboundChunkTimestampsRequestPacket.PACKET_ID;
-				case ServerboundCatchupRequestPacket $ -> ServerboundCatchupRequestPacket.PACKET_ID;
-				default -> throw new UnexpectedPacketException(packet);
-			});
-			packet.write(writer);
+			final var out = new ByteArrayOutputStream();
+			Packet.encodePacket(new BufferWriter(out), packet);
+			packetBytes = out.toByteArray();
 		}
 		catch (final Exception e) {
-			throw new RuntimeException(e);
+			this.websocket.onError(e);
+			return;
 		}
-		ws.sendBinary(ByteBuffer.wrap(out.toByteArray()), true);
-	}
-
-	public synchronized void disconnect() {
-		if (this.websocket instanceof WebSocket ws) {
-			this.websocket = null;
-			ws.sendClose(1000, "Disconnecting");
+		if (packetBytes.length > MAX_PAYLOAD_LENGTH) {
+			this.websocket.onError(new IOException("encoded packet[%s] exceeds maximum payload length! [%d > %d]".formatted(
+				packet.getClass().getSimpleName(),
+				packetBytes.length,
+				MAX_PAYLOAD_LENGTH
+			)));
+			return;
 		}
-		this.closing = true;
-		this.auth.set(null);
+		try {
+			this.websocket.send(packetBytes);
+		}
+		catch (final WebsocketNotConnectedException e) {
+			LOGGER.warn("[{}] Dropping packet[{}] as websocket is not connected!", this.name(), packet.getClass().getSimpleName(), e);
+			return;
+		}
+		catch (final Exception e) {
+			this.websocket.onError(e);
+			return;
+		}
 	}
 }

@@ -23,10 +23,10 @@ public final class AuthProcess {
 		final DimensionState dimensionState
 	) throws Exception {
 		if (dimensionState == null) {
-			client.disconnect();
+			client.websocket.close();
 			return;
 		}
-		if (!client.auth.setIf(Objects::isNull, AwaitingWelcome::new)) {
+		if (!client.authState.setIf(Objects::isNull, AwaitingIdentityRequest::new)) {
 			throw new IllegalStateException("already authenticated");
 		}
 		client.send(new ServerboundHandshakePacket(
@@ -41,7 +41,7 @@ public final class AuthProcess {
 		final @NotNull SyncClient client,
 		final @NotNull ClientboundIdentityRequestPacket packet
 	) throws Exception {
-		if (!client.auth.setIf((state) -> state instanceof AwaitingIdentityRequest, AwaitingWelcome::new)) {
+		if (!client.authState.setIf((state) -> state instanceof AwaitingIdentityRequest, AwaitingWelcome::new)) {
 			throw new UnexpectedPacketException(packet);
 		}
 		final User session = Minecraft.getInstance().getUser();
@@ -72,7 +72,7 @@ public final class AuthProcess {
 		final @NotNull SyncClient client,
 		final @NotNull ClientboundWelcomePacket packet
 	) throws Exception {
-		if (!client.auth.setIf((state) -> state instanceof AwaitingWelcome, Authenticated::new)) {
+		if (!client.authState.setIf((state) -> state instanceof AwaitingWelcome, Welcomed::new)) {
 			throw new UnexpectedPacketException(packet);
 		}
 	}

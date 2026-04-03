@@ -100,7 +100,7 @@ export class ProtocolHandler {
             ? node_crypto.randomBytes(32)
             : Buffer.allocUnsafe(0);
         client.auth = new AwaitingIdentityResponse(serverSalt);
-        await client.send(new ClientboundIdentityRequestPacket(serverSalt));
+        client.send(new ClientboundIdentityRequestPacket(serverSalt));
     }
 
     private async handleIdentityResponse(
@@ -171,21 +171,16 @@ export class ProtocolHandler {
 
         // TODO check version, mc server, user access
 
-        await client.send(new ClientboundWelcomePacket());
+        client.send(new ClientboundWelcomePacket());
 
-        const regions = await database.getRegionTimestamps(client.dimension!);
-        await Promise.allSettled(
-            regions.map((region) =>
-                client.send(
-                    new ClientboundRegionTimestampsPacket(
-                        client.dimension!,
-                        region.regionX,
-                        region.regionZ,
-                        region.timestamp,
-                    ),
-                ),
-            ),
-        );
+        for (const region of await database.getRegionTimestamps(client.dimension!)) {
+            client.send(new ClientboundRegionTimestampsPacket(
+                client.dimension!,
+                region.regionX,
+                region.regionZ,
+                region.timestamp,
+            ))
+        }
     }
 
     private async handleChunkTilePacket(
@@ -211,7 +206,7 @@ export class ProtocolHandler {
 
         // TODO small timeout, then skip if other client already has it
         for (const otherClient of this.server.clients.values()) {
-            if (client === otherClient) continue;
+            if (client === otherClient || !(otherClient.auth instanceof Welcomed)) continue;
             otherClient.send(pkt);
         }
     }

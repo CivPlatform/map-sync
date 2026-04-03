@@ -20,7 +20,7 @@ export class WSServer {
         this.wss = new WebSocketServer(
             {
                 port: config.port,
-                path: "/ws",
+                path: "/",
                 maxPayload: (1 << 16) - 1, // sizeof(u16)
             },
             () => {
@@ -63,6 +63,7 @@ export class WSClient {
         private readonly ws: WebSocket,
         server: WSServer,
     ) {
+        this.log("Connected...");
         server.handler.handleClientConnected(this);
 
         ws.on("message", async (data, isBinary) => {
@@ -83,6 +84,7 @@ export class WSClient {
             }
             try {
                 const packet = decodePacket(new BufferReader(data));
+                this.debug(`Received`, packet);
                 await server.handler.handleClientPacketReceived(this, packet);
             } catch (err) {
                 this.warn(err);
@@ -113,11 +115,11 @@ export class WSClient {
         this.ws.close(1000);
     }
 
-    public async send(pkt: ClientboundPacket) {
+    public send(pkt: ClientboundPacket) {
         if (this.ws.readyState !== WebSocket.OPEN) {
             return this.debug("WebSocket not open, dropping", pkt);
         }
-        this.debug(`Sending ${pkt.name}:`, pkt);
+        this.debug("Sending", pkt);
         let buf: Buffer;
         {
             const packetWriter = new BufferWriter();

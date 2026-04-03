@@ -32,7 +32,7 @@ dependencies {
 	modImplementation(libs.fabricApi)
 
 	project(":dep-websockets", configuration = "shadedElements").also {
-		compileOnly(it)
+		implementation(it)
 		include(it)
 	}
 

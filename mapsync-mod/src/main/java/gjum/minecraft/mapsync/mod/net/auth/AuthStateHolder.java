@@ -36,4 +36,11 @@ public final class AuthStateHolder {
 			return true;
 		}
 	}
+
+	public @NotNull Welcomed requireWelcomed() {
+		if (this.get() instanceof final Welcomed welcomed) {
+			return welcomed;
+		}
+		throw new IllegalStateException("not welcomed yet!");
+	}
 }

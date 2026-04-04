@@ -118,6 +118,7 @@ public final class MapSyncMod implements ClientModInitializer {
 	public void handleSyncConnection(
 		final @NotNull SyncClient client
 	) throws Exception {
+		client.authState.set(null);
 		AuthProcess.sendHandshake(
 			client,
 			this.dimensionState
@@ -128,7 +129,7 @@ public final class MapSyncMod implements ClientModInitializer {
 		final @NotNull SyncClient client,
 		final @NotNull CloseContext context
 	) {
-
+		client.authState.set(null);
 	}
 
 	/// Keep in mind this could be
@@ -137,11 +138,11 @@ public final class MapSyncMod implements ClientModInitializer {
 		final @NotNull Packet received
 	) throws Exception {
 		switch (received) {
-			case ChunkTilePacket(ChunkTile chunkTile) -> handleSharedChunk(chunkTile);
+			case ChunkTilePacket(ChunkTile chunkTile) -> handleSharedChunk(client, chunkTile);
 			case ClientboundIdentityRequestPacket packet -> AuthProcess.handleIdentityRequest(client, packet);
 			case ClientboundWelcomePacket packet -> AuthProcess.handleWelcome(client, packet);
-			case ClientboundRegionTimestampsPacket packet -> handleRegionTimestamps(packet, client);
-			case ClientboundChunkTimestampsResponsePacket packet -> handleCatchupData(packet, client);
+			case ClientboundRegionTimestampsPacket packet -> handleRegionTimestamps(client, packet);
+			case ClientboundChunkTimestampsResponsePacket packet -> handleCatchupData(client, packet);
 			default -> throw new UnexpectedPacketException(received);
 		}
 	}
@@ -231,7 +232,8 @@ public final class MapSyncMod implements ClientModInitializer {
 		// TODO tell server our current dimension
 	}
 
-	public void handleRegionTimestamps(ClientboundRegionTimestampsPacket packet, SyncClient client) {
+	public void handleRegionTimestamps(SyncClient client, ClientboundRegionTimestampsPacket packet) {
+		client.authState.requireWelcomed();
 		DimensionState dimension = getDimensionState();
 		if (dimension == null) return;
 		if (!dimension.dimension.identifier().toString().equals(packet.dimension())) {
@@ -254,7 +256,8 @@ public final class MapSyncMod implements ClientModInitializer {
 		}
 	}
 
-	public void handleSharedChunk(ChunkTile chunkTile) {
+	public void handleSharedChunk(SyncClient client, ChunkTile chunkTile) {
+		client.authState.requireWelcomed();
 		debugLog("received shared chunk: " + chunkTile.chunkPos());
 		for (SyncClient syncClient : SyncClients.get().orElseThrow()) {
 			syncClient.setServerKnownChunkHash(chunkTile.chunkPos(), chunkTile.dataHash());
@@ -265,7 +268,8 @@ public final class MapSyncMod implements ClientModInitializer {
 		dimensionState.processSharedChunk(chunkTile);
 	}
 
-	public void handleCatchupData(ClientboundChunkTimestampsResponsePacket packet, SyncClient client) {
+	public void handleCatchupData(SyncClient client, ClientboundChunkTimestampsResponsePacket packet) {
+		client.authState.requireWelcomed();
 		for (CatchupChunk chunk : packet.chunks()) {
 			chunk.syncClient = client;
 		}

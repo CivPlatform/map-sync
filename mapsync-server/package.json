@@ -12,7 +12,7 @@
         "format": "prettier -w .",
         "test": "true",
         "start": "node -r source-map-support/register dist/main.js",
-        "start:dev": "node --experimental-transform-types --inspect src/main.ts"
+        "start:dev": "node --inspect -r source-map-support/register dist/main.js"
     },
     "dependencies": {
         "async-mutex": "0.5.0",

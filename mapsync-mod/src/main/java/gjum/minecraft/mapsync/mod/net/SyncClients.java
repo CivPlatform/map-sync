@@ -21,8 +21,8 @@ import org.slf4j.LoggerFactory;
 public final class SyncClients implements Iterable<SyncClient> {
 	private static final Logger LOGGER = LoggerFactory.getLogger(SyncClients.class);
 
-	private final String gameAddress;
-	private final ServerConfig serverConfig;
+	public final String gameAddress;
+	public final ServerConfig serverConfig;
 	private final Map<String, SyncClient> clients = new ConcurrentHashMap<>();
 
 	public SyncClients(
@@ -46,7 +46,6 @@ public final class SyncClients implements Iterable<SyncClient> {
 			if (syncAddressesCopy.contains(syncClient.syncAddress)) {
 				return false;
 			}
-			syncClient.isShutDown = true;
 			syncClient.shouldReconnect = false;
 			syncClient.websocket.close();
 			return true;
@@ -61,7 +60,7 @@ public final class SyncClients implements Iterable<SyncClient> {
 		SyncClient syncClient
 	) {
 		if (syncClient != null) {
-			if (!Objects.equals(serverConfig.gameAddress, syncClient.gameAddress)) {
+			if (!Objects.equals(this.serverConfig.gameAddress, syncClient.gameAddress)) {
 				syncClient.websocket.close();
 				return null;
 			}
@@ -73,14 +72,14 @@ public final class SyncClients implements Iterable<SyncClient> {
 					return syncClient;
 				case CLOSING:
 				case CLOSED:
-					if (syncClient.isShutDown || !syncClient.shouldReconnect) {
+					if (!syncClient.shouldReconnect) {
 						return null;
 					}
 					syncClient.websocket.reconnect();
 					return syncClient;
 			}
 		}
-		syncClient = new SyncClient(syncAddress, serverConfig.gameAddress);
+		syncClient = new SyncClient(syncAddress, this.serverConfig.gameAddress);
 		syncClient.websocket.connect();
 		return syncClient;
 	}
@@ -90,7 +89,6 @@ public final class SyncClients implements Iterable<SyncClient> {
 	) {
 		this.clients.values().removeIf((syncClient) -> {
 			if (preventReconnect) {
-				syncClient.isShutDown = true;
 				syncClient.shouldReconnect = false;
 			}
 			syncClient.websocket.close();

@@ -18,7 +18,7 @@ public interface CloseContext {
 	}
 
 	public record Closed(
-		int statusCode,
+		int closeCode,
 		String reason
 	) implements CloseContext {}
 }

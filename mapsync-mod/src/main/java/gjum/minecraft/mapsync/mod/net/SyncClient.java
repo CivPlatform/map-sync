@@ -68,9 +68,6 @@ public class SyncClient {
 	/// false = don't auto-reconnect but maintain connection as long as it stays up.
 	/// can be set to true again later.
 	public boolean shouldReconnect = true;
-	/// false = don't reconnect under any circumstances,
-	/// and disconnect when coming across this during a check
-	public boolean isShutDown = false;
 	public volatile String lastError = null;
 
 	public final AuthStateHolder authState = new AuthStateHolder();
@@ -120,6 +117,7 @@ public class SyncClient {
 			final @NotNull ServerHandshake handshake
 		) {
 			LOGGER.info("[{}] Connected...", SyncClient.this.name());
+			SyncClient.this.lastError = null;
 			try {
 				MapSyncMod.getMod().handleSyncConnection(SyncClient.this);
 			}
@@ -135,7 +133,11 @@ public class SyncClient {
 			final boolean wasKicked
 		) {
 			LOGGER.info("[{}] Closing... {}:{} (kicked: {})", SyncClient.this.name(), closeCode, reason, wasKicked);
-			SyncClient.this.authState.set(null);
+			if (wasKicked) {
+				SyncClient.this.shouldReconnect = false;
+			}
+			SyncClient.this.lastError = null;
+			MapSyncMod.getMod().handleSyncDisconnection(SyncClient.this, new CloseContext.Closed(closeCode, reason));
 		}
 
 		@Override
@@ -143,9 +145,8 @@ public class SyncClient {
 			final @NotNull Exception e
 		) {
 			LOGGER.warn("[{}] Closing due to error...", SyncClient.this.name(), e);
-			SyncClient.this.isShutDown = true;
+			SyncClient.this.shouldReconnect = false;
 			SyncClient.this.lastError = e.getMessage();
-			SyncClient.this.authState.set(null);
 			this.close(CloseContext.CUSTOM_CLOSE_4000_ERROR);
 		}
 

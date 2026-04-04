@@ -10,6 +10,8 @@ import journeymap.client.model.map.MapType;
 import journeymap.client.model.region.RegionCoord;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
+import net.minecraft.resources.ResourceKey;
+import net.minecraft.world.level.Level;
 import net.minecraft.world.level.biome.Biome;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
@@ -53,15 +55,14 @@ public class JourneyMapHelperReal {
 	}
 
 	private static boolean renderWithDiagnostics(
-			RegionCoord rCoord,
-			MapType mapType,
-			TileChunkMD chunkMd,
-			String mapName
+		RegionCoord rCoord,
+		MapType mapType,
+		TileChunkMD chunkMd,
+		String mapName
 	) {
 		try {
 			// keep this call in one place so failures are logged with context
 			final boolean rendered = JourneymapClient.getInstance().getChunkRenderController().renderChunk(rCoord, mapType, chunkMd);
-			if (!rendered) logger.warn("Failed rendering {} at {}", mapName, chunkMd.chunkTile.chunkPos());
 			return rendered;
 		} catch (Throwable t) {
 			logger.error("Exception rendering {} at {}", mapName, chunkMd.chunkTile.chunkPos(), t);
@@ -123,20 +124,10 @@ public class JourneyMapHelperReal {
 		}
 
 		@Override
-		public Holder<Biome> getBiomeHolder(BlockPos pos) {
-			var biome = getBiome(pos);
-			return biome != null ? Holder.direct(biome) : null;
-		}
-
-		@Override
 		public boolean canBlockSeeTheSky(int localX, int y, int localZ) {
 			return getSavedLightValue(localX, y, localZ) > 0;
 		}
 
-		@Override
-		public boolean hasLevelChunk() {
-			return false;
-		}
 
 		@Override
 		public int getSavedLightValue(int localX, int y, int localZ) {
@@ -147,17 +138,21 @@ public class JourneyMapHelperReal {
 			return light;
 		}
 
-
 		@Override
 		public int getPrecipitationHeight(BlockPos pos) {
 			return this.getPrecipitationHeight(pos.getX(), pos.getZ());
 		}
 
 		@Override
+		public ResourceKey<Level> getDimension() {
+			return chunkTile.dimension();
+		}
+
+		@Override
 		public int getPrecipitationHeight(int localX, int localZ) {
 			var column = getCol(localX, localZ);
 			if (column == null || column.layers().isEmpty()) {
-				return mc.level != null ? mc.level.getMinY() : 0;
+				return mc.level != null ? this.getMinY() : 0;
 			}
 			return column.layers().get(0).y();
 		}
@@ -165,6 +160,12 @@ public class JourneyMapHelperReal {
 		@Override
 		public int getHeight(BlockPos pos) {
 			return this.getPrecipitationHeight(pos);
+		}
+
+		@Override
+		public Holder<Biome> getBiomeHolder(BlockPos pos) {
+			var biome = getBiome(pos);
+			return biome != null ? Holder.direct(biome) : null;
 		}
 
 		@Override

@@ -17,7 +17,7 @@ fixChat = { group = "maven.modrinth", name = "no-chat-reports", version = "rhykG
 # https://modrinth.com/mod/modmenu/versions?l=fabric
 modmenu = { group = "maven.modrinth", name = "modmenu", version = "JWQVh32x" }
 # https://modrinth.com/mod/voxelmap-updated/versions?l=fabric
-voxelmap = { group = "maven.modrinth", name = "voxelmap-updated", version = "KgOVU4rn" }
+voxelmap = { group = "maven.modrinth", name = "voxelmap-updated", version = "oL15yOzL" }
 # https://modrinth.com/mod/journeymap/versions?l=fabric
 journeymap = { group = "maven.modrinth", name = "journeymap", version = "6vu2HyQi" }
 # https://modrinth.com/mod/xaeros-world-map/versions?l=fabric

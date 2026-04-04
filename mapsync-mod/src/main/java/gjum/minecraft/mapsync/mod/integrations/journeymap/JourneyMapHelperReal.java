@@ -10,6 +10,7 @@ import journeymap.client.model.map.MapType;
 import journeymap.client.model.region.RegionCoord;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
+import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.biome.Biome;
@@ -18,6 +19,7 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.chunk.LevelChunk;
 
 import static gjum.minecraft.mapsync.mod.MapSyncMod.logger;
+import static gjum.minecraft.mapsync.mod.Utils.getBiomeRegistry;
 import static gjum.minecraft.mapsync.mod.Utils.mc;
 
 public class JourneyMapHelperReal {
@@ -64,6 +66,9 @@ public class JourneyMapHelperReal {
 			// keep this call in one place so failures are logged with context
 			final boolean rendered = JourneymapClient.getInstance().getChunkRenderController().renderChunk(rCoord, mapType, chunkMd);
 			return rendered;
+		} catch (ChunkMD.ChunkMissingException e) {
+			logger.error("Chunk missing for rendering {} at {}", mapName, chunkMd.chunkTile.chunkPos());
+			return false;
 		} catch (Throwable t) {
 			logger.error("Exception rendering {} at {}", mapName, chunkMd.chunkTile.chunkPos(), t);
 			return false;
@@ -165,7 +170,12 @@ public class JourneyMapHelperReal {
 		@Override
 		public Holder<Biome> getBiomeHolder(BlockPos pos) {
 			var biome = getBiome(pos);
-			return biome != null ? Holder.direct(biome) : null;
+			if (biome == null || mc.level == null) return null;
+			var biomeKey = getBiomeRegistry().getResourceKey(biome).orElse(null);
+			if (biomeKey == null) return null;
+			return mc.level.registryAccess()
+				.lookupOrThrow(Registries.BIOME)
+				.getOrThrow(biomeKey);
 		}
 
 		@Override

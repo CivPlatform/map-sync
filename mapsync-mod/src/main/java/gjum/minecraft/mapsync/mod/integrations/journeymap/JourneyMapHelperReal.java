@@ -1,23 +1,22 @@
 package gjum.minecraft.mapsync.mod.integrations.journeymap;
 
-import static gjum.minecraft.mapsync.mod.MapSyncMod.logger;
-import static gjum.minecraft.mapsync.mod.Utils.mc;
-
 import gjum.minecraft.mapsync.mod.data.BlockColumn;
 import gjum.minecraft.mapsync.mod.data.BlockInfo;
 import gjum.minecraft.mapsync.mod.data.ChunkTile;
 import journeymap.client.JourneymapClient;
 import journeymap.client.io.FileHandler;
-import journeymap.client.model.chunk.NBTChunkMD;
+import journeymap.client.model.chunk.ChunkMD;
 import journeymap.client.model.map.MapType;
 import journeymap.client.model.region.RegionCoord;
-import journeymap.common.nbt.RegionData;
-import journeymap.common.nbt.RegionDataStorageHandler;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Holder;
 import net.minecraft.world.level.biome.Biome;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.chunk.LevelChunk;
+
+import static gjum.minecraft.mapsync.mod.MapSyncMod.logger;
+import static gjum.minecraft.mapsync.mod.Utils.mc;
 
 public class JourneyMapHelperReal {
 	static boolean isMapping() {
@@ -33,41 +32,51 @@ public class JourneyMapHelperReal {
 		var chunkMd = new TileChunkMD(chunkTile);
 
 		var rCoord = RegionCoord.fromChunkPos(
-				FileHandler.getJMWorldDir(mc),
-				MapType.day(chunkTile.dimension()), // type doesn't matter, only dimension is used
-				chunkMd.getCoord().x,
-				chunkMd.getCoord().z);
+			FileHandler.getJMWorldDir(mc),
+			MapType.day(chunkTile.dimension()), // type doesn't matter, only dimension is used
+			chunkMd.getCoord().x,
+			chunkMd.getCoord().z);
 
-		var key = new RegionDataStorageHandler.Key(rCoord, MapType.day(chunkTile.dimension()));
-		RegionData regionData = RegionDataStorageHandler.getInstance().getRegionData(key);
+		final boolean renderedDay = renderWithDiagnostics(rCoord,
+			MapType.day(chunkTile.dimension()), chunkMd, "day");
+		final boolean renderedBiome = renderWithDiagnostics(rCoord,
+			MapType.biome(chunkTile.dimension()), chunkMd, "biome");
+		final boolean renderedTopo = renderWithDiagnostics(rCoord,
+			MapType.topo(chunkTile.dimension()), chunkMd, "topo");
 
-		final boolean renderedDay = renderController.renderChunk(rCoord,
-				MapType.day(chunkTile.dimension()), chunkMd, regionData);
-		if (!renderedDay) logger.warn("Failed rendering day at {}", chunkTile.chunkPos());
-
-		final boolean renderedBiome = renderController.renderChunk(rCoord,
-				MapType.biome(chunkTile.dimension()), chunkMd, regionData);
-		if (!renderedBiome) logger.warn("Failed rendering biome at {}", chunkTile.chunkPos());
-
-		final boolean renderedTopo = renderController.renderChunk(rCoord,
-				MapType.topo(chunkTile.dimension()), chunkMd, regionData);
-		if (!renderedTopo) logger.warn("Failed rendering topo at {}", chunkTile.chunkPos());
+		if (!renderedDay || !renderedBiome || !renderedTopo) {
+			logger.warn("JourneyMap chunk render debug {} -> day={}, biome={}, topo={}",
+				chunkTile.chunkPos(), renderedDay, renderedBiome, renderedTopo);
+		}
 
 		return renderedDay && renderedBiome && renderedTopo;
+	}
+
+	private static boolean renderWithDiagnostics(
+			RegionCoord rCoord,
+			MapType mapType,
+			TileChunkMD chunkMd,
+			String mapName
+	) {
+		try {
+			// keep this call in one place so failures are logged with context
+			final boolean rendered = JourneymapClient.getInstance().getChunkRenderController().renderChunk(rCoord, mapType, chunkMd);
+			if (!rendered) logger.warn("Failed rendering {} at {}", mapName, chunkMd.chunkTile.chunkPos());
+			return rendered;
+		} catch (Throwable t) {
+			logger.error("Exception rendering {} at {}", mapName, chunkMd.chunkTile.chunkPos(), t);
+			return false;
+		}
 	}
 
 	/**
 	 * References JourneyMap classes. Check {@link JourneyMapHelper#isJourneyMapNotAvailable} before referencing this.
 	 */
-	private static class TileChunkMD extends NBTChunkMD {
+	private static class TileChunkMD extends ChunkMD {
 		private final ChunkTile chunkTile;
 
 		public TileChunkMD(ChunkTile chunkTile) {
-			super(new LevelChunk(mc.level, chunkTile.chunkPos()),
-					chunkTile.chunkPos(),
-					null, // all accessing methods are overridden
-					MapType.day(chunkTile.dimension()) // just has to not be `underground`
-			);
+			super(new LevelChunk(mc.level, chunkTile.chunkPos()));
 			this.chunkTile = chunkTile;
 		}
 
@@ -88,7 +97,9 @@ public class JourneyMapHelperReal {
 
 		@Override
 		public BlockState getBlockState(BlockPos pos) {
-			var layers = getCol(pos.getX(), pos.getZ()).layers();
+			var column = getCol(pos.getX(), pos.getZ());
+			if (column == null) return Blocks.AIR.defaultBlockState();
+			var layers = column.layers();
 			BlockInfo prevLayer = null;
 			// note that layers are ordered top-down
 			for (BlockInfo layer : layers) {
@@ -107,23 +118,60 @@ public class JourneyMapHelperReal {
 		}
 
 		@Override
-		public Integer getGetLightValue(BlockPos pos) {
-			return getCol(pos.getX(), pos.getZ()).light();
+		public BlockState getChunkBlockState(BlockPos pos) {
+			return getBlockState(pos);
 		}
 
 		@Override
-		public Integer getTopY(BlockPos pos) {
-			return getCol(pos.getX(), pos.getZ()).layers().get(0).y();
+		public Holder<Biome> getBiomeHolder(BlockPos pos) {
+			var biome = getBiome(pos);
+			return biome != null ? Holder.direct(biome) : null;
+		}
+
+		@Override
+		public boolean canBlockSeeTheSky(int localX, int y, int localZ) {
+			return getSavedLightValue(localX, y, localZ) > 0;
+		}
+
+		@Override
+		public boolean hasLevelChunk() {
+			return false;
+		}
+
+		@Override
+		public int getSavedLightValue(int localX, int y, int localZ) {
+			var column = getCol(localX, localZ);
+			if (column == null) return 0;
+			int light = column.light();
+			if (light < 0 || light > 15) return 0;
+			return light;
+		}
+
+
+		@Override
+		public int getPrecipitationHeight(BlockPos pos) {
+			return this.getPrecipitationHeight(pos.getX(), pos.getZ());
+		}
+
+		@Override
+		public int getPrecipitationHeight(int localX, int localZ) {
+			var column = getCol(localX, localZ);
+			if (column == null || column.layers().isEmpty()) {
+				return mc.level != null ? mc.level.getMinY() : 0;
+			}
+			return column.layers().get(0).y();
 		}
 
 		@Override
 		public int getHeight(BlockPos pos) {
-			return this.getTopY(pos);
+			return this.getPrecipitationHeight(pos);
 		}
 
 		@Override
 		public Biome getBiome(BlockPos pos) {
-			return getCol(pos).biome();
+			var column = getCol(pos);
+			if (column != null) return column.biome();
+			return null;
 		}
 	}
 }

@@ -132,7 +132,7 @@ public final class MapSyncMod implements ClientModInitializer {
 		client.authState.set(null);
 	}
 
-	/// Keep in mind this could be
+	/// BEWARE: This is called from whatever thread the given SyncClient websocket is using for reads.
 	public void handleSyncPacket(
 		final @NotNull SyncClient client,
 		final @NotNull Packet received

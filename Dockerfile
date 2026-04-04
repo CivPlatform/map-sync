@@ -17,9 +17,6 @@ RUN corepack pack
 ## don't call out to network anymore
 ENV COREPACK_ENABLE_NETWORK=0
 
-FROM base AS prod-deps
-RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --prod --frozen-lockfile
-
 FROM base AS build
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --frozen-lockfile
 
@@ -33,7 +30,7 @@ RUN pnpm run test
 # final image only includes minimal files
 FROM base AS deploy
 
-COPY --from=prod-deps /usr/src/app/node_modules /usr/src/app/node_modules
+COPY --from=build /usr/src/app/node_modules /usr/src/app/node_modules
 COPY --from=build /usr/src/app/dist /usr/src/app/dist
 
 ENV NODE_ENV=production

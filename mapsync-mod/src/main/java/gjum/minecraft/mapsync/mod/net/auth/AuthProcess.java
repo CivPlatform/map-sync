@@ -23,8 +23,7 @@ public final class AuthProcess {
 		final DimensionState dimensionState
 	) throws Exception {
 		if (dimensionState == null) {
-			client.websocket.close();
-			return;
+			throw new IllegalStateException("no dimension state");
 		}
 		if (!client.authState.setIf(Objects::isNull, AwaitingIdentityRequest::new)) {
 			throw new IllegalStateException("already authenticated");

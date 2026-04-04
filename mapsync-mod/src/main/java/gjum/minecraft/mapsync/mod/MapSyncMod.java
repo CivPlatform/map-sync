@@ -121,7 +121,7 @@ public final class MapSyncMod implements ClientModInitializer {
 		client.authState.set(null);
 		AuthProcess.sendHandshake(
 			client,
-			this.dimensionState
+			this.getDimensionState()
 		);
 	}
 

@@ -1,9 +1,11 @@
 package gjum.minecraft.mapsync.mod.net;
 
 import com.google.common.net.HostAndPort;
+import gjum.minecraft.mapsync.mod.MapSyncMod;
 import gjum.minecraft.mapsync.mod.config.ServerConfig;
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.VarHandle;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Objects;
@@ -44,6 +46,10 @@ public final class SyncClients implements Iterable<SyncClient> {
 		final var syncAddressesCopy = Set.copyOf(syncAddresses);
 		this.clients.values().removeIf((syncClient) -> {
 			if (syncAddressesCopy.contains(syncClient.syncAddress)) {
+				MapSyncMod.debugLog("Closing sync client as %s is not contained within %s".formatted(
+					syncClient.syncAddress,
+					syncAddressesCopy
+				));
 				return false;
 			}
 			syncClient.shouldReconnect = false;
@@ -60,7 +66,11 @@ public final class SyncClients implements Iterable<SyncClient> {
 		SyncClient syncClient
 	) {
 		if (syncClient != null) {
-			if (!Objects.equals(this.serverConfig.gameAddress, syncClient.gameAddress)) {
+			if (!Objects.equals(this.gameAddress, syncClient.gameAddress)) {
+				MapSyncMod.debugLog("Closing client %s as it doesn't match game address %s".formatted(
+					syncClient.name(),
+					this.gameAddress
+				));
 				syncClient.websocket.close();
 				return null;
 			}
@@ -79,7 +89,7 @@ public final class SyncClients implements Iterable<SyncClient> {
 					return syncClient;
 			}
 		}
-		syncClient = new SyncClient(syncAddress, this.serverConfig.gameAddress);
+		syncClient = new SyncClient(syncAddress, this.gameAddress);
 		syncClient.websocket.connect();
 		return syncClient;
 	}
@@ -87,6 +97,9 @@ public final class SyncClients implements Iterable<SyncClient> {
 	public void closeAll(
 		final boolean preventReconnect
 	) {
+		MapSyncMod.debugLog("Closing all sync clients (preventReconnect=%s)".formatted(
+			preventReconnect
+		));
 		this.clients.values().removeIf((syncClient) -> {
 			if (preventReconnect) {
 				syncClient.shouldReconnect = false;
@@ -140,10 +153,11 @@ public final class SyncClients implements Iterable<SyncClient> {
 				LOGGER.error("Could not load server config for {}... backing out", gameAddress, e);
 				return;
 			}
-			instance = new SyncClients(
+			final SyncClients syncClients = instance = new SyncClients(
 				gameAddress,
 				serverConfig
 			);
+			syncClients.setAll(new HashSet<>(serverConfig.getSyncServerAddresses()));
 		});
 	}
 }

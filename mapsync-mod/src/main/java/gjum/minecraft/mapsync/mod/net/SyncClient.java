@@ -116,7 +116,7 @@ public class SyncClient {
 		public void onOpen(
 			final @NotNull ServerHandshake handshake
 		) {
-			LOGGER.info("[{}] Connected...", SyncClient.this.name());
+			LOGGER.info("[{}] Connected to {}", SyncClient.this.name(), this.uri);
 			SyncClient.this.lastError = null;
 			try {
 				MapSyncMod.getMod().handleSyncConnection(SyncClient.this);
@@ -177,9 +177,8 @@ public class SyncClient {
 				this.onError(e);
 				return;
 			}
-			MapSyncMod.debugLog("[%s] Received %s: %s".formatted(
+			MapSyncMod.debugLog("[%s] Received %s".formatted(
 				SyncClient.this.name(),
-				packet.getClass().getSimpleName(),
 				packet
 			));
 			if (payload.hasRemaining()) {
@@ -231,5 +230,9 @@ public class SyncClient {
 			this.websocket.onError(e);
 			return;
 		}
+		MapSyncMod.debugLog("[%s] Sent %s".formatted(
+			this.name(),
+			packet
+		));
 	}
 }

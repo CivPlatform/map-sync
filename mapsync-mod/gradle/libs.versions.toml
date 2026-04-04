@@ -2,7 +2,7 @@
 minecraft = "1.21.11"
 # https://fabricmc.net/versions.html
 fabricLoom = "1.15-SNAPSHOT"
-fabricLoader = "0.18.4"
+fabricLoader = "0.18.6"
 fabricApi = "0.141.3+1.21.11"
 
 [libraries]
@@ -19,7 +19,7 @@ modmenu = { group = "maven.modrinth", name = "modmenu", version = "JWQVh32x" }
 # https://modrinth.com/mod/voxelmap-updated/versions?l=fabric
 voxelmap = { group = "maven.modrinth", name = "voxelmap-updated", version = "oL15yOzL" }
 # https://modrinth.com/mod/journeymap/versions?l=fabric
-journeymap = { group = "maven.modrinth", name = "journeymap", version = "6vu2HyQi" }
+journeymap = { group = "maven.modrinth", name = "journeymap", version = "ajOMv0sc" }
 # https://modrinth.com/mod/xaeros-world-map/versions?l=fabric
 xaerosmap = { group = "maven.modrinth", name = "xaeros-world-map", version = "CkZVhVE0" }
 # https://mvnrepository.com/artifact/org.java-websocket/Java-WebSocket

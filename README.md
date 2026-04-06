@@ -22,26 +22,6 @@ Map-Sync tracks a timestamp per chunk, so old data will never overwrite newer da
 
 ## Running a server
 
-<details open>
-<summary>Docker Install (recommended)</summary>
-<br />
-
-1. [Install the Docker Engine](https://docs.docker.com/engine/install/), if you haven't already.
-2. [Install Docker Compose](https://docs.docker.com/compose/install/) (We're using Docker Compose V2, so update if you haven't already done so.)
-3. Open a terminal.
-4. Clone our code. 
-    - `git clone https://github.com/CivPlatform/map-sync.git`
-5. Change your working directory. 
-    - `cd map-sync/`
-6. To run the server with interactive prompt: 
-    - `docker compose run --rm -it -p 12312:12312 map-sync`
-    - To stop the interactive prompt: hit ctrl-c twice
-7. To run the server headless: 
-    - `docker compose up map-sync -d`
-    - To stop the headless server: `docker compose down map-sync`
-
-</details>
-
 By default, a whitelist will deny any connections, which can be turned off from the config file. (**Caution**)\
 You can also add and remove players via the commands below or via the config files
 
@@ -53,7 +33,6 @@ You can also add and remove players via the commands below or via the config fil
 </details>
 
 Client authentication can also be turned off for use with unauthenticated accounts. (ex. testing purposes)
-
 
 ### Server commands
 

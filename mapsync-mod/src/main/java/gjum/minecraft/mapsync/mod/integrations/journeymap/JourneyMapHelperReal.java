@@ -69,7 +69,7 @@ public class JourneyMapHelperReal {
 		} catch (ChunkMD.ChunkMissingException e) {
 			logger.error("[JourneyMap] Chunk missing for rendering {} at {}", mapName, chunkMd.chunkTile.chunkPos());
 			return false;
-		} catch (Throwable t) {
+		} catch (Exception t) {
 			logger.error("[JourneyMap] Exception rendering {} at {}", mapName, chunkMd.chunkTile.chunkPos(), t);
 			return false;
 		}

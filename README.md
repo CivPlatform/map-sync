@@ -22,7 +22,7 @@ Map-Sync tracks a timestamp per chunk, so old data will never overwrite newer da
 
 ## Running a server
 
-You can learn how to setup and manage your mapsync server in [docs/getting-started](./docs/getitng-started.md)
+You can learn how to setup and manage your mapsync server in [docs/getting-started](./docs/getting-started.md)
 
 ## Copyright
 

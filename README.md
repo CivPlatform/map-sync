@@ -22,56 +22,9 @@ Map-Sync tracks a timestamp per chunk, so old data will never overwrite newer da
 
 ## Running a server
 
-<details open>
-<summary>Docker Install (recommended)</summary>
-<br />
+You can learn how to setup and manage your mapsync server in [docs/getting-started](./docs/getitng-started.md)
 
-1. [Install the Docker Engine](https://docs.docker.com/engine/install/), if you haven't already.
-2. [Install Docker Compose](https://docs.docker.com/compose/install/) (We're using Docker Compose V2, so update if you haven't already done so.)
-3. Open a terminal.
-4. Clone our code. 
-    - `git clone https://github.com/CivPlatform/map-sync.git`
-5. Change your working directory. 
-    - `cd map-sync/`
-6. To run the server with interactive prompt: 
-    - `docker compose run --rm -it -p 12312:12312 map-sync`
-    - To stop the interactive prompt: hit ctrl-c twice
-7. To run the server headless: 
-    - `docker compose up map-sync -d`
-    - To stop the headless server: `docker compose down map-sync`
-
-</details>
-
-By default, a whitelist will deny any connections, which can be turned off from the config file. (**Caution**)\
-You can also add and remove players via the commands below or via the config files
-
-<details>
-<summary>Config file approach</summary>
-
-- You can control who has access to a Sync Server by editing its `allowed-users.txt`. If someone connects who is not allowed access yet, their name and UUID gets written to `denied-users.txt`, from where you can just cut+paste it into `allowed-users.txt` and restart the server to grant access.
-
-</details>
-
-Client authentication can also be turned off for use with unauthenticated accounts. (ex. testing purposes)
-
-
-### Server commands
-
-Run these inside the command-line interface after starting the server.
-
-```
-whitelist_load
-whitelist_save
-whitelist_add_ign <name> -- requires the player to have connected in the past
-whitelist_remove_ign <name> -- requires the player to have connected in the past
-whitelist_add <uuid>
-whitelist_remove <uuid>
-list -- lists players
-send <uuid/name> -- sends all available data to player
-kick <uuid/name> -- kicks player from sync server
-```
-
----
+## Copyright
 
 Copyright (C) 2022 Map-Sync contributors
 

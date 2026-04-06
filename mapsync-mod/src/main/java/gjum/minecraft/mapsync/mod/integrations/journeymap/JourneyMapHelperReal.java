@@ -49,7 +49,7 @@ public class JourneyMapHelperReal {
 			MapType.topo(chunkTile.dimension()), chunkMd, "topo");
 
 		if (!renderedDay || !renderedBiome || !renderedTopo) {
-			logger.warn("JourneyMap chunk render debug {} -> day={}, biome={}, topo={}",
+			logger.warn("[JourneyMap] chunk render debug {} -> day={}, biome={}, topo={}",
 				chunkTile.chunkPos(), renderedDay, renderedBiome, renderedTopo);
 		}
 
@@ -67,10 +67,10 @@ public class JourneyMapHelperReal {
 			final boolean rendered = JourneymapClient.getInstance().getChunkRenderController().renderChunk(rCoord, mapType, chunkMd);
 			return rendered;
 		} catch (ChunkMD.ChunkMissingException e) {
-			logger.error("Chunk missing for rendering {} at {}", mapName, chunkMd.chunkTile.chunkPos());
+			logger.error("[JourneyMap] Chunk missing for rendering {} at {}", mapName, chunkMd.chunkTile.chunkPos());
 			return false;
 		} catch (Throwable t) {
-			logger.error("Exception rendering {} at {}", mapName, chunkMd.chunkTile.chunkPos(), t);
+			logger.error("[JourneyMap] Exception rendering {} at {}", mapName, chunkMd.chunkTile.chunkPos(), t);
 			return false;
 		}
 	}

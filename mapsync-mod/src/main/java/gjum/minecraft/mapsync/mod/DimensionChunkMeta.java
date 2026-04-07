@@ -1,5 +1,6 @@
 package gjum.minecraft.mapsync.mod;
 
+import gjum.minecraft.mapsync.mod.data.GameAddress;
 import gjum.minecraft.mapsync.mod.data.RegionPos;
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -10,7 +11,6 @@ import java.nio.file.Path;
 import java.nio.file.attribute.FileTime;
 import java.util.Arrays;
 import java.util.HashMap;
-import net.minecraft.client.Minecraft;
 import net.minecraft.world.level.ChunkPos;
 
 /**
@@ -19,17 +19,17 @@ import net.minecraft.world.level.ChunkPos;
  * Each region's LastModifiedTime is set to the oldest contained chunk (or 0 if any chunks are absent), to easily find regions to request from the sync server.
  */
 public class DimensionChunkMeta {
-	public final String mcServerName;
+	public final GameAddress gameAddress;
 	public final String dimensionName;
 	private final String dimensionDirPath;
 
 	private final HashMap<RegionPos, long[]> regionsTimestamps = new HashMap<>();
 
-	DimensionChunkMeta(String mcServerName, String dimensionName) {
-		this.mcServerName = mcServerName;
+	DimensionChunkMeta(GameAddress gameAddress, String dimensionName) {
+		this.gameAddress = gameAddress;
 		this.dimensionName = dimensionName;
 		var dir = Path.of(MapSyncMod.getConfigDirectory().getAbsolutePath(), "cache",
-				mcServerName.replaceAll(":", "~"), dimensionName.replaceAll(":", "~"));
+				gameAddress.asFsName(), dimensionName.replaceAll(":", "~"));
 		dir.toFile().mkdirs();
 		this.dimensionDirPath = dir.toAbsolutePath().toString();
 	}

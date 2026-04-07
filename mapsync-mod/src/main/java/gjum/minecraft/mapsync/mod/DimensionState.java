@@ -4,6 +4,7 @@ import static gjum.minecraft.mapsync.mod.MapSyncMod.debugLog;
 
 import gjum.minecraft.mapsync.mod.data.CatchupChunk;
 import gjum.minecraft.mapsync.mod.data.ChunkTile;
+import gjum.minecraft.mapsync.mod.data.GameAddress;
 import gjum.minecraft.mapsync.mod.data.RegionPos;
 import java.util.List;
 import net.minecraft.client.Minecraft;
@@ -26,10 +27,10 @@ public class DimensionState {
 	private int numChunksReceived = 0;
 	private int numChunksRendered = 0;
 
-	DimensionState(String mcServerName, ResourceKey<Level> dimension) {
+	DimensionState(GameAddress gameAddress, ResourceKey<Level> dimension) {
 		this.dimension = dimension;
 		String dimensionName = dimension.identifier().toString();
-		chunkMeta = new DimensionChunkMeta(mcServerName, dimensionName);
+		chunkMeta = new DimensionChunkMeta(gameAddress, dimensionName);
 		renderQueue = new RenderQueue(this);
 		catchup = new CatchupLogic(this);
 	}

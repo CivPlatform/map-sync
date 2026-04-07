@@ -7,6 +7,7 @@ import gjum.minecraft.mapsync.mod.config.ModConfig;
 import gjum.minecraft.mapsync.mod.config.ServerConfig;
 import gjum.minecraft.mapsync.mod.data.CatchupChunk;
 import gjum.minecraft.mapsync.mod.data.ChunkTile;
+import gjum.minecraft.mapsync.mod.data.GameAddress;
 import gjum.minecraft.mapsync.mod.data.RegionPos;
 import gjum.minecraft.mapsync.mod.net.CloseContext;
 import gjum.minecraft.mapsync.mod.net.Packet;
@@ -165,9 +166,7 @@ public final class MapSyncMod implements ClientModInitializer {
 			serverConfig = null;
 			return null;
 		}
-		String gameAddress = currentServer.ip;
-		if (!gameAddress.contains(":")) gameAddress += ":25565";
-
+		GameAddress gameAddress = new GameAddress(currentServer.ip);
 		if (serverConfig == null) {
 			serverConfig = ServerConfig.load(gameAddress);
 		}

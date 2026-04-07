@@ -2,6 +2,7 @@ package gjum.minecraft.mapsync.mod.net;
 
 import gjum.minecraft.mapsync.mod.MapSyncMod;
 import gjum.minecraft.mapsync.mod.data.ChunkTile;
+import gjum.minecraft.mapsync.mod.data.GameAddress;
 import gjum.minecraft.mapsync.mod.deps.websockets.client.WebSocketClient;
 import gjum.minecraft.mapsync.mod.deps.websockets.drafts.Draft;
 import gjum.minecraft.mapsync.mod.deps.websockets.drafts.Draft_6455;
@@ -63,7 +64,7 @@ public class SyncClient {
 
 	public final long clientId;
 	public final String syncAddress;
-	public final String gameAddress;
+	public final GameAddress gameAddress;
 
 	/// false = don't auto-reconnect but maintain connection as long as it stays up.
 	/// can be set to true again later.
@@ -74,7 +75,7 @@ public class SyncClient {
 
 	public SyncClient(
 		final @NotNull String syncAddress,
-		final @NotNull String gameAddress
+		final @NotNull GameAddress gameAddress
 	) {
 		this.clientId = LAST_CLIENT_ID.incrementAndGet();
 		this.syncAddress = Objects.requireNonNull(syncAddress);

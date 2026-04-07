@@ -1,5 +1,6 @@
 package gjum.minecraft.mapsync.mod.net.packet;
 
+import gjum.minecraft.mapsync.mod.data.GameAddress;
 import gjum.minecraft.mapsync.mod.net.Packet;
 import gjum.minecraft.mapsync.mod.net.buffers.BufferWriter;
 import gjum.minecraft.mapsync.mod.utils.Assertions;
@@ -11,7 +12,7 @@ import org.jetbrains.annotations.NotNull;
 /// - Next: [ClientboundIdentityRequestPacket]
 public record ServerboundHandshakePacket(
 	@NotNull String modVersion,
-	@NotNull String gameAddress,
+	@NotNull GameAddress gameAddress,
 	@NotNull String dimension
 ) implements Packet {
 	public static final int PACKET_ID = 1;
@@ -27,7 +28,7 @@ public record ServerboundHandshakePacket(
 		final @NotNull BufferWriter writer
 	) throws Exception {
 		writer.writeString(this.modVersion());
-		writer.writeString(this.gameAddress());
+		writer.writeString(this.gameAddress().address());
 		writer.writeString(this.dimension());
 	}
 }

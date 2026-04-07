@@ -3,6 +3,7 @@ package gjum.minecraft.mapsync.mod.config;
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
 import com.google.gson.annotations.Expose;
+import gjum.minecraft.mapsync.mod.data.GameAddress;
 import java.io.File;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
@@ -16,7 +17,7 @@ import net.minecraft.client.Minecraft;
 import org.jetbrains.annotations.NotNull;
 
 public class ServerConfig extends JsonConfig {
-	public String gameAddress;
+	public GameAddress gameAddress;
 
 	@Expose
 	private @NotNull List<String> syncServerAddresses = new ArrayList<>();
@@ -36,8 +37,8 @@ public class ServerConfig extends JsonConfig {
 		saveLater();
 	}
 
-	public static ServerConfig load(String gameAddress) {
-		var dir = Path.of(MapSyncMod.getConfigDirectory().getAbsolutePath(), gameAddress.replaceAll(":", "~")).toFile();
+	public static ServerConfig load(GameAddress gameAddress) {
+		var dir = Path.of(MapSyncMod.getConfigDirectory().getAbsolutePath(), gameAddress.asFsName()).toFile();
 		dir.mkdirs();
 		var conf = load(new File(dir, "server-config.json"), ServerConfig.class);
 		conf.gameAddress = gameAddress;
@@ -60,7 +61,8 @@ public class ServerConfig extends JsonConfig {
 			String json = new String(input.readAllBytes(), StandardCharsets.UTF_8);
 			JsonObject root = new Gson().fromJson(json, JsonObject.class);
 			JsonObject servers = root.get("servers").getAsJsonObject();
-			JsonObject server = servers.get(conf.gameAddress).getAsJsonObject();
+			// TODO: Don't get, instead iterate through keys
+			JsonObject server = servers.get(conf.gameAddress.address()).getAsJsonObject();
 			defaults = GSON.fromJson(server, ServerConfig.class);
 		} catch (IllegalStateException | NullPointerException ignored) {
 			return;

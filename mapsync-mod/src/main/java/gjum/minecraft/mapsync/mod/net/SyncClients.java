@@ -1,8 +1,8 @@
 package gjum.minecraft.mapsync.mod.net;
 
-import com.google.common.net.HostAndPort;
 import gjum.minecraft.mapsync.mod.MapSyncMod;
 import gjum.minecraft.mapsync.mod.config.ServerConfig;
+import gjum.minecraft.mapsync.mod.data.GameAddress;
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.VarHandle;
 import java.util.HashSet;
@@ -23,12 +23,12 @@ import org.slf4j.LoggerFactory;
 public final class SyncClients implements Iterable<SyncClient> {
 	private static final Logger LOGGER = LoggerFactory.getLogger(SyncClients.class);
 
-	public final String gameAddress;
+	public final GameAddress gameAddress;
 	public final ServerConfig serverConfig;
 	private final Map<String, SyncClient> clients = new ConcurrentHashMap<>();
 
 	public SyncClients(
-		final @NotNull String gameAddress,
+		final @NotNull GameAddress gameAddress,
 		final @NotNull ServerConfig serverConfig
 	) {
 		this.gameAddress = Objects.requireNonNull(gameAddress);
@@ -135,16 +135,7 @@ public final class SyncClients implements Iterable<SyncClient> {
 				LOGGER.error("Connection doesn't have server data yet... backing out");
 				return;
 			}
-			final String gameAddress; {
-				final String ip = serverData.ip;
-				try {
-					gameAddress = HostAndPort.fromString(ip).withDefaultPort(25565).toString();
-				}
-				catch (final Exception e) {
-					LOGGER.error("Weirdly could not pass {} as a game address... backing out", ip, e);
-					return;
-				}
-			}
+			final GameAddress gameAddress = new GameAddress(serverData.ip);
 			final ServerConfig serverConfig;
 			try {
 				serverConfig = ServerConfig.load(gameAddress);

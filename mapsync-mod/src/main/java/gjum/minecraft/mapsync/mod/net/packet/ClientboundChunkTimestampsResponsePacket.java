@@ -4,10 +4,12 @@ import gjum.minecraft.mapsync.mod.data.CatchupChunk;
 import gjum.minecraft.mapsync.mod.net.Packet;
 import gjum.minecraft.mapsync.mod.net.buffers.BufferReader;
 import gjum.minecraft.mapsync.mod.utils.Assertions;
+import gjum.minecraft.mapsync.mod.utils.MagicValues;
 import java.util.List;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.level.Level;
+import org.apache.commons.lang3.IntegerRange;
 import org.jetbrains.annotations.NotNull;
 
 /// The server will send this packet, containing an elaboration of chunk timestamps of a particular region as requested
@@ -23,6 +25,7 @@ public record ClientboundChunkTimestampsResponsePacket(
 
 	public ClientboundChunkTimestampsResponsePacket {
 		chunks = Assertions.assertNonNullList(chunks);
+		Assertions.assertIntRange(IntegerRange.of(1, MagicValues.REGION_GRID), chunks.size());
 	}
 
 	public static @NotNull ClientboundChunkTimestampsResponsePacket read(
@@ -31,7 +34,7 @@ public record ClientboundChunkTimestampsResponsePacket(
 		final ResourceKey<Level> dimension = reader.readResourceKey(Registries.DIMENSION);
 		final int anchorChunkX = reader.readInt16() << 5;
 		final int anchorChunkZ = reader.readInt16() << 5;
-		final var chunks = new CatchupChunk[reader.readUnt10()];
+		final var chunks = new CatchupChunk[reader.readUnt10() + 1];
 		for (int i = 0; i < chunks.length; i++) {
 			chunks[i] = new CatchupChunk(
 				dimension,

@@ -7,7 +7,7 @@ import gjum.minecraft.mapsync.mod.utils.MagicValues;
 import java.util.Map;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.level.ChunkPos;
-import org.apache.commons.lang3.LongRange;
+import org.apache.commons.lang3.IntegerRange;
 import org.jetbrains.annotations.NotNull;
 
 /// The client sends this in response to a [ClientboundChunkTimestampsResponsePacket], requesting the server to send
@@ -27,7 +27,7 @@ public record ServerboundCatchupRequestPacket(
 	public ServerboundCatchupRequestPacket {
 		Assertions.assertNotNull(dimension);
 		chunks = Assertions.assertNonNullMap(chunks);
-		Assertions.assertLongRange(LongRange.of(1, MagicValues.REGION_GRID), chunks.size());
+		Assertions.assertIntRange(IntegerRange.of(1, MagicValues.REGION_GRID), chunks.size());
 	}
 
 	@Override
@@ -37,7 +37,7 @@ public record ServerboundCatchupRequestPacket(
 		writer.writeString(this.dimension().toString());
 		writer.writeInt16(this.regionX());
 		writer.writeInt16(this.regionZ());
-		writer.writeUnt10(this.chunks().size());
+		writer.writeUnt10(this.chunks().size() - 1);
 		for (final var entry : this.chunks().entrySet()) {
 			final ChunkPos chunkPos = entry.getKey();
 			writer.writeUnt5(chunkPos.getRegionLocalX());

@@ -171,7 +171,7 @@ export class ClientboundChunkTimestampsResponsePacket extends Packet {
         writer.writeString(this.dimension);
         writer.writeInt16(this.regionX);
         writer.writeInt16(this.regionZ);
-        writer.writeUnt10(this.chunks.length);
+        writer.writeUnt10(this.chunks.length - 1);
         for (const row of this.chunks) {
             writer.writeUnt5(row.chunkX & 31n);
             writer.writeUnt5(row.chunkZ & 31n);
@@ -196,7 +196,7 @@ export class ServerboundCatchupRequestPacket extends Packet {
         const dimension = reader.readString();
         const anchorChunkX = reader.readInt16() << 5n;
         const anchorChunkZ = reader.readInt16() << 5n;
-        const chunks: CatchupChunk[] = new Array(Number(reader.readUnt10()));
+        const chunks: CatchupChunk[] = new Array(Number(reader.readUnt10()) + 1);
         for (let i = 0; i < chunks.length; i++) {
             chunks[i] = {
                 chunkX: asInt32(anchorChunkX + reader.readUnt5()),

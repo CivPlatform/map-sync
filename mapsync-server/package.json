@@ -34,7 +34,7 @@
         "bufferutil": "4.1.0"
     },
     "engines": {
-        "node": "24.x"
+        "node": "25.x"
     },
     "prettier": {
         "useTabs": false,

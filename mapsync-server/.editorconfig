@@ -1,4 +1,7 @@
 # https://editorconfig.org
 
+[.nvmrc]
+insert_final_newline = false
+
 [*.{ts,json}]
 indent_style = space

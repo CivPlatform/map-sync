@@ -2,12 +2,12 @@ allowBuilds:
   better-sqlite3: true
   bufferutil: true
 
-blockExoticSubdeps: true
-# prevent packages newer than 1 day old from being installed
-minimumReleaseAge: 1440
-# https://pnpm.io/settings#trustpolicy
 onlyBuiltDependencies:
   - better-sqlite3
   - bufferutil
 
+blockExoticSubdeps: true
+# prevent packages newer than 1 day old from being installed
+minimumReleaseAge: 1440
+# https://pnpm.io/settings#trustpolicy
 trustPolicy: no-downgrade

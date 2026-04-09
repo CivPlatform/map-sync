@@ -85,34 +85,39 @@ public final class GameContext {
 
 	public static void initEvents() {
 		ClientPlayConnectionEvents.INIT.register((gameConnection, minecraft) -> {
-			if (!(gameConnection.getServerData() instanceof final ServerData serverData)) {
-				LOGGER.error("Connection doesn't have server data yet... backing out");
-				return;
-			}
-			final GameAddress gameAddress; {
-				final String ip = serverData.ip;
-				try {
-					gameAddress = new GameAddress(ip);
-				}
-				catch (final Exception e) {
-					LOGGER.error("Weirdly could not parse {} as a valid game address... backing out", ip, e);
+			GameContext gameContext = null;
+			try {
+				if (!(gameConnection.getServerData() instanceof final ServerData serverData)) {
+					LOGGER.error("Connection doesn't have server data yet... backing out");
 					return;
 				}
+				final GameAddress gameAddress; {
+					final String ip = serverData.ip;
+					try {
+						gameAddress = new GameAddress(ip);
+					}
+					catch (final Exception e) {
+						LOGGER.error("Weirdly could not parse {} as a valid game address... backing out", ip, e);
+						return;
+					}
+				}
+				final ServerConfig gameConfig;
+				try {
+					gameConfig = ServerConfig.load(gameAddress);
+				}
+				catch (final Exception e) {
+					LOGGER.error("Could not load game config for {}... backing out", gameAddress, e);
+					return;
+				}
+				gameContext = new GameContext(
+					gameAddress,
+					gameConfig
+				);
 			}
-			final ServerConfig gameConfig;
-			try {
-				gameConfig = ServerConfig.load(gameAddress);
-			}
-			catch (final Exception e) {
-				LOGGER.error("Could not load game config for {}... backing out", gameAddress, e);
-				return;
-			}
-			final var context = new GameContext(
-				gameAddress,
-				gameConfig
-			);
-			if (INSTANCE.getAndSet(context) instanceof final GameContext previous) {
-				previous.shutdown();
+			finally {
+				if (INSTANCE.getAndSet(gameContext) instanceof final GameContext previous) {
+					previous.shutdown();
+				}
 			}
 		});
 		ClientPlayConnectionEvents.DISCONNECT.register((gameConnection, minecraft) -> {
@@ -126,14 +131,16 @@ public final class GameContext {
 			}
 		});
 		ClientWorldEvents.AFTER_CLIENT_WORLD_CHANGE.register((minecraft, level) -> {
-			final GameContext gameContext = get().orElseThrow();
-			if (DIMENSION_STATE.getAndSet(gameContext, null) instanceof final DimensionState dimensionState) {
-				dimensionState.shutDown();
+			if (!(instance instanceof final GameContext gameContext)) {
+				return;
 			}
-			gameContext.dimensionState = new DimensionState(
+			final var dimensionState = new DimensionState(
 				gameContext.getGameAddress(),
 				level.dimension()
 			);
+			if (DIMENSION_STATE.getAndSet(gameContext, dimensionState) instanceof final DimensionState previous) {
+				previous.shutDown();
+			}
 		});
 	}
 }

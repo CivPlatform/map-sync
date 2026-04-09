@@ -41,7 +41,6 @@ import net.minecraft.world.level.ChunkPos;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 import org.lwjgl.glfw.GLFW;
 
 public final class MapSyncMod implements ClientModInitializer {
@@ -69,12 +68,6 @@ public final class MapSyncMod implements ClientModInitializer {
 			CATEGORY
 			//"category.map-sync"
 	);
-
-	/**
-	 * Tracks state and render thread for current mc dimension.
-	 * Never access this directly; always go through `getDimensionState()`.
-	 */
-	private @Nullable DimensionState dimensionState;
 
 	public MapSyncMod() {
 		if (INSTANCE != null) throw new IllegalStateException("Constructor called twice");
@@ -106,8 +99,9 @@ public final class MapSyncMod implements ClientModInitializer {
 			minecraft.setScreen(new ModGui(minecraft.screen));
 		}
 
-		var dimensionState = getDimensionState();
-		if (dimensionState != null) dimensionState.onTick();
+		GameContext.get()
+			.flatMap(GameContext::getDimensionState)
+			.ifPresent(DimensionState::onTick);
 	}
 
 	public void handleSyncConnection(
@@ -116,7 +110,9 @@ public final class MapSyncMod implements ClientModInitializer {
 		client.authState.set(null);
 		AuthProcess.sendHandshake(
 			client,
-			this.getDimensionState()
+			GameContext.get()
+				.flatMap(GameContext::getDimensionState)
+				.orElse(null)
 		);
 	}
 
@@ -148,30 +144,6 @@ public final class MapSyncMod implements ClientModInitializer {
 	}
 
 	/**
-	 * for current dimension
-	 */
-	public @Nullable DimensionState getDimensionState() {
-		if (mc.level == null) return null;
-		var serverConfig = GameContext.get().map(GameContext::getGameConfig).orElse(null);
-		if (serverConfig == null) return null;
-
-		if (dimensionState != null && dimensionState.dimension != mc.level.dimension()) {
-			shutDownDimensionState();
-		}
-		if (dimensionState == null || dimensionState.hasShutDown) {
-			dimensionState = new DimensionState(serverConfig.gameAddress, mc.level.dimension());
-		}
-		return dimensionState;
-	}
-
-	private void shutDownDimensionState() {
-		if (dimensionState != null) {
-			dimensionState.shutDown();
-			dimensionState = null;
-		}
-	}
-
-	/**
 	 * an entire chunk was received from the mc server;
 	 * send it to the map data server right away.
 	 */
@@ -180,7 +152,7 @@ public final class MapSyncMod implements ClientModInitializer {
 
 		if (mc.level == null) return;
 		// TODO disable in nether (no meaningful "surface layer")
-		var dimensionState = getDimensionState();
+		var dimensionState = GameContext.get().flatMap(GameContext::getDimensionState).orElse(null);
 		if (dimensionState == null) return;
 
 		debugLog("received mc chunk: " + cx + "," + cz);
@@ -211,7 +183,7 @@ public final class MapSyncMod implements ClientModInitializer {
 
 	public void handleRegionTimestamps(SyncClient client, ClientboundRegionTimestampsPacket packet) {
 		client.authState.requireWelcomed();
-		DimensionState dimension = getDimensionState();
+		DimensionState dimension = GameContext.get().flatMap(GameContext::getDimensionState).orElse(null);
 		if (dimension == null) return;
 		if (!dimension.dimension.identifier().toString().equals(packet.dimension())) {
 			return;
@@ -240,9 +212,9 @@ public final class MapSyncMod implements ClientModInitializer {
 			syncClient.setServerKnownChunkHash(chunkTile.chunkPos(), chunkTile.dataHash());
 		}
 
-		var dimensionState = getDimensionState();
-		if (dimensionState == null) return;
-		dimensionState.processSharedChunk(chunkTile);
+		GameContext.get()
+			.flatMap(GameContext::getDimensionState)
+			.ifPresent((dimensionState) -> dimensionState.processSharedChunk(chunkTile));
 	}
 
 	public void handleCatchupData(SyncClient client, ClientboundChunkTimestampsResponsePacket packet) {
@@ -250,10 +222,12 @@ public final class MapSyncMod implements ClientModInitializer {
 		for (CatchupChunk chunk : packet.chunks()) {
 			chunk.syncClient = client;
 		}
-		var dimensionState = getDimensionState();
-		if (dimensionState == null) return;
-		debugLog("received catchup: " + packet.chunks().size() + " " + client.syncAddress);
-		dimensionState.addCatchupChunks(packet.chunks());
+		GameContext.get()
+			.flatMap(GameContext::getDimensionState)
+			.ifPresent((dimensionState) -> {
+				debugLog("received catchup: " + packet.chunks().size() + " " + client.syncAddress);
+				dimensionState.addCatchupChunks(packet.chunks());
+			});
 	}
 
 	public void requestCatchupData(

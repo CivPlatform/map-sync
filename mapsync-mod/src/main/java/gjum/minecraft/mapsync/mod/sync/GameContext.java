@@ -1,5 +1,6 @@
 package gjum.minecraft.mapsync.mod.sync;
 
+import gjum.minecraft.mapsync.mod.DimensionState;
 import gjum.minecraft.mapsync.mod.config.ServerConfig;
 import gjum.minecraft.mapsync.mod.data.GameAddress;
 import java.lang.invoke.MethodHandles;
@@ -31,6 +32,7 @@ public final class GameContext {
 
 	public void shutdown() {
 		this.syncConnections.closeAll(true);
+		this.getDimensionState().ifPresent(DimensionState::shutDown);
 	}
 
 	public @NotNull GameAddress getGameAddress() {
@@ -43,6 +45,23 @@ public final class GameContext {
 
 	public @NotNull SyncConnections getSyncConnections() {
 		return this.syncConnections;
+	}
+
+	// ============================================================
+	// Dimension State
+	// ============================================================
+
+	volatile DimensionState dimensionState = null;
+	static final VarHandle DIMENSION_STATE; static {
+		try {
+			DIMENSION_STATE = MethodHandles.lookup().findVarHandle(GameContext.class, "dimensionState", DimensionState.class);
+		}
+		catch (final ReflectiveOperationException e) {
+			throw new ExceptionInInitializerError(e);
+		}
+	}
+	public Optional<DimensionState> getDimensionState() {
+		return Optional.ofNullable(this.dimensionState);
 	}
 
 	// ============================================================

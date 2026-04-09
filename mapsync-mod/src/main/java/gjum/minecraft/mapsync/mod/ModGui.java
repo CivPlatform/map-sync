@@ -118,10 +118,9 @@ public class ModGui extends Screen {
 	}
 
 	public void purgeClicked(Button btn) {
-		DimensionState dimState = getMod().getDimensionState();
-		if (dimState != null) {
-			dimState.PurgeRegionTimeStamps();
-		}
+		GameContext.get()
+			.flatMap(GameContext::getDimensionState)
+			.ifPresent(DimensionState::PurgeRegionTimeStamps);
 	}
 
 	@Override
@@ -136,17 +135,20 @@ public class ModGui extends Screen {
 			guiGraphics.drawCenteredString(font, title, centerX, top, 0xFFFFFFFF);
 			syncServerAddressField.render(guiGraphics, i, j, f);
 
-			var dimensionState = getMod().getDimensionState();
-			if (dimensionState != null) {
-				String counterText = String.format(
-						"In dimension %s, received %d chunks, rendered %d, rendering %d",
+			GameContext.get()
+				.flatMap(GameContext::getDimensionState)
+				.ifPresent((dimensionState) -> guiGraphics.drawCenteredString(
+					font,
+					"In dimension %s, received %d chunks, rendered %d, rendering %d".formatted(
 						dimensionState.dimension.identifier(),
 						dimensionState.getNumChunksReceived(),
 						dimensionState.getNumChunksRendered(),
 						dimensionState.getRenderQueueSize()
-				);
-				guiGraphics.drawCenteredString(font, counterText, centerX, syncServerAddressField.getY() - 20, 0xFF888888);
-			}
+					),
+					centerX,
+					syncServerAddressField.getY() - 20,
+					0xFF888888
+				));
 
 			int msgY = syncServerAddressField.getY() + 25;
 			for (var client : GameContext.expectSyncConnections()) {

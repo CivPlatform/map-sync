@@ -4,6 +4,7 @@ import static gjum.minecraft.mapsync.mod.Cartography.chunkTileFromLevel;
 
 import com.mojang.blaze3d.platform.InputConstants;
 import gjum.minecraft.mapsync.mod.config.ModConfig;
+import gjum.minecraft.mapsync.mod.config.gui.SyncConnectionsGui;
 import gjum.minecraft.mapsync.mod.data.CatchupChunk;
 import gjum.minecraft.mapsync.mod.data.ChunkTile;
 import gjum.minecraft.mapsync.mod.data.RegionPos;
@@ -121,13 +122,16 @@ public final class MapSyncMod implements ClientModInitializer {
 	public void handleTick(
 		final @NotNull Minecraft minecraft
 	) {
-		while (openGuiKey.consumeClick()) {
-			minecraft.setScreen(new ModGui(minecraft.screen));
+		final GameContext gameContext = GameContext.get().orElse(null);
+		if (gameContext == null) { // This *shouldn't* ever happen, but just case
+			return;
 		}
 
-		GameContext.get()
-			.flatMap(GameContext::getDimensionState)
-			.ifPresent(DimensionState::onTick);
+		while (openGuiKey.consumeClick()) {
+			minecraft.setScreen(new SyncConnectionsGui(minecraft.screen, gameContext));
+		}
+
+		gameContext.getDimensionState().ifPresent(DimensionState::onTick);
 	}
 
 	public void handleSyncConnection(

@@ -108,12 +108,7 @@ public final class MapSyncMod implements ClientModInitializer {
 		final @NotNull SyncClient client
 	) throws Exception {
 		client.authState.set(null);
-		AuthProcess.sendHandshake(
-			client,
-			GameContext.get()
-				.flatMap(GameContext::getDimensionState)
-				.orElse(null)
-		);
+		AuthProcess.sendHandshake(client);
 	}
 
 	public void handleSyncDisconnection(
@@ -148,11 +143,16 @@ public final class MapSyncMod implements ClientModInitializer {
 	 * send it to the map data server right away.
 	 */
 	public void handleMcFullChunk(int cx, int cz) {
+		final GameContext gameContext = GameContext.get().orElse(null);
+		if (gameContext == null) {
+			return;
+		}
+
 		// TODO batch this up and send multiple chunks at once
 
 		if (mc.level == null) return;
 		// TODO disable in nether (no meaningful "surface layer")
-		var dimensionState = GameContext.get().flatMap(GameContext::getDimensionState).orElse(null);
+		var dimensionState = gameContext.getDimensionState().orElse(null);
 		if (dimensionState == null) return;
 
 		debugLog("received mc chunk: " + cx + "," + cz);
@@ -163,7 +163,7 @@ public final class MapSyncMod implements ClientModInitializer {
 		if (RenderQueue.areAllMapModsMapping()) {
 			dimensionState.setChunkTimestamp(chunkTile.chunkPos(), chunkTile.timestamp());
 		}
-		for (SyncClient client : GameContext.expectSyncConnections()) {
+		for (SyncClient client : gameContext.getSyncConnections()) {
 			client.sendChunkTile(chunkTile);
 		}
 	}
@@ -183,7 +183,7 @@ public final class MapSyncMod implements ClientModInitializer {
 
 	public void handleRegionTimestamps(SyncClient client, ClientboundRegionTimestampsPacket packet) {
 		client.authState.requireWelcomed();
-		DimensionState dimension = GameContext.get().flatMap(GameContext::getDimensionState).orElse(null);
+		DimensionState dimension = client.gameContext.getDimensionState().orElse(null);
 		if (dimension == null) return;
 		if (!dimension.dimension.identifier().toString().equals(packet.dimension())) {
 			return;
@@ -208,13 +208,11 @@ public final class MapSyncMod implements ClientModInitializer {
 	public void handleSharedChunk(SyncClient client, ChunkTile chunkTile) {
 		client.authState.requireWelcomed();
 		debugLog("received shared chunk: " + chunkTile.chunkPos());
-		for (SyncClient syncClient : GameContext.expectSyncConnections()) {
+		for (SyncClient syncClient : client.gameContext.getSyncConnections()) {
 			syncClient.setServerKnownChunkHash(chunkTile.chunkPos(), chunkTile.dataHash());
 		}
 
-		GameContext.get()
-			.flatMap(GameContext::getDimensionState)
-			.ifPresent((dimensionState) -> dimensionState.processSharedChunk(chunkTile));
+		client.gameContext.getDimensionState().ifPresent((dimensionState) -> dimensionState.processSharedChunk(chunkTile));
 	}
 
 	public void handleCatchupData(SyncClient client, ClientboundChunkTimestampsResponsePacket packet) {
@@ -222,12 +220,10 @@ public final class MapSyncMod implements ClientModInitializer {
 		for (CatchupChunk chunk : packet.chunks()) {
 			chunk.syncClient = client;
 		}
-		GameContext.get()
-			.flatMap(GameContext::getDimensionState)
-			.ifPresent((dimensionState) -> {
-				debugLog("received catchup: " + packet.chunks().size() + " " + client.syncAddress);
-				dimensionState.addCatchupChunks(packet.chunks());
-			});
+		client.gameContext.getDimensionState().ifPresent((dimensionState) -> {
+			debugLog("received catchup: " + packet.chunks().size() + " " + client.syncAddress);
+			dimensionState.addCatchupChunks(packet.chunks());
+		});
 	}
 
 	public void requestCatchupData(

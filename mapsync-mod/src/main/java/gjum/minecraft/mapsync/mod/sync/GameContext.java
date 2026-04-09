@@ -65,15 +65,6 @@ public final class GameContext {
 	}
 
 	// ============================================================
-	// Static Getters
-	// ============================================================
-
-	/// Convenience shortcut
-	public static @NotNull SyncConnections expectSyncConnections() {
-		return get().map(GameContext::getSyncConnections).orElseThrow();
-	}
-
-	// ============================================================
 	// Event Hooks
 	// ============================================================
 

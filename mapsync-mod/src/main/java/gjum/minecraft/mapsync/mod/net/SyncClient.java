@@ -2,7 +2,6 @@ package gjum.minecraft.mapsync.mod.net;
 
 import gjum.minecraft.mapsync.mod.MapSyncMod;
 import gjum.minecraft.mapsync.mod.data.ChunkTile;
-import gjum.minecraft.mapsync.mod.data.GameAddress;
 import gjum.minecraft.mapsync.mod.deps.websockets.client.WebSocketClient;
 import gjum.minecraft.mapsync.mod.deps.websockets.drafts.Draft;
 import gjum.minecraft.mapsync.mod.deps.websockets.drafts.Draft_6455;
@@ -13,6 +12,7 @@ import gjum.minecraft.mapsync.mod.net.auth.Welcomed;
 import gjum.minecraft.mapsync.mod.net.buffers.BufferReader;
 import gjum.minecraft.mapsync.mod.net.buffers.BufferWriter;
 import gjum.minecraft.mapsync.mod.net.packet.ChunkTilePacket;
+import gjum.minecraft.mapsync.mod.sync.GameContext;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.net.URI;
@@ -62,9 +62,9 @@ public class SyncClient {
 	private static final AtomicLong LAST_CLIENT_ID = new AtomicLong(0L);
 	private static final int MAX_PAYLOAD_LENGTH = (1 << Short.SIZE) - 1;
 
+	public final GameContext gameContext;
 	public final long clientId;
 	public final String syncAddress;
-	public final GameAddress gameAddress;
 
 	/// false = don't auto-reconnect but maintain connection as long as it stays up.
 	/// can be set to true again later.
@@ -74,12 +74,12 @@ public class SyncClient {
 	public final AuthStateHolder authState = new AuthStateHolder();
 
 	public SyncClient(
-		final @NotNull String syncAddress,
-		final @NotNull GameAddress gameAddress
+		final @NotNull GameContext gameContext,
+		final @NotNull String syncAddress
 	) {
 		this.clientId = LAST_CLIENT_ID.incrementAndGet();
+		this.gameContext = Objects.requireNonNull(gameContext);
 		this.syncAddress = Objects.requireNonNull(syncAddress);
-		this.gameAddress = Objects.requireNonNull(gameAddress);
 		this.websocket = new WsClient(URI.create(syncAddress));
 	}
 

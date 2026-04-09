@@ -68,7 +68,7 @@ public final class SyncConnections implements Iterable<SyncClient> {
 					return syncClient;
 			}
 		}
-		syncClient = new SyncClient(syncAddress, this.gameContext.getGameAddress());
+		syncClient = new SyncClient(this.gameContext, syncAddress);
 		syncClient.websocket.connect();
 		return syncClient;
 	}

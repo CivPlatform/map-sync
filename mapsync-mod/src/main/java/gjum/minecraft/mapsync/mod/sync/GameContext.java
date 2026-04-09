@@ -53,8 +53,8 @@ public final class GameContext {
 	// Dimension State
 	// ============================================================
 
-	volatile DimensionState dimensionState = null;
-	static final VarHandle DIMENSION_STATE; static {
+	private volatile DimensionState dimensionState = null;
+	private static final VarHandle DIMENSION_STATE; static {
 		try {
 			DIMENSION_STATE = MethodHandles.lookup().findVarHandle(GameContext.class, "dimensionState", DimensionState.class);
 		}
@@ -70,7 +70,7 @@ public final class GameContext {
 	// Event Hooks
 	// ============================================================
 
-	static volatile GameContext instance = null;
+	private static volatile GameContext instance = null;
 	private static final VarHandle INSTANCE; static {
 		try {
 			INSTANCE = MethodHandles.lookup().findStaticVarHandle(GameContext.class, "instance", GameContext.class);

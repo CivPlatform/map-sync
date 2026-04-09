@@ -10,6 +10,7 @@ import java.security.MessageDigest;
 import java.util.ArrayList;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
+import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.LightLayer;
 import net.minecraft.world.level.chunk.LevelChunk;
@@ -17,10 +18,9 @@ import net.minecraft.world.level.levelgen.Heightmap;
 import org.apache.commons.lang3.function.Failable;
 
 public class Cartography {
-	public static ChunkTile chunkTileFromLevel(Level level, int cx, int cz) {
+	public static ChunkTile chunkTileFromLevel(Level level, LevelChunk chunk) {
 		long timestamp = System.currentTimeMillis();
 		var dimension = level.dimension();
-		var chunk = level.getChunk(cx, cz);
 
 		var columns = new BlockColumn[256];
 		var pos = new BlockPos.MutableBlockPos(0, 0, 0);
@@ -42,7 +42,8 @@ public class Cartography {
 			dataHash = md.digest();
 		}
 
-		return new ChunkTile(dimension, cx, cz, timestamp, dataVersion, dataHash, columns);
+		final ChunkPos chunkPos = chunk.getPos();
+		return new ChunkTile(dimension, chunkPos.x, chunkPos.z, timestamp, dataVersion, dataHash, columns);
 	}
 
 	public static BlockColumn blockColumnFromChunk(LevelChunk chunk, BlockPos.MutableBlockPos pos) {

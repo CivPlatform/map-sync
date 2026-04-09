@@ -8,7 +8,6 @@ import net.minecraft.client.multiplayer.ClientPacketListener;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.protocol.game.ClientboundBlockDestructionPacket;
 import net.minecraft.network.protocol.game.ClientboundBlockUpdatePacket;
-import net.minecraft.network.protocol.game.ClientboundLevelChunkWithLightPacket;
 import net.minecraft.network.protocol.game.ClientboundRespawnPacket;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
@@ -27,17 +26,6 @@ public abstract class MixinClientPacketListener {
 			printErrorRateLimited(e);
 		}
 	}
-
-	@Inject(method = "handleLevelChunkWithLight", at = @At("RETURN"))
-	protected void onHandleLevelChunkWithLight(ClientboundLevelChunkWithLightPacket packet, CallbackInfo ci) {
-		if (!Minecraft.getInstance().isSameThread()) return; // will be called again on mc thread in a moment
-		try {
-			getMod().handleMcFullChunk(packet.getX(), packet.getZ());
-		} catch (Throwable e) {
-			printErrorRateLimited(e);
-		}
-	}
-
 
 	@Inject(method = "handleBlockUpdate", at = @At("RETURN"))
 	protected void onHandleBlockUpdate(ClientboundBlockUpdatePacket packet, CallbackInfo ci) {

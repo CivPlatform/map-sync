@@ -31,6 +31,7 @@ import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
 import net.fabricmc.api.ClientModInitializer;
+import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientChunkEvents;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper;
 import net.minecraft.client.KeyMapping;
@@ -90,6 +91,31 @@ public final class MapSyncMod implements ClientModInitializer {
 			}
 		});
 		GameContext.initEvents();
+		ClientChunkEvents.CHUNK_LOAD.register((level, chunk) -> {
+			final GameContext gameContext = GameContext.get().orElse(null);
+			if (gameContext == null) {
+				return;
+			}
+			// TODO batch this up and send multiple chunks at once
+			// TODO disable in nether (no meaningful "surface layer")
+			final DimensionState dimensionState = gameContext.getDimensionState().orElse(null);
+			if (dimensionState == null) {
+				return;
+			}
+			final ChunkPos chunkPos = chunk.getPos();
+			debugLog("received mc chunk: %d,%d".formatted(
+				chunkPos.x,
+				chunkPos.z
+			));
+			final ChunkTile chunkTile = chunkTileFromLevel(level, chunk);
+			// TODO handle journeymap skipping chunks due to rate limiting - probably need mixin on render function
+			if (RenderQueue.areAllMapModsMapping()) {
+				dimensionState.setChunkTimestamp(chunkTile.chunkPos(), chunkTile.timestamp());
+			}
+			for (final SyncClient client : gameContext.getSyncConnections()) {
+				client.sendChunkTile(chunkTile);
+			}
+		});
 	}
 
 	public void handleTick(
@@ -136,36 +162,6 @@ public final class MapSyncMod implements ClientModInitializer {
 	public void handleRespawn(ClientboundRespawnPacket packet) {
 		debugLog("handleRespawn");
 		// TODO tell sync server to only send chunks for this dimension now
-	}
-
-	/**
-	 * an entire chunk was received from the mc server;
-	 * send it to the map data server right away.
-	 */
-	public void handleMcFullChunk(int cx, int cz) {
-		final GameContext gameContext = GameContext.get().orElse(null);
-		if (gameContext == null) {
-			return;
-		}
-
-		// TODO batch this up and send multiple chunks at once
-
-		if (mc.level == null) return;
-		// TODO disable in nether (no meaningful "surface layer")
-		var dimensionState = gameContext.getDimensionState().orElse(null);
-		if (dimensionState == null) return;
-
-		debugLog("received mc chunk: " + cx + "," + cz);
-
-		var chunkTile = chunkTileFromLevel(mc.level, cx, cz);
-
-		// TODO handle journeymap skipping chunks due to rate limiting - probably need mixin on render function
-		if (RenderQueue.areAllMapModsMapping()) {
-			dimensionState.setChunkTimestamp(chunkTile.chunkPos(), chunkTile.timestamp());
-		}
-		for (SyncClient client : gameContext.getSyncConnections()) {
-			client.sendChunkTile(chunkTile);
-		}
 	}
 
 	/**

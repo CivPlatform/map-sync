@@ -12,7 +12,7 @@ import gjum.minecraft.mapsync.mod.data.RegionPos;
 import gjum.minecraft.mapsync.mod.net.CloseContext;
 import gjum.minecraft.mapsync.mod.net.Packet;
 import gjum.minecraft.mapsync.mod.net.SyncClient;
-import gjum.minecraft.mapsync.mod.net.SyncClients;
+import gjum.minecraft.mapsync.mod.sync.GameContext;
 import gjum.minecraft.mapsync.mod.net.UnexpectedPacketException;
 import gjum.minecraft.mapsync.mod.net.auth.AuthProcess;
 import gjum.minecraft.mapsync.mod.net.packet.ChunkTilePacket;
@@ -26,7 +26,6 @@ import it.unimi.dsi.fastutil.objects.Object2LongArrayMap;
 import it.unimi.dsi.fastutil.objects.Object2LongMap;
 
 import java.io.File;
-import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -106,7 +105,7 @@ public final class MapSyncMod implements ClientModInitializer {
 				e.printStackTrace();
 			}
 		});
-		SyncClients.initEvents();
+		GameContext.initEvents();
 	}
 
 	public void handleTick(
@@ -217,7 +216,7 @@ public final class MapSyncMod implements ClientModInitializer {
 		if (RenderQueue.areAllMapModsMapping()) {
 			dimensionState.setChunkTimestamp(chunkTile.chunkPos(), chunkTile.timestamp());
 		}
-		for (SyncClient client : SyncClients.get().orElseThrow()) {
+		for (SyncClient client : GameContext.expectSyncConnections()) {
 			client.sendChunkTile(chunkTile);
 		}
 	}
@@ -262,7 +261,7 @@ public final class MapSyncMod implements ClientModInitializer {
 	public void handleSharedChunk(SyncClient client, ChunkTile chunkTile) {
 		client.authState.requireWelcomed();
 		debugLog("received shared chunk: " + chunkTile.chunkPos());
-		for (SyncClient syncClient : SyncClients.get().orElseThrow()) {
+		for (SyncClient syncClient : GameContext.expectSyncConnections()) {
 			syncClient.setServerKnownChunkHash(chunkTile.chunkPos(), chunkTile.dataHash());
 		}
 

@@ -3,7 +3,7 @@ package gjum.minecraft.mapsync.mod;
 import static gjum.minecraft.mapsync.mod.MapSyncMod.getMod;
 
 import gjum.minecraft.mapsync.mod.config.ServerConfig;
-import gjum.minecraft.mapsync.mod.net.SyncClients;
+import gjum.minecraft.mapsync.mod.sync.GameContext;
 import java.util.HashSet;
 import java.util.List;
 import net.minecraft.client.gui.GuiGraphics;
@@ -102,7 +102,7 @@ public class ModGui extends Screen {
 			if (syncServerAddressField == null) return;
 			var addresses = List.of(syncServerAddressField.getValue().split("[^-_.:A-Za-z0-9/]+"));
 			serverConfig.setSyncServerAddresses(addresses);
-			SyncClients.get().orElseThrow().setAll(new HashSet<>(addresses));
+			GameContext.expectSyncConnections().setAll(new HashSet<>(addresses));
 			btn.active = false;
 			syncServerDisconnectBtn.active = true;
 		} catch (Throwable e) {
@@ -113,7 +113,7 @@ public class ModGui extends Screen {
 	// TODO: not working
 	public void disconnectClicked(Button btn) {
 		if (syncServerAddressField == null) return;
-		SyncClients.get().orElseThrow().closeAll(true);
+		GameContext.expectSyncConnections().closeAll(true);
 		btn.active = false;
 	}
 
@@ -149,7 +149,7 @@ public class ModGui extends Screen {
 			}
 
 			int msgY = syncServerAddressField.getY() + 25;
-			for (var client : SyncClients.get().orElseThrow()) {
+			for (var client : GameContext.expectSyncConnections()) {
 				int statusColor;
 				String statusText;
 

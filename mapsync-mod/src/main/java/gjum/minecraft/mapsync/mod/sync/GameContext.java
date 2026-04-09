@@ -1,5 +1,6 @@
 package gjum.minecraft.mapsync.mod.sync;
 
+import gjum.minecraft.mapsync.mod.MapSyncMod;
 import gjum.minecraft.mapsync.mod.config.ServerConfig;
 import gjum.minecraft.mapsync.mod.data.GameAddress;
 import java.lang.invoke.MethodHandles;
@@ -141,6 +142,7 @@ public final class GameContext {
 			if (DIMENSION_STATE.getAndSet(gameContext, dimensionState) instanceof final DimensionState previous) {
 				previous.shutDown();
 			}
+			MapSyncMod.getMod().handleDimensionChange(minecraft, level, gameContext);
 		});
 	}
 }

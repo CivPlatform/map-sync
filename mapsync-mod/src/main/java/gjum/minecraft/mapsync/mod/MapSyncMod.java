@@ -39,7 +39,7 @@ import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
-import net.minecraft.network.protocol.game.ClientboundRespawnPacket;
+import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.level.ChunkPos;
 import org.apache.logging.log4j.LogManager;
@@ -165,8 +165,13 @@ public final class MapSyncMod implements ClientModInitializer {
 		}
 	}
 
-	public void handleRespawn(ClientboundRespawnPacket packet) {
-		debugLog("handleRespawn");
+	/// @param clientLevel This is the *new* dimension.
+	public void handleDimensionChange(
+		final @NotNull Minecraft minecraft,
+		final @NotNull ClientLevel clientLevel,
+		final @NotNull GameContext gameContext
+	) {
+		debugLog("handleDimensionChange");
 		// TODO tell sync server to only send chunks for this dimension now
 	}
 

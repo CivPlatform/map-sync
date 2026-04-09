@@ -4,10 +4,8 @@ import static gjum.minecraft.mapsync.mod.Cartography.chunkTileFromLevel;
 
 import com.mojang.blaze3d.platform.InputConstants;
 import gjum.minecraft.mapsync.mod.config.ModConfig;
-import gjum.minecraft.mapsync.mod.config.ServerConfig;
 import gjum.minecraft.mapsync.mod.data.CatchupChunk;
 import gjum.minecraft.mapsync.mod.data.ChunkTile;
-import gjum.minecraft.mapsync.mod.data.GameAddress;
 import gjum.minecraft.mapsync.mod.data.RegionPos;
 import gjum.minecraft.mapsync.mod.net.CloseContext;
 import gjum.minecraft.mapsync.mod.net.Packet;
@@ -37,7 +35,6 @@ import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.multiplayer.ServerData;
 import net.minecraft.network.protocol.game.ClientboundRespawnPacket;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.level.ChunkPos;
@@ -78,12 +75,6 @@ public final class MapSyncMod implements ClientModInitializer {
 	 * Never access this directly; always go through `getDimensionState()`.
 	 */
 	private @Nullable DimensionState dimensionState;
-
-	/**
-	 * Tracks configuration for current mc server.
-	 * Never access this directly; always go through `getServerConfig()`.
-	 */
-	private @Nullable ServerConfig serverConfig;
 
 	public MapSyncMod() {
 		if (INSTANCE != null) throw new IllegalStateException("Constructor called twice");
@@ -157,27 +148,11 @@ public final class MapSyncMod implements ClientModInitializer {
 	}
 
 	/**
-	 * only null when not connected to a server
-	 */
-	public @Nullable ServerConfig getServerConfig() {
-		final ServerData currentServer = Minecraft.getInstance().getCurrentServer();
-		if (currentServer == null) {
-			serverConfig = null;
-			return null;
-		}
-		GameAddress gameAddress = new GameAddress(currentServer.ip);
-		if (serverConfig == null) {
-			serverConfig = ServerConfig.load(gameAddress);
-		}
-		return serverConfig;
-	}
-
-	/**
 	 * for current dimension
 	 */
 	public @Nullable DimensionState getDimensionState() {
 		if (mc.level == null) return null;
-		var serverConfig = getServerConfig();
+		var serverConfig = GameContext.get().map(GameContext::getGameConfig).orElse(null);
 		if (serverConfig == null) return null;
 
 		if (dimensionState != null && dimensionState.dimension != mc.level.dimension()) {

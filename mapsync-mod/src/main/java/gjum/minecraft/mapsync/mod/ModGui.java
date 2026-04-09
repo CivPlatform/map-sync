@@ -16,7 +16,7 @@ import org.jetbrains.annotations.NotNull;
 public class ModGui extends Screen {
 	final Screen parentScreen;
 
-	ServerConfig serverConfig = getMod().getServerConfig();
+	ServerConfig serverConfig = GameContext.get().map(GameContext::getGameConfig).orElse(null);
 
 	int innerWidth = 300;
 	int left;

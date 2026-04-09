@@ -32,7 +32,9 @@ public final class GameContext {
 
 	public void shutdown() {
 		this.syncConnections.closeAll(true);
-		this.getDimensionState().ifPresent(DimensionState::shutDown);
+		if (DIMENSION_STATE.getAndSet(this, null) instanceof final DimensionState dimensionState) {
+			dimensionState.shutDown();
+		}
 	}
 
 	public @NotNull GameAddress getGameAddress() {

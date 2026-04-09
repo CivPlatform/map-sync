@@ -1,6 +1,6 @@
 package gjum.minecraft.mapsync.mod;
 
-import static gjum.minecraft.mapsync.mod.Cartography.chunkTileFromLevel;
+import static gjum.minecraft.mapsync.mod.sync.Cartography.chunkTileFromLevel;
 
 import com.mojang.blaze3d.platform.InputConstants;
 import gjum.minecraft.mapsync.mod.config.ModConfig;
@@ -11,6 +11,7 @@ import gjum.minecraft.mapsync.mod.data.RegionPos;
 import gjum.minecraft.mapsync.mod.net.CloseContext;
 import gjum.minecraft.mapsync.mod.net.Packet;
 import gjum.minecraft.mapsync.mod.net.SyncClient;
+import gjum.minecraft.mapsync.mod.sync.DimensionState;
 import gjum.minecraft.mapsync.mod.sync.GameContext;
 import gjum.minecraft.mapsync.mod.net.UnexpectedPacketException;
 import gjum.minecraft.mapsync.mod.net.auth.AuthProcess;
@@ -21,6 +22,7 @@ import gjum.minecraft.mapsync.mod.net.packet.ClientboundRegionTimestampsPacket;
 import gjum.minecraft.mapsync.mod.net.packet.ClientboundWelcomePacket;
 import gjum.minecraft.mapsync.mod.net.packet.ServerboundCatchupRequestPacket;
 import gjum.minecraft.mapsync.mod.net.packet.ServerboundChunkTimestampsRequestPacket;
+import gjum.minecraft.mapsync.mod.sync.RenderQueue;
 import it.unimi.dsi.fastutil.objects.Object2LongArrayMap;
 import it.unimi.dsi.fastutil.objects.Object2LongMap;
 

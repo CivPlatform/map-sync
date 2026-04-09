@@ -1,6 +1,5 @@
 package gjum.minecraft.mapsync.mod.sync;
 
-import gjum.minecraft.mapsync.mod.DimensionState;
 import gjum.minecraft.mapsync.mod.config.ServerConfig;
 import gjum.minecraft.mapsync.mod.data.GameAddress;
 import java.lang.invoke.MethodHandles;
@@ -8,6 +7,7 @@ import java.lang.invoke.VarHandle;
 import java.util.Objects;
 import java.util.Optional;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientLifecycleEvents;
+import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientWorldEvents;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
 import net.minecraft.client.multiplayer.ServerData;
 import org.jetbrains.annotations.NotNull;
@@ -82,7 +82,7 @@ public final class GameContext {
 	}
 
 	public static void initEvents() {
-		ClientPlayConnectionEvents.JOIN.register((gameConnection, sender, minecraft) -> {
+		ClientPlayConnectionEvents.INIT.register((gameConnection, minecraft) -> {
 			if (!(gameConnection.getServerData() instanceof final ServerData serverData)) {
 				LOGGER.error("Connection doesn't have server data yet... backing out");
 				return;
@@ -122,6 +122,16 @@ public final class GameContext {
 			if (INSTANCE.getAndSet((Object) null) instanceof final GameContext context) {
 				context.shutdown();
 			}
+		});
+		ClientWorldEvents.AFTER_CLIENT_WORLD_CHANGE.register((minecraft, level) -> {
+			final GameContext gameContext = get().orElseThrow();
+			if (DIMENSION_STATE.getAndSet(gameContext, null) instanceof final DimensionState dimensionState) {
+				dimensionState.shutDown();
+			}
+			gameContext.dimensionState = new DimensionState(
+				gameContext.getGameAddress(),
+				level.dimension()
+			);
 		});
 	}
 }

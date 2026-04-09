@@ -1,4 +1,4 @@
-package gjum.minecraft.mapsync.mod;
+package gjum.minecraft.mapsync.mod.sync;
 
 import static gjum.minecraft.mapsync.mod.MapSyncMod.debugLog;
 

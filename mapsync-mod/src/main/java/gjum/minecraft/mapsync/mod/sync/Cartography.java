@@ -1,4 +1,4 @@
-package gjum.minecraft.mapsync.mod;
+package gjum.minecraft.mapsync.mod.sync;
 
 import gjum.minecraft.mapsync.mod.data.BlockColumn;
 import gjum.minecraft.mapsync.mod.data.BlockInfo;

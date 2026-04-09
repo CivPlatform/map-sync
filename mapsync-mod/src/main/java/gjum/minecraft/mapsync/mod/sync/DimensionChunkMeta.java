@@ -1,5 +1,6 @@
-package gjum.minecraft.mapsync.mod;
+package gjum.minecraft.mapsync.mod.sync;
 
+import gjum.minecraft.mapsync.mod.MapSyncMod;
 import gjum.minecraft.mapsync.mod.data.GameAddress;
 import gjum.minecraft.mapsync.mod.data.RegionPos;
 import java.io.FileNotFoundException;

@@ -1,6 +1,6 @@
 package gjum.minecraft.mapsync.mod.net.auth;
 
-import gjum.minecraft.mapsync.mod.DimensionState;
+import gjum.minecraft.mapsync.mod.sync.DimensionState;
 import gjum.minecraft.mapsync.mod.net.SyncClient;
 import gjum.minecraft.mapsync.mod.net.UnexpectedPacketException;
 import gjum.minecraft.mapsync.mod.net.packet.ClientboundIdentityRequestPacket;

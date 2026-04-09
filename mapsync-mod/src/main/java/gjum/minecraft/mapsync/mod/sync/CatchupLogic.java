@@ -1,9 +1,10 @@
-package gjum.minecraft.mapsync.mod;
+package gjum.minecraft.mapsync.mod.sync;
 
 import static gjum.minecraft.mapsync.mod.MapSyncMod.debugLog;
 import static gjum.minecraft.mapsync.mod.MapSyncMod.getMod;
 import static gjum.minecraft.mapsync.mod.MapSyncMod.logger;
 
+import gjum.minecraft.mapsync.mod.MapSyncMod;
 import gjum.minecraft.mapsync.mod.data.CatchupChunk;
 import gjum.minecraft.mapsync.mod.data.ChunkTile;
 import java.util.ArrayList;

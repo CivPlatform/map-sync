@@ -6,13 +6,11 @@ import com.google.gson.annotations.Expose;
 import gjum.minecraft.mapsync.mod.data.GameAddress;
 import java.io.File;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
 
-import gjum.minecraft.mapsync.mod.MapSyncMod;
 import net.minecraft.client.Minecraft;
 import org.jetbrains.annotations.NotNull;
 
@@ -38,7 +36,7 @@ public class ServerConfig extends JsonConfig {
 	}
 
 	public static ServerConfig load(GameAddress gameAddress) {
-		var dir = Path.of(MapSyncMod.getConfigDirectory().getAbsolutePath(), gameAddress.asFsName()).toFile();
+		var dir = getConfigDir().resolve(gameAddress.asFsName()).toFile();
 		dir.mkdirs();
 		var conf = load(new File(dir, "server-config.json"), ServerConfig.class);
 		conf.gameAddress = gameAddress;

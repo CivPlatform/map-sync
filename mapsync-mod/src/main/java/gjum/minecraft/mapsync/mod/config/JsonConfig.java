@@ -10,8 +10,10 @@ import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
+import java.nio.file.Path;
 import java.util.Timer;
 import java.util.TimerTask;
+import net.fabricmc.loader.api.FabricLoader;
 import org.jetbrains.annotations.NotNull;
 
 /**
@@ -77,5 +79,9 @@ public class JsonConfig {
 		} catch (IOException e) {
 			logger.error("Failed to save config file {}", configFile, e);
 		}
+	}
+
+	protected static @NotNull Path getConfigDir() {
+		return FabricLoader.getInstance().getConfigDir().resolve("MapSync");
 	}
 }

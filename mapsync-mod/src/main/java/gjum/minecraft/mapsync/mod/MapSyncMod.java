@@ -26,8 +26,6 @@ import gjum.minecraft.mapsync.mod.sync.RenderQueue;
 import it.unimi.dsi.fastutil.objects.Object2LongArrayMap;
 import it.unimi.dsi.fastutil.objects.Object2LongMap;
 
-import java.io.File;
-import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.IdentityHashMap;
@@ -239,12 +237,5 @@ public final class MapSyncMod {
 		if (modConfig.isShowDebugLog()) {
 			logger.info(msg);
 		}
-	}
-
-	public static File getConfigDirectory() {
-		final String mcRoot = Minecraft.getInstance().gameDirectory.getAbsolutePath();
-		var dir = Paths.get(mcRoot, "config", "MapSync").toFile();
-		dir.mkdirs();
-		return dir;
 	}
 }

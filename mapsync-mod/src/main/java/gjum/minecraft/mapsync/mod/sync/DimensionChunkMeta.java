@@ -1,6 +1,5 @@
 package gjum.minecraft.mapsync.mod.sync;
 
-import gjum.minecraft.mapsync.mod.MapSyncMod;
 import gjum.minecraft.mapsync.mod.data.GameAddress;
 import gjum.minecraft.mapsync.mod.data.RegionPos;
 import java.io.FileNotFoundException;
@@ -12,7 +11,9 @@ import java.nio.file.Path;
 import java.nio.file.attribute.FileTime;
 import java.util.Arrays;
 import java.util.HashMap;
+import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.world.level.ChunkPos;
+import org.jetbrains.annotations.NotNull;
 
 /**
  * Stores each chunk's timestamp of when it was received from mc.
@@ -22,21 +23,19 @@ import net.minecraft.world.level.ChunkPos;
 public class DimensionChunkMeta {
 	public final GameAddress gameAddress;
 	public final String dimensionName;
-	private final String dimensionDirPath;
+	private final Path dimensionDirPath;
 
 	private final HashMap<RegionPos, long[]> regionsTimestamps = new HashMap<>();
 
 	DimensionChunkMeta(GameAddress gameAddress, String dimensionName) {
 		this.gameAddress = gameAddress;
 		this.dimensionName = dimensionName;
-		var dir = Path.of(MapSyncMod.getConfigDirectory().getAbsolutePath(), "cache",
-				gameAddress.asFsName(), dimensionName.replaceAll(":", "~"));
-		dir.toFile().mkdirs();
-		this.dimensionDirPath = dir.toAbsolutePath().toString();
-	}
-
-	private Path getRegionFilePath(RegionPos regionPos) {
-		return Path.of(dimensionDirPath, "r%d,%d.chunkmeta".formatted(regionPos.x(), regionPos.z()));
+		this.dimensionDirPath = FabricLoader.getInstance()
+			.getGameDir()
+			.resolve("data")
+			.resolve("MapSync")
+			.resolve(gameAddress.asFsName())
+			.resolve(dimensionName.replace(":", "~"));
 	}
 
 	public synchronized long getOldestChunkTsInRegion(RegionPos regionPos) {
@@ -63,16 +62,15 @@ public class DimensionChunkMeta {
 	public synchronized void PurgeRegionTimeStamps() {
 		regionsTimestamps.clear();
 		try {
-			Path dir = Path.of(dimensionDirPath);
-			if (Files.exists(dir)) {
-				Files.walk(dir)
+			if (Files.exists(this.dimensionDirPath)) {
+				Files.walk(this.dimensionDirPath)
 					.sorted((a, b) -> b.compareTo(a)) // delete children first
 					.forEach(path -> {
 						try { Files.delete(path); }
 						catch (IOException e) { e.printStackTrace(); }
 					});
 			}
-			Files.createDirectories(dir);
+			Files.createDirectories(this.dimensionDirPath);
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
@@ -81,7 +79,7 @@ public class DimensionChunkMeta {
 	private long[] readRegionTimestampsFile(RegionPos regionPos) {
 		long[] longs = new long[RegionPos.CHUNKS_IN_REGION];
 		try {
-			final byte[] byteArray = Files.readAllBytes(getRegionFilePath(regionPos));
+			final byte[] byteArray = Files.readAllBytes(this.dimensionDirPath.resolve(this.getRegionFileName(regionPos)));
 			ByteBuffer.wrap(byteArray).asLongBuffer().get(longs);
 		} catch (FileNotFoundException | NoSuchFileException ignored) {
 		} catch (IOException e) {
@@ -95,7 +93,8 @@ public class DimensionChunkMeta {
 			final var buffer = ByteBuffer.allocate(8 * RegionPos.CHUNKS_IN_REGION);
 			buffer.asLongBuffer().put(chunkTimestamps);
 			buffer.flip();
-			Path path = getRegionFilePath(regionPos);
+			Files.createDirectories(this.dimensionDirPath);
+			Path path = this.dimensionDirPath.resolve(this.getRegionFileName(regionPos));
 			Files.write(path, buffer.array());
 			// include absent chunks (ts=0) because sync server may have a chunk there (i.e. newer than 0)
 			long oldestChunkTs = Arrays.stream(chunkTimestamps).min().orElseThrow();
@@ -103,5 +102,14 @@ public class DimensionChunkMeta {
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
+	}
+
+	private @NotNull String getRegionFileName(
+		final @NotNull RegionPos regionPos
+	) {
+		return "r%d,%d.chunkmeta".formatted(
+			regionPos.x(),
+			regionPos.z()
+		);
 	}
 }

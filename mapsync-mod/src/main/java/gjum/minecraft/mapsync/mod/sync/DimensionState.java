@@ -29,8 +29,7 @@ public class DimensionState {
 
 	DimensionState(GameAddress gameAddress, ResourceKey<Level> dimension) {
 		this.dimension = dimension;
-		String dimensionName = dimension.identifier().toString();
-		chunkMeta = new DimensionChunkMeta(gameAddress, dimensionName);
+		chunkMeta = new DimensionChunkMeta(gameAddress, dimension.identifier());
 		renderQueue = new RenderQueue(this);
 		catchup = new CatchupLogic(this);
 	}
@@ -53,7 +52,7 @@ public class DimensionState {
 		chunkMeta.setTimestamp(chunkPos, timestamp);
 	}
 
-	public void PurgeRegionTimeStamps() { chunkMeta.PurgeRegionTimeStamps(); }
+	public void PurgeRegionTimeStamps() { chunkMeta.purgeRegionTimestamps(); }
 
 	public int getNumChunksReceived() {
 		return numChunksReceived;

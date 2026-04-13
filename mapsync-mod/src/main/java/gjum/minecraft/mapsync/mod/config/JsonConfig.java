@@ -1,83 +1,71 @@
 package gjum.minecraft.mapsync.mod.config;
 
-import static gjum.minecraft.mapsync.mod.MapSyncMod.logger;
-
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import java.io.File;
 import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
 import java.io.FileReader;
-import java.io.IOException;
-import java.lang.reflect.InvocationTargetException;
+import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.Timer;
-import java.util.TimerTask;
+import java.util.Objects;
 import net.fabricmc.loader.api.FabricLoader;
 import org.jetbrains.annotations.NotNull;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-/**
- * subclasses must have constructor without args, to create default config
- */
-public class JsonConfig {
+abstract class JsonConfig {
+	private static final Logger LOGGER = LoggerFactory.getLogger(JsonConfig.class);
 	static final Gson GSON = new GsonBuilder()
-			.excludeFieldsWithoutExposeAnnotation()
-			.setPrettyPrinting()
-			.create();
-
-	private static final Timer timer = new Timer();
-	private static long saveLaterTimeout = 300;
-	private long lastSaveTime = 0;
+		.excludeFieldsWithoutExposeAnnotation()
+		.setPrettyPrinting()
+		.create();
 
 	protected File configFile;
 
-	/**
-	 * Doesn't save any newly created config; for that, call `saveNow()`.
-	 */
-	public static <T extends JsonConfig> @NotNull T load(@NotNull File file, Class<T> clazz) {
-		try (FileReader reader = new FileReader(file)) {
-			T config = GSON.fromJson(reader, clazz);
-			config.configFile = file;
-			logger.info("Loaded existing {}", file);
+	protected abstract void resetToDefaults();
+
+	/// Doesn't save any newly created config; for that, call `saveNow()`.
+	protected static <T extends JsonConfig> @NotNull T load(
+		final @NotNull File configFile,
+		final @NotNull Class<T> configClass
+	) {
+		Objects.requireNonNull(configFile);
+		Objects.requireNonNull(configClass);
+		T config;
+		try (final var reader = new FileReader(configFile)) {
+			config = GSON.fromJson(reader, configClass);
+			config.configFile = configFile;
+			LOGGER.info("Loaded existing {}", configFile);
 			return config;
-		} catch (FileNotFoundException ignored) {
-		} catch (IOException e) {
-			logger.error("Failed to load config file {}", file, e);
+		}
+		catch (final FileNotFoundException ignored) {}
+		catch (final Exception e) {
+			LOGGER.error("Failed to load config file {}", configFile, e);
 		}
 		try {
-			final T config = clazz.getConstructor().newInstance();
-			config.configFile = file;
-			logger.info("Created default {}", file);
+			config = configClass.getConstructor().newInstance();
+			config.configFile = configFile;
+			config.resetToDefaults();
+			LOGGER.info("Created default {}", configFile);
 			return config;
-		} catch (NoSuchMethodException | InstantiationException | IllegalAccessException |
-				 InvocationTargetException ex) {
-			throw new IllegalArgumentException(ex);
 		}
-	}
-
-	public void saveLater() {
-		final long originalSaveRequestTime = System.currentTimeMillis();
-		timer.schedule(new TimerTask() {
-			@Override
-			public void run() {
-				if (lastSaveTime > originalSaveRequestTime) return; // already saved while waiting
-				saveNow();
-			}
-		}, saveLaterTimeout);
+		catch (final ReflectiveOperationException e) {
+			throw new IllegalStateException(e);
+		}
 	}
 
 	synchronized
-	public void saveNow() {
+	public void save() {
+		LOGGER.info("Saving {} to {}", getClass().getSimpleName(), this.configFile);
 		try {
-			lastSaveTime = System.currentTimeMillis();
-			logger.info("Saving {} to {}", getClass().getSimpleName(), configFile);
-			configFile.getParentFile().mkdirs();
-			String json = GSON.toJson(this);
-			FileOutputStream fos = new FileOutputStream(configFile);
-			fos.write(json.getBytes());
-			fos.close();
-		} catch (IOException e) {
-			logger.error("Failed to save config file {}", configFile, e);
+			Files.createDirectories(this.configFile.getParentFile().toPath());
+			Files.write(
+				this.configFile.toPath(),
+				GSON.toJson(this).getBytes()
+			);
+		}
+		catch (final Exception e) {
+			LOGGER.error("Failed to save config file {}", this.configFile, e);
 		}
 	}
 

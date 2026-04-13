@@ -3,10 +3,9 @@ package gjum.minecraft.mapsync.mod.config.gui;
 import gjum.minecraft.mapsync.mod.sync.DimensionState;
 import gjum.minecraft.mapsync.mod.net.SyncClient;
 import gjum.minecraft.mapsync.mod.sync.GameContext;
-import java.util.List;
+import java.util.Arrays;
 import java.util.Objects;
 import java.util.Set;
-import java.util.stream.Stream;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.EditBox;
@@ -64,12 +63,13 @@ public final class SyncConnectionsGui extends Screen {
 				.builder(
 					Component.literal("Connect"),
 					(button) -> {
-						final List<String> syncAddresses = Stream.of(StringUtils.split(this.addressFieldValue, ','))
-							.filter(StringUtils::isNotBlank)
-							.distinct()
-							.toList();
-						this.gameContext.getGameConfig().setSyncServerAddresses(syncAddresses);
-						this.gameContext.getSyncConnections().setAll(Set.copyOf(syncAddresses));
+						this.gameContext.getGameConfig().setSyncServerAddresses(Arrays.asList(
+							StringUtils.split(this.addressFieldValue, ',')
+						));
+						this.gameContext.getGameConfig().save();
+						this.gameContext.getSyncConnections().setAll(Set.copyOf(
+							this.gameContext.getGameConfig().getSyncServerAddresses()
+						));
 					}
 				)
 				.pos(offsetRight - 100, this.offsetTop + 40)
@@ -174,6 +174,7 @@ public final class SyncConnectionsGui extends Screen {
 
 	@Override
 	public void onClose() {
+		this.gameContext.getGameConfig().save();
 		this.minecraft.setScreen(this.parentScreen);
 	}
 }

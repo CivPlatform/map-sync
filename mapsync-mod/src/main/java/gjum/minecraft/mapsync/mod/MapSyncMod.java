@@ -63,7 +63,7 @@ public final class MapSyncMod {
 		KeyBindingHelper.registerKeyBinding(OPEN_GUI_KEY);
 
 		modConfig = ModConfig.load();
-		modConfig.saveNow(); // creates the default file if it doesn't exist yet
+		modConfig.save(); // creates the default file if it doesn't exist yet
 
 		ClientTickEvents.START_CLIENT_TICK.register((minecraft) -> {
 			final GameContext gameContext = GameContext.get().orElse(null);

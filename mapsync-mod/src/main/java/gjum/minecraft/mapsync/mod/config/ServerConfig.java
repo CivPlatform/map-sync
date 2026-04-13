@@ -1,75 +1,45 @@
 package gjum.minecraft.mapsync.mod.config;
 
-import com.google.gson.Gson;
-import com.google.gson.JsonObject;
 import com.google.gson.annotations.Expose;
 import gjum.minecraft.mapsync.mod.data.GameAddress;
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Objects;
 import java.util.stream.Collectors;
-
-import net.minecraft.client.Minecraft;
+import org.apache.commons.lang3.StringUtils;
 import org.jetbrains.annotations.NotNull;
 
-public class ServerConfig extends JsonConfig {
-	public GameAddress gameAddress;
-
+public final class ServerConfig extends JsonConfig {
 	@Expose
-	private @NotNull List<String> syncServerAddresses = new ArrayList<>();
+	private ArrayList<String> syncServerAddresses = new ArrayList<>();
 
-	public @NotNull List<String> getSyncServerAddresses() {
-		return syncServerAddresses;
+	public @NotNull List<@NotNull String> getSyncServerAddresses() {
+		return this.syncServerAddresses.stream()
+			.map(String::trim)
+			.filter(StringUtils::isNotEmpty)
+			.map((address) -> address.contains(":") ? address : (address + ":12312"))
+			.distinct()
+			.collect(Collectors.toCollection(ArrayList::new));
 	}
 
-	public void setSyncServerAddresses(@NotNull List<String> addresses) {
-		syncServerAddresses = addresses.stream()
-				.filter(Objects::nonNull)
-				.map(String::trim)
-				.filter(address -> !address.isEmpty())
-				.map(address -> address.contains(":") ? address : (address + ":12312"))
-				.collect(Collectors.toCollection(ArrayList::new));
-
-		saveLater();
+	public void setSyncServerAddresses(
+		final @NotNull List<String> syncAddresses
+	) {
+		this.syncServerAddresses = new ArrayList<>(syncAddresses);
 	}
 
-	public static ServerConfig load(GameAddress gameAddress) {
-		final ServerConfig conf = load(
+	@Override
+	public void resetToDefaults() {
+		this.setSyncServerAddresses(List.of(
+			"ws://localhost:12312"
+		));
+	}
+
+	public static @NotNull ServerConfig load(
+		final @NotNull GameAddress gameAddress
+	) {
+		return load(
 			getConfigDir().resolve("%s.json".formatted(gameAddress.asFsName())).toFile(),
 			ServerConfig.class
 		);
-		conf.gameAddress = gameAddress;
-
-		loadDefaults(conf);
-
-		conf.syncServerAddresses = conf.syncServerAddresses.stream()
-				.filter(Objects::nonNull)
-				.map(String::trim)
-				.filter(address -> !address.isEmpty())
-				.collect(Collectors.toCollection(ArrayList::new));
-
-		return conf;
-	}
-
-	private static void loadDefaults(ServerConfig conf) {
-		ServerConfig defaults;
-		try (var input = ServerConfig.class.getResourceAsStream("/default-config.json")) {
-			if (input == null) return;
-			String json = new String(input.readAllBytes(), StandardCharsets.UTF_8);
-			JsonObject root = new Gson().fromJson(json, JsonObject.class);
-			JsonObject servers = root.get("servers").getAsJsonObject();
-			// TODO: Don't get, instead iterate through keys
-			JsonObject server = servers.get(conf.gameAddress.address()).getAsJsonObject();
-			defaults = GSON.fromJson(server, ServerConfig.class);
-		} catch (IllegalStateException | NullPointerException ignored) {
-			return;
-		} catch (Throwable e) {
-			e.printStackTrace();
-			return;
-		}
-		if (conf.syncServerAddresses.isEmpty() && defaults.syncServerAddresses != null) {
-			conf.setSyncServerAddresses(defaults.syncServerAddresses);
-		}
 	}
 }

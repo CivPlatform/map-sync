@@ -1,35 +1,42 @@
 package gjum.minecraft.mapsync.mod.config;
 
 import com.google.gson.annotations.Expose;
+import org.jetbrains.annotations.NotNull;
 
-import net.minecraft.client.Minecraft;
-
-public class ModConfig extends JsonConfig {
+public final class ModConfig extends JsonConfig {
 	@Expose
 	private boolean showDebugLog = false;
 
 	public boolean isShowDebugLog() {
-		return showDebugLog;
+		return this.showDebugLog;
 	}
 
-	public void setShowDebugLog(boolean value) {
-		showDebugLog = value;
-		saveLater();
+	public void setShowDebugLog(
+		final boolean value
+	) {
+		this.showDebugLog = value;
 	}
 
 	@Expose
 	private int catchupWatermark = 100;
 
 	public int getCatchupWatermark() {
-		return catchupWatermark;
+		return Math.max(1, this.catchupWatermark);
 	}
 
-	public void setCatchupWatermark(int value) {
-		catchupWatermark = value;
-		saveLater();
+	public void setCatchupWatermark(
+		final int value
+	) {
+		this.catchupWatermark = value;
 	}
 
-	public static ModConfig load() {
+	@Override
+	protected void resetToDefaults() {
+		this.showDebugLog = false;
+		this.catchupWatermark = 100;
+	}
+
+	public static @NotNull ModConfig load() {
 		return ModConfig.load(
 			getConfigDir().resolve("mod-config.json").toFile(),
 			ModConfig.class

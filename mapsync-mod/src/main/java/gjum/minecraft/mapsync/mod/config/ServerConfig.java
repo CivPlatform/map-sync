@@ -4,7 +4,6 @@ import com.google.gson.Gson;
 import com.google.gson.JsonObject;
 import com.google.gson.annotations.Expose;
 import gjum.minecraft.mapsync.mod.data.GameAddress;
-import java.io.File;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
@@ -36,9 +35,10 @@ public class ServerConfig extends JsonConfig {
 	}
 
 	public static ServerConfig load(GameAddress gameAddress) {
-		var dir = getConfigDir().resolve(gameAddress.asFsName()).toFile();
-		dir.mkdirs();
-		var conf = load(new File(dir, "server-config.json"), ServerConfig.class);
+		final ServerConfig conf = load(
+			getConfigDir().resolve("%s.json".formatted(gameAddress.asFsName())).toFile(),
+			ServerConfig.class
+		);
 		conf.gameAddress = gameAddress;
 
 		loadDefaults(conf);

@@ -1,12 +1,10 @@
 name: Build+Test Server
 
 on:
-  push:
-    paths:
-      - "mapsync-server/**/*"
   pull_request:
     paths:
       - "mapsync-server/**/*"
+  workflow_dispatch: {}
 
 jobs:
   build:

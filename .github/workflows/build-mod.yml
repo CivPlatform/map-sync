@@ -1,12 +1,10 @@
 name: "Build Mod"
 
 on:
-  push:
-    paths:
-      - "mapsync-mod/**/*"
   pull_request:
     paths:
       - "mapsync-mod/**/*"
+  workflow_dispatch: {}
 
 jobs:
   build:

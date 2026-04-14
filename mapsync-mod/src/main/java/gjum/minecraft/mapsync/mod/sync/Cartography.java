@@ -4,7 +4,6 @@ import gjum.minecraft.mapsync.mod.data.BlockColumn;
 import gjum.minecraft.mapsync.mod.data.BlockInfo;
 import gjum.minecraft.mapsync.mod.data.ChunkTile;
 import gjum.minecraft.mapsync.mod.net.buffers.BufferWriter;
-import gjum.minecraft.mapsync.mod.utils.Shortcuts;
 import java.io.ByteArrayOutputStream;
 import java.security.MessageDigest;
 import java.util.ArrayList;
@@ -34,13 +33,14 @@ public class Cartography {
 		int dataVersion = 1;
 
 		// TODO speedup: don't serialize twice (once here, once later when writing to network)
-		final byte[] dataHash; {
-			final ByteArrayOutputStream os = new ByteArrayOutputStream();
-			Failable.run(() -> ChunkTile.writeColumns(columns, new BufferWriter(os)));
-			final MessageDigest md = Shortcuts.shaHash();
-			md.update(os.toByteArray());
-			dataHash = md.digest();
-		}
+		final byte[] dataHash = Failable.get(() -> {
+			final MessageDigest md = MessageDigest.getInstance("SHA-1");
+			try (final var os = new ByteArrayOutputStream()) {
+				ChunkTile.writeColumns(columns, new BufferWriter(os));
+				md.update(os.toByteArray());
+			}
+			return md.digest();
+		});
 
 		final ChunkPos chunkPos = chunk.getPos();
 		return new ChunkTile(dimension, chunkPos.x, chunkPos.z, timestamp, dataVersion, dataHash, columns);

@@ -55,7 +55,7 @@ public final class SyncConnectionsGui extends Screen {
 		this.addRenderableWidget(
 			Checkbox.builder(Component.literal("Auto-connect"), this.font)
 				.pos(offsetRight - 100, this.offsetTop + 18)
-				.selected(this.gameContext.getGameConfig().isAutoConnect())
+				.selected(this.gameContext.getGameConfig().shouldAutoConnect())
 				.onValueChange((checkbox, value) -> {
 					this.gameContext.getGameConfig().setAutoConnect(value);
 					this.gameContext.getGameConfig().save();

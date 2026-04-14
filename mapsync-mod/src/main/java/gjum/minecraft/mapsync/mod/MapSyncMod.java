@@ -31,6 +31,7 @@ import java.util.HashMap;
 import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientChunkEvents;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper;
@@ -129,6 +130,17 @@ public final class MapSyncMod {
 			case ClientboundRegionTimestampsPacket packet -> handleRegionTimestamps(client, packet);
 			case ClientboundChunkTimestampsResponsePacket packet -> handleCatchupData(client, packet);
 			default -> throw new UnexpectedPacketException(received);
+		}
+	}
+
+	public static void handleGameConnection(
+		final @NotNull Minecraft minecraft,
+		final @NotNull GameContext gameContext
+	) {
+		if (gameContext.getGameConfig().shouldAutoConnect()) {
+			gameContext.getSyncConnections().setAll(Set.copyOf(
+				gameContext.getGameConfig().getSyncServerAddresses()
+			));
 		}
 	}
 

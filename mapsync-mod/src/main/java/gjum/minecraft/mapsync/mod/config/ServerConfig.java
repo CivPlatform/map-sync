@@ -30,8 +30,15 @@ public final class ServerConfig extends JsonConfig {
 		this.syncServerAddresses = new ArrayList<>(syncAddresses);
 	}
 
-	public boolean isAutoConnect() { return this.autoConnect; }
-	public void setAutoConnect(final boolean autoConnect) { this.autoConnect = autoConnect; }
+	public boolean shouldAutoConnect() {
+		return this.autoConnect;
+	}
+
+	public void setAutoConnect(
+		final boolean autoConnect
+	) {
+		this.autoConnect = autoConnect;
+	}
 
 	@Override
 	public void resetToDefaults() {

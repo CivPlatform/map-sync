@@ -5,11 +5,8 @@ import gjum.minecraft.mapsync.mod.config.ServerConfig;
 import gjum.minecraft.mapsync.mod.data.GameAddress;
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.VarHandle;
-import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.Set;
-
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientLifecycleEvents;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientWorldEvents;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
@@ -124,6 +121,11 @@ public final class GameContext {
 				}
 			}
 		});
+		ClientPlayConnectionEvents.JOIN.register((gameConnection, packetSender, minecraft) -> {
+			if (instance instanceof final GameContext context) {
+				MapSyncMod.handleGameConnection(minecraft, context);
+			}
+		});
 		ClientPlayConnectionEvents.DISCONNECT.register((gameConnection, minecraft) -> {
 			if (INSTANCE.getAndSet((Object) null) instanceof final GameContext context) {
 				context.shutdown();
@@ -146,14 +148,6 @@ public final class GameContext {
 				previous.shutDown();
 			}
 			MapSyncMod.handleDimensionChange(minecraft, level, gameContext);
-
-			final ServerConfig gameConfig = gameContext.getGameConfig();
-			if (gameConfig.isAutoConnect() && gameContext.getSyncConnections().hasNoConnections()) {
-				final @NotNull List<@NotNull String> addresses = gameConfig.getSyncServerAddresses();
-				if (!addresses.isEmpty()) {
-					gameContext.getSyncConnections().setAll(Set.copyOf(addresses));
-				}
-			}
 		});
 	}
 }

@@ -1,3 +1,5 @@
+import { isValidUuid } from "./deps/uuid.ts";
+
 export abstract class AuthState {
     protected constructor(public readonly logName: string | null) {}
 }
@@ -20,6 +22,9 @@ export class Welcomed extends AuthState {
         public readonly uuid: string,
         public readonly authed: boolean,
     ) {
+        if (!isValidUuid(uuid)) {
+            throw new Error(`Invalid UUID: ${uuid}`);
+        }
         super(name + (authed ? "" : "?"));
     }
 }

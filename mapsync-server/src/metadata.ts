@@ -96,9 +96,7 @@ export function getConfig(): Config {
 
 const WHITELIST_FILE = "whitelist.json";
 const WHITELIST_MUTEX = new Mutex();
-const WHITELIST_SCHEMA = z.array(
-    z.union([z.string().uuid(), z.string().regex(/^AUTH-DISABLED-.+/)]),
-);
+const WHITELIST_SCHEMA = z.array(z.string().uuid());
 export const whitelist = new Set<string>();
 
 export async function loadWhitelist() {
@@ -130,9 +128,7 @@ export async function saveWhitelist() {
 
 const UUID_CACHE_FILE = "uuid_cache.json";
 const UUID_CACHE_MUTEX = new Mutex();
-const UUID_CACHE_SCHEMA = z.record(
-    z.union([z.string().uuid(), z.string().regex(/^AUTH-DISABLED-.+/)]),
-);
+const UUID_CACHE_SCHEMA = z.record(z.string().uuid());
 //                         IGN     UUID
 const uuid_cache = new Map<string, string>();
 

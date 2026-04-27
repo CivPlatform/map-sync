@@ -10,7 +10,7 @@
 		"sources": "${mod_source_url}",
 		"issues": "${mod_issues_url}"
 	},
-	"license": "${copyright_licence}",
+	"license": "${mod_copyright}",
 	"icon": "assets/mapsync/icon.png",
 	"environment": "client",
 	"entrypoints": {

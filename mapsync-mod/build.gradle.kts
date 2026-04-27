@@ -2,13 +2,24 @@ plugins {
 	alias(libs.plugins.fabricLoom)
 }
 
-private val mod_name = project.property("mod_name").toString()
-version = "${project.property("mod_version")}-${libs.versions.minecraft.get()}"
+// gradle.properties
+private val project_name: String by project
+private val project_group: String by project
+private val mapsync_version: String by project
+private val project_description: String by project
+private val project_authors: String by project
+private val project_copyright: String by project
+private val project_home_url: String by project
+private val project_source_url: String by project
+private val project_issues_url: String by project
 
-private val modLocalDep = configurations.create("modLocalDep")
+version = "${mapsync_version}-${libs.versions.minecraft.get()}"
+group = project_group
+
+private val modLocalDep: Configuration by configurations.creating
 
 base {
-	archivesName = project.property("archives_base_name").toString()
+	archivesName = project_name
 }
 
 loom {
@@ -82,22 +93,20 @@ tasks {
 	}
 	jar {
 		from(file("../LICENSE")) {
-			rename { "LICENSE_${mod_name}" }
+			rename { "LICENSE_${project_name}" }
 		}
 	}
 	processResources {
-		val expansions: Map<String, Any> = buildMap {
-			put("mod_name", mod_name)
-			put("mod_version", project.version)
-			putAll(listOf(
-				"mod_description",
-				"copyright_licence",
-				"mod_home_url",
-				"mod_source_url",
-				"mod_issues_url"
-			).associateWith { project.property(it).toString() })
-			put("minecraft_version", libs.versions.minecraft.get())
-			put("fabric_loader_version", libs.versions.fabricLoader.get())
+		val expansions: Map<String, Any> = buildMap expansions@{
+			this@expansions["mod_name"] = project_name
+			this@expansions["mod_version"] = project.version
+			this@expansions["mod_description"] = project_description
+			this@expansions["mod_copyright"] = project_copyright
+			this@expansions["mod_home_url"] = project_home_url
+			this@expansions["mod_source_url"] = project_source_url
+			this@expansions["mod_issues_url"] = project_issues_url
+			this@expansions["minecraft_version"] = libs.versions.minecraft.get()
+			this@expansions["fabric_loader_version"] = libs.versions.fabricLoader.get()
 		}
 		inputs.properties(expansions)
 		filesMatching("fabric.mod.json") {
@@ -105,7 +114,7 @@ tasks {
 			filter {
 				it.replace(
 					"\"%FABRIC_AUTHORS_ARRAY%\"",
-					groovy.json.JsonBuilder(project.property("mod_authors").toString().split(",")).toString()
+					groovy.json.JsonBuilder(project_authors.split(",")).toString()
 				)
 			}
 		}

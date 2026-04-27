@@ -24,7 +24,9 @@
 	"depends": {
 		"minecraft": "${minecraft_version}",
 		"fabricloader": ">=${fabric_loader_version}",
-		"fabric": "*"
+		"fabric": "*",
+
+		"org_java-websocket_java-websocket": ">=${java_websockets_version}"
 	},
 	"suggests": {
 		"modmenu": "*",

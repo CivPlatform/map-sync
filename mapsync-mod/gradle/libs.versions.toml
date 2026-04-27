@@ -4,6 +4,8 @@ minecraft = "1.21.11"
 fabricLoom = "1.15-SNAPSHOT"
 fabricLoader = "0.18.6"
 fabricApi = "0.141.3+1.21.11"
+# https://mvnrepository.com/artifact/org.java-websocket/Java-WebSocket
+java-ws = "1.6.0"
 
 [libraries]
 minecraft = { group = "com.mojang", name = "minecraft", version.ref = "minecraft" }
@@ -22,8 +24,7 @@ voxelmap = { group = "maven.modrinth", name = "voxelmap-updated", version = "oL1
 journeymap = { group = "maven.modrinth", name = "journeymap", version = "ajOMv0sc" }
 # https://modrinth.com/mod/xaeros-world-map/versions?l=fabric
 xaerosmap = { group = "maven.modrinth", name = "xaeros-world-map", version = "CkZVhVE0" }
-# https://mvnrepository.com/artifact/org.java-websocket/Java-WebSocket
-java-ws = { group = "org.java-websocket", name = "Java-WebSocket", version = "1.6.0" }
+java-ws = { group = "org.java-websocket", name = "Java-WebSocket", version.ref = "java-ws" }
 
 [plugins]
 fabricLoom = { id = "fabric-loom", version.ref = "fabricLoom" }

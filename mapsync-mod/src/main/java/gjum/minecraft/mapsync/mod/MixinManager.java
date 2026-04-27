@@ -8,7 +8,6 @@ import org.jetbrains.annotations.Nullable;
 import org.objectweb.asm.tree.ClassNode;
 import org.spongepowered.asm.mixin.extensibility.IMixinConfigPlugin;
 import org.spongepowered.asm.mixin.extensibility.IMixinInfo;
-import org.spongepowered.asm.service.MixinService;
 
 public final class MixinManager implements IMixinConfigPlugin {
 	private String mixinPackage = "";
@@ -19,20 +18,7 @@ public final class MixinManager implements IMixinConfigPlugin {
 		final @NotNull String mixinPackage
 	) {
 		this.mixinPackage = mixinPackage;
-		this.isVoxelMapLoaded = hasClass("com.mamiyaotaru.voxelmap.VoxelConstants");
-	}
-
-	/// This could be replaced with a [FabricLoader#isModLoaded(String)] if this was a fabric-only mod but alas, no.
-	private static boolean hasClass(
-		final @NotNull String className
-	) {
-		try {
-			MixinService.getService().getClassProvider().findClass(className, false);
-			return true;
-		}
-		catch (final ClassNotFoundException e) {
-			return false;
-		}
+		this.isVoxelMapLoaded = FabricLoader.getInstance().isModLoaded("voxelmap");
 	}
 
 	@Override

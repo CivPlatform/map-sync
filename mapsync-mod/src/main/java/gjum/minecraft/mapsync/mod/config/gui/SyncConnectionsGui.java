@@ -8,6 +8,7 @@ import java.util.Objects;
 import java.util.Set;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
+import net.minecraft.client.gui.components.Checkbox;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.CommonComponents;
@@ -40,13 +41,6 @@ public final class SyncConnectionsGui extends Screen {
 		final int offsetRight = this.width / 2 + innerWidth / 2;
 		this.offsetTop = this.height / 3;
 
-		this.addRenderableWidget(
-			Button.builder(Component.literal("Close"), (button) -> this.minecraft.setScreen(this.parentScreen))
-				.pos(offsetRight - 100, this.offsetTop)
-				.width(100)
-				.build()
-		);
-
 		final EditBox addressField = this.addRenderableWidget(new EditBox(
 			this.font,
 			this.offsetLeft,
@@ -57,6 +51,17 @@ public final class SyncConnectionsGui extends Screen {
 		));
 		addressField.setValue(this.addressFieldValue);
 		addressField.setResponder((value) -> this.addressFieldValue = value);
+
+		this.addRenderableWidget(
+			Checkbox.builder(Component.literal("Auto-connect"), this.font)
+				.pos(offsetRight - 100, this.offsetTop + 18)
+				.selected(this.gameContext.getGameConfig().isAutoConnect())
+				.onValueChange((checkbox, value) -> {
+					this.gameContext.getGameConfig().setAutoConnect(value);
+					this.gameContext.getGameConfig().save();
+				})
+				.build()
+		);
 
 		this.addRenderableWidget(
 			Button

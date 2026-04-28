@@ -27,6 +27,8 @@ public final class SyncConnections implements Iterable<SyncClient> {
 		return this.clients.values().iterator();
 	}
 
+	public boolean hasNoConnections() { return this.clients.isEmpty(); }
+
 	public void setAll(
 		final @NotNull Set<@NotNull String> syncAddresses
 	) {

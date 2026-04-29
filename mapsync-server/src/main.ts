@@ -23,8 +23,8 @@ import {
     AwaitingIdentityResponse,
     Welcomed,
 } from "./auth.ts";
-import { SUPPORTED_VERSIONS, UUID_NAMESPACE } from "./constants.ts";
-import { uuidv5 } from "./deps/uuid.ts";
+import { SUPPORTED_VERSIONS } from "./constants.ts";
+import { createOfflineUuid } from "./deps/uuid.ts";
 
 let config: metadata.Config = null!;
 let main: ProtocolHandler = null!;
@@ -151,7 +151,7 @@ export class ProtocolHandler {
             }
             client.auth = new Welcomed(
                 packet.claimedUsername,
-                uuidv5(`Offline:${packet.claimedUsername}`, UUID_NAMESPACE),
+                createOfflineUuid(packet.claimedUsername),
                 false,
             );
         }

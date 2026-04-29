@@ -16,8 +16,8 @@ repositories {
 
 tasks {
 	shadowJar {
-		include("org/java_websocket/**")
-		include("META-INF/LICENSE.txt")
+		// Remove slf4j code
+		exclude("org/slf4j/**", "META-INF/maven/org.slf4j/**")
 		relocate(
 			"org.java_websocket",
 			"gjum.minecraft.mapsync.mod.deps.websockets"

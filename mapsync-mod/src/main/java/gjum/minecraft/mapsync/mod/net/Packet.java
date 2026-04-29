@@ -9,6 +9,7 @@ import gjum.minecraft.mapsync.mod.net.packet.ClientboundRegionTimestampsPacket;
 import gjum.minecraft.mapsync.mod.net.packet.ClientboundWelcomePacket;
 import gjum.minecraft.mapsync.mod.net.packet.ServerboundCatchupRequestPacket;
 import gjum.minecraft.mapsync.mod.net.packet.ServerboundChunkTimestampsRequestPacket;
+import gjum.minecraft.mapsync.mod.net.packet.ServerboundDimensionChangePacket;
 import gjum.minecraft.mapsync.mod.net.packet.ServerboundHandshakePacket;
 import gjum.minecraft.mapsync.mod.net.packet.ServerboundIdentityResponsePacket;
 import org.apache.commons.lang3.NotImplementedException;
@@ -43,6 +44,7 @@ public interface Packet {
 			case ChunkTilePacket $ -> ChunkTilePacket.PACKET_ID;
 			case ServerboundHandshakePacket $ -> ServerboundHandshakePacket.PACKET_ID;
 			case ServerboundIdentityResponsePacket $ -> ServerboundIdentityResponsePacket.PACKET_ID;
+			case ServerboundDimensionChangePacket $ -> ServerboundDimensionChangePacket.PACKET_ID;
 			case ServerboundChunkTimestampsRequestPacket $ -> ServerboundChunkTimestampsRequestPacket.PACKET_ID;
 			case ServerboundCatchupRequestPacket $ -> ServerboundCatchupRequestPacket.PACKET_ID;
 			default -> throw new UnexpectedPacketException(packet);

@@ -16,6 +16,7 @@ import {
     ClientboundWelcomePacket,
     UnexpectedPacketError,
     ClientboundIdentityRequestPacket,
+    ServerboundDimensionChangePacket,
 } from "./packets.ts";
 import {
     AwaitingHandshake,
@@ -73,6 +74,8 @@ export class ProtocolHandler {
                 return this.handleCatchupRequest(client, pkt);
             case pkt instanceof ChunkTilePacket:
                 return this.handleChunkTilePacket(client, pkt);
+            case pkt instanceof ServerboundDimensionChangePacket:
+                return this.handleDimensionChange(client, pkt);
             default:
                 throw new Error(
                     `Unknown packet [${node_utils.inspect(pkt)}] from client ${client.id}`,
@@ -94,8 +97,6 @@ export class ProtocolHandler {
         }
         // TODO: Check whether the game address is supported
         client.gameAddress = packet.gameAddress;
-        // TODO: Make this its own packet
-        client.dimension = packet.dimension;
         const serverSalt: Buffer = this.config.auth
             ? node_crypto.randomBytes(32)
             : Buffer.allocUnsafe(0);
@@ -172,6 +173,16 @@ export class ProtocolHandler {
         // TODO check version, mc server, user access
 
         client.send(new ClientboundWelcomePacket());
+    }
+
+    private async handleDimensionChange(
+        client: WSClient,
+        pkt: ServerboundDimensionChangePacket,
+    ) {
+        if (client.dimension === pkt.dimension) {
+            return;
+        }
+        client.dimension = pkt.dimension;
 
         for (const region of await database.getRegionTimestamps(
             client.dimension!,
@@ -192,6 +203,13 @@ export class ProtocolHandler {
         pkt: ChunkTilePacket,
     ) {
         const welcome = client.requireWelcomed();
+
+        if (client.dimension !== pkt.dimension) {
+            client.warn(
+                `Client send chunk data for [${pkt.dimension}] when their dimension is [${client.dimension}]!`,
+            );
+            return;
+        }
 
         // TODO ignore if same chunk hash exists in db
 
@@ -224,6 +242,13 @@ export class ProtocolHandler {
         pkt: ServerboundCatchupRequestPacket,
     ) {
         const welcome = client.requireWelcomed();
+
+        if (client.dimension !== pkt.dimension) {
+            client.warn(
+                `Client requested catchup for [${pkt.dimension}] when their dimension is [${client.dimension}]!`,
+            );
+            return;
+        }
 
         for (const req of pkt.chunks) {
             let chunk = await database.getChunkData(
@@ -261,6 +286,13 @@ export class ProtocolHandler {
         pkt: ServerboundChunkTimestampsRequestPacket,
     ) {
         const welcome = client.requireWelcomed();
+
+        if (client.dimension !== pkt.dimension) {
+            client.warn(
+                `Client requested chunk timestamps for [${pkt.dimension}] when their dimension is [${client.dimension}]!`,
+            );
+            return;
+        }
 
         const chunks = await database.getChunkTimestamps(
             pkt.dimension,

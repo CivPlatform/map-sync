@@ -12,15 +12,13 @@ import org.jetbrains.annotations.NotNull;
 /// - Next: [ClientboundIdentityRequestPacket]
 public record ServerboundHandshakePacket(
 	@NotNull String modVersion,
-	@NotNull GameAddress gameAddress,
-	@NotNull String dimension
+	@NotNull GameAddress gameAddress
 ) implements Packet {
 	public static final int PACKET_ID = 1;
 
 	public ServerboundHandshakePacket {
 		Assertions.assertNotNull(modVersion);
 		Assertions.assertNotNull(gameAddress);
-		Assertions.assertNotNull(dimension);
 	}
 
 	@Override
@@ -29,6 +27,5 @@ public record ServerboundHandshakePacket(
 	) throws Exception {
 		writer.writeString(this.modVersion());
 		writer.writeString(this.gameAddress().address());
-		writer.writeString(this.dimension());
 	}
 }

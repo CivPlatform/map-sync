@@ -11,6 +11,7 @@ import gjum.minecraft.mapsync.mod.data.RegionPos;
 import gjum.minecraft.mapsync.mod.net.CloseContext;
 import gjum.minecraft.mapsync.mod.net.Packet;
 import gjum.minecraft.mapsync.mod.net.SyncClient;
+import gjum.minecraft.mapsync.mod.net.packet.ServerboundDimensionChangePacket;
 import gjum.minecraft.mapsync.mod.sync.DimensionState;
 import gjum.minecraft.mapsync.mod.sync.GameContext;
 import gjum.minecraft.mapsync.mod.net.UnexpectedPacketException;
@@ -133,6 +134,16 @@ public final class MapSyncMod {
 		}
 	}
 
+	public static void handleWelcomed(
+		final @NotNull SyncClient client
+	) {
+		if (client.gameContext.getDimensionState().orElse(null) instanceof final DimensionState dimensionState) {
+			client.send(new ServerboundDimensionChangePacket(
+				dimensionState.dimension.identifier()
+			));
+		}
+	}
+
 	public static void handleGameConnection(
 		final @NotNull Minecraft minecraft,
 		final @NotNull GameContext gameContext
@@ -144,14 +155,15 @@ public final class MapSyncMod {
 		}
 	}
 
-	/// @param clientLevel This is the *new* dimension.
+	/// @param level This is the *new* dimension.
 	public static void handleDimensionChange(
 		final @NotNull Minecraft minecraft,
-		final @NotNull ClientLevel clientLevel,
+		final @NotNull ClientLevel level,
 		final @NotNull GameContext gameContext
 	) {
-		debugLog("handleDimensionChange");
-		// TODO tell sync server to only send chunks for this dimension now
+		gameContext.getSyncConnections().broadcast(new ServerboundDimensionChangePacket(
+			level.dimension().identifier()
+		));
 	}
 
 	/**

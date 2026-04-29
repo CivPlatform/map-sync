@@ -4,11 +4,12 @@ import gjum.minecraft.mapsync.mod.net.Packet;
 import gjum.minecraft.mapsync.mod.net.buffers.BufferReader;
 import org.jetbrains.annotations.NotNull;
 
-/// This is sent by the server to indicate a successful connection: that the client can begin sending chunk data. The
-/// server will immediately follow up this packet with a [ClientboundRegionTimestampsPacket].
+/// This is sent by the server to indicate a successful connection. The client should then inform the server of its
+/// current dimension via [ServerboundDimensionChangePacket], after which the client can begin sending chunk data for
+/// that dimension.
 ///
 /// - Prev: [ServerboundIdentityResponsePacket]
-/// - Next: [ClientboundRegionTimestampsPacket]
+/// - Next: [ServerboundDimensionChangePacket]
 public record ClientboundWelcomePacket() implements Packet {
 	public static final int PACKET_ID = 9;
 

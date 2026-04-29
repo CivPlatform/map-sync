@@ -1,6 +1,7 @@
 package gjum.minecraft.mapsync.mod.sync;
 
 import gjum.minecraft.mapsync.mod.MapSyncMod;
+import gjum.minecraft.mapsync.mod.net.Packet;
 import gjum.minecraft.mapsync.mod.net.SyncClient;
 import java.util.Iterator;
 import java.util.Map;
@@ -86,5 +87,13 @@ public final class SyncConnections implements Iterable<SyncClient> {
 			syncClient.websocket.close();
 			return true;
 		});
+	}
+
+	public void broadcast(
+		final @NotNull Packet packet
+	) {
+		for (final SyncClient syncClient : this) {
+			syncClient.send(packet);
+		}
 	}
 }

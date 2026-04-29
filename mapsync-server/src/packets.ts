@@ -15,6 +15,7 @@ import {
 export type ServerboundPacket =
     | ServerboundHandshakePacket
     | ServerboundIdentityResponsePacket
+    | ServerboundDimensionChangePacket
     | ServerboundChunkTimestampsRequestPacket
     | ServerboundCatchupRequestPacket
     | ChunkTilePacket;
@@ -48,14 +49,12 @@ export class ServerboundHandshakePacket extends Packet {
     public constructor(
         public readonly modVersion: string,
         public readonly gameAddress: string,
-        public readonly dimension: string,
     ) {
         super(ServerboundHandshakePacket.PACKET_ID);
     }
 
     public static decode(reader: BufferReader): ServerboundHandshakePacket {
         return new ServerboundHandshakePacket(
-            reader.readString(),
             reader.readString(),
             reader.readString(),
         );
@@ -105,6 +104,20 @@ export class ClientboundWelcomePacket extends Packet {
     }
 
     public encode(writer: BufferWriter) {}
+}
+
+export class ServerboundDimensionChangePacket extends Packet {
+    public static readonly PACKET_ID = asUnt8(10);
+
+    public constructor(public readonly dimension: string) {
+        super(ServerboundDimensionChangePacket.PACKET_ID);
+    }
+
+    public static decode(
+        reader: BufferReader,
+    ): ServerboundDimensionChangePacket {
+        return new ServerboundDimensionChangePacket(reader.readString());
+    }
 }
 
 export class ClientboundRegionTimestampsPacket extends Packet {
@@ -196,7 +209,9 @@ export class ServerboundCatchupRequestPacket extends Packet {
         const dimension = reader.readString();
         const anchorChunkX = reader.readInt16() << 5n;
         const anchorChunkZ = reader.readInt16() << 5n;
-        const chunks: CatchupChunk[] = new Array(Number(reader.readUnt10()) + 1);
+        const chunks: CatchupChunk[] = new Array(
+            Number(reader.readUnt10()) + 1,
+        );
         for (let i = 0; i < chunks.length; i++) {
             chunks[i] = {
                 chunkX: asInt32(anchorChunkX + reader.readUnt5()),
@@ -253,6 +268,8 @@ export function decodePacket(reader: BufferReader): ServerboundPacket {
             return ServerboundHandshakePacket.decode(reader);
         case ServerboundIdentityResponsePacket.PACKET_ID:
             return ServerboundIdentityResponsePacket.decode(reader);
+        case ServerboundDimensionChangePacket.PACKET_ID:
+            return ServerboundDimensionChangePacket.decode(reader);
         case ServerboundChunkTimestampsRequestPacket.PACKET_ID:
             return ServerboundChunkTimestampsRequestPacket.decode(reader);
         case ServerboundCatchupRequestPacket.PACKET_ID:

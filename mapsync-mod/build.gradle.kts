@@ -42,7 +42,7 @@ dependencies {
 	modImplementation(libs.fabricLoader)
 	modImplementation(libs.fabricApi)
 
-	libs.java.ws.also {
+	project(":dep-websockets", configuration = "shadedElements").also {
 		implementation(it)
 		include(it)
 	}
@@ -107,7 +107,6 @@ tasks {
 			this@expansions["mod_issues_url"] = project_issues_url
 			this@expansions["minecraft_version"] = libs.versions.minecraft.get()
 			this@expansions["fabric_loader_version"] = libs.versions.fabricLoader.get()
-			this@expansions["java_websockets_version"] = libs.versions.java.ws.get()
 		}
 		inputs.properties(expansions)
 		filesMatching("fabric.mod.json") {

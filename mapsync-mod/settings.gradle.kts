@@ -11,4 +11,4 @@ pluginManagement {
 
 rootProject.name = "MapSync"
 
-include(":dep-websockets");
+include(":dep-websockets")

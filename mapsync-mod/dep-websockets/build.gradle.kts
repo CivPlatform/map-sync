@@ -3,6 +3,7 @@ plugins {
 	alias(libs.plugins.shadow)
 }
 
+group = libs.java.ws.get().group
 version = libs.java.ws.get().version!!
 
 dependencies {

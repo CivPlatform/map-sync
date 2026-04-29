@@ -179,9 +179,11 @@ export class ProtocolHandler {
         client: WSClient,
         pkt: ServerboundDimensionChangePacket,
     ) {
-        if (client.dimension === pkt.dimension) {
+        if (client.isInDimension(pkt.dimension)) {
             return;
         }
+        // TODO: Stop any sync process of the previous dimension
+
         client.dimension = pkt.dimension;
 
         for (const region of await database.getRegionTimestamps(
@@ -204,7 +206,7 @@ export class ProtocolHandler {
     ) {
         const welcome = client.requireWelcomed();
 
-        if (client.dimension !== pkt.dimension) {
+        if (!client.isInDimension(pkt.dimension)) {
             client.warn(
                 `Client send chunk data for [${pkt.dimension}] when their dimension is [${client.dimension}]!`,
             );
@@ -243,7 +245,7 @@ export class ProtocolHandler {
     ) {
         const welcome = client.requireWelcomed();
 
-        if (client.dimension !== pkt.dimension) {
+        if (!client.isInDimension(pkt.dimension)) {
             client.warn(
                 `Client requested catchup for [${pkt.dimension}] when their dimension is [${client.dimension}]!`,
             );
@@ -287,7 +289,7 @@ export class ProtocolHandler {
     ) {
         const welcome = client.requireWelcomed();
 
-        if (client.dimension !== pkt.dimension) {
+        if (!client.isInDimension(pkt.dimension)) {
             client.warn(
                 `Client requested chunk timestamps for [${pkt.dimension}] when their dimension is [${client.dimension}]!`,
             );

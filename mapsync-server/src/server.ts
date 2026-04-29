@@ -110,6 +110,10 @@ export class WSClient {
         throw new Error("Client is not authenticated!");
     }
 
+    public isInDimension(dimension: string): boolean {
+        return this.dimension === dimension;
+    }
+
     public kick(internalReason: string) {
         this.log("Kicking:", internalReason);
         this.ws.close(1000);

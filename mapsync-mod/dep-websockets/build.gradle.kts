@@ -18,7 +18,6 @@ tasks {
 	shadowJar {
 		include("org/java_websocket/**")
 		include("META-INF/LICENSE.txt")
-		rename("LICENSE.txt", "LICENSE_JavaWebSockets")
 		relocate(
 			"org.java_websocket",
 			"gjum.minecraft.mapsync.mod.deps.websockets"

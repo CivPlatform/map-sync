@@ -64,6 +64,24 @@ public final class SyncConnectionsGui extends Screen {
 		);
 
 		this.addRenderableWidget(
+			Checkbox.builder(Component.literal("Preserve existing map data"), this.font)
+				.pos(this.offsetLeft, this.offsetTop + 70)
+				.selected(this.gameContext.getGameConfig().shouldPreserveExistingMapData())
+				.tooltip(net.minecraft.client.gui.components.Tooltip.create(Component.literal(
+					"When on, MapSync will not overwrite local map data for chunks "
+						+ "it has never seen on this server. Empty areas the sync "
+						+ "server knows about are still filled in. Granularity is "
+						+ "per-region (32x32 chunks) for Xaero; JourneyMap and "
+						+ "VoxelMap are fully protected until per-mod probes land."
+				)))
+				.onValueChange((checkbox, value) -> {
+					this.gameContext.getGameConfig().setPreserveExistingMapData(value);
+					this.gameContext.getGameConfig().save();
+				})
+				.build()
+		);
+
+		this.addRenderableWidget(
 			Button
 				.builder(
 					Component.literal("Connect"),

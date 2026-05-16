@@ -7,6 +7,7 @@ import static gjum.minecraft.mapsync.mod.Utils.mc;
 import gjum.minecraft.mapsync.mod.data.BlockColumn;
 import gjum.minecraft.mapsync.mod.data.BlockInfo;
 import gjum.minecraft.mapsync.mod.data.ChunkTile;
+import java.io.File;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
 import net.minecraft.resources.ResourceKey;
@@ -26,10 +27,12 @@ import org.jetbrains.annotations.NotNull;
 import xaero.map.MapProcessor;
 import xaero.map.MapWriter;
 import xaero.map.WorldMapSession;
+import xaero.map.file.RegionDetection;
 import xaero.map.region.MapBlock;
 import xaero.map.region.MapRegion;
 import xaero.map.region.MapTile;
 import xaero.map.region.MapTileChunk;
+import xaero.map.world.MapDimension;
 import xaero.map.world.MapWorld;
 
 public class XaerosWorldMapHelperReal {
@@ -40,6 +43,54 @@ public class XaerosWorldMapHelperReal {
 		} catch (Exception e) {
 			debugLog("CurrentSession is null probably");
 			return false;
+		}
+	}
+
+	/// Whether Xaero already holds data for the chunk's enclosing region.
+	/// Checked at *region* granularity: a region covers 32x32 chunks
+	/// (512x512 blocks), so any prior exploration anywhere in the region
+	/// protects every chunk in it from being overwritten. That's the right
+	/// trade-off for the preservation safeguard — players who explored part
+	/// of an area typically care about the rest of the same area too.
+	///
+	/// We check three signals: (1) the region is loaded in memory and has
+	/// any terrain or a known save file, (2) Xaero's startup detection found
+	/// a cache file on disk for this region. Any positive signal counts as
+	/// "has data". When all three are negative we report no data — letting
+	/// the sync server create fresh tiles for never-explored areas.
+	static boolean hasExistingChunkData(final ChunkPos chunkPos) {
+		if (!isMapping()) return false;
+		try {
+			final MapProcessor mapProcessor = WorldMapSession.getCurrentSession().getMapProcessor();
+			final MapWorld mapWorld = mapProcessor.getMapWorld();
+			final MapDimension dim = mapWorld.getCurrentDimension();
+			if (dim == null) return false;
+
+			final int rx = (chunkPos.x() >> 2) >> 3;
+			final int rz = (chunkPos.z() >> 2) >> 3;
+			final int caveLayer = mapProcessor.getCurrentCaveLayer();
+
+			final MapRegion loaded = dim.getLayeredMapRegions().getLeaf(caveLayer, rx, rz);
+			if (loaded != null) {
+				if (loaded.hasHadTerrain()) return true;
+				if (Boolean.TRUE.equals(loaded.getSaveExists())) return true;
+			}
+
+			final RegionDetection detection = dim.getWorldSaveRegionDetection(rx, rz);
+			if (detection != null) {
+				final File cacheFile = detection.getCacheFile();
+				if (cacheFile != null && cacheFile.exists()) return true;
+			}
+
+			return false;
+		}
+		catch (final Exception e) {
+			// Probe failures are not fatal — fail safe: assume the region has
+			// data so the safeguard preserves it. Worst case is the player
+			// has to toggle the safeguard off to backfill a chunk we couldn't
+			// probe correctly.
+			debugLog("Xaero existence probe threw, assuming chunk has data: " + e);
+			return true;
 		}
 	}
 

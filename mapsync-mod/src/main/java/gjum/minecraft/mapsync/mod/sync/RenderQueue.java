@@ -9,6 +9,7 @@ import gjum.minecraft.mapsync.mod.integrations.xaerosmap.XaerosWorldMapHelper;
 import java.util.Comparator;
 import java.util.concurrent.PriorityBlockingQueue;
 import net.minecraft.client.Minecraft;
+import net.minecraft.world.level.ChunkPos;
 import org.jetbrains.annotations.NotNull;
 
 public class RenderQueue {
@@ -73,9 +74,22 @@ public class RenderQueue {
 				}
 
 				// chunks from sync server (live, region) will always be older than mc, so mc will take priority
-				if (chunkTile.timestamp() < dimensionState.getChunkTimestamp(chunkTile.chunkPos())) {
+				final long existingTs = dimensionState.getChunkTimestamp(chunkTile.chunkPos());
+				if (chunkTile.timestamp() < existingTs) {
 					// don't overwrite newer data with older data
 					debugLog("skipping render outdated " + chunkTile.chunkPos());
+				} else if (existingTs == DimensionChunkMeta.NULLISH_TIMESTAMP
+						&& shouldPreserveExistingMapData()
+						&& anyMapModHasChunk(chunkTile.chunkPos())) {
+					// MapSync has never seen this chunk for this server AND at
+					// least one installed map mod already has data we shouldn't
+					// overwrite. Skip the render AND deliberately do not record
+					// a timestamp — future updates for the same chunk will land
+					// in this branch again until the player physically loads
+					// the chunk in-game (which sets a real timestamp). Chunks
+					// that no map mod has data for fall through and render
+					// normally — that's the "create where missing" path.
+					debugLog("skipping render to preserve existing map data " + chunkTile.chunkPos());
 				} else {
 					boolean voxelRendered = VoxelMapHelper.updateWithChunkTile(chunkTile);
 					boolean renderedJM = JourneyMapHelper.updateWithChunkTile(chunkTile);
@@ -104,5 +118,24 @@ public class RenderQueue {
 
 	public static boolean areAllMapModsMapping() {
 		return JourneyMapHelper.isMapping();
+	}
+
+	/// Fail-safe accessor for the safeguard flag. Defaults to true (preserve)
+	/// when the GameContext is unavailable — we'd rather drop a chunk we
+	/// could have rendered than risk overwriting local data the player
+	/// trusted.
+	private static boolean shouldPreserveExistingMapData() {
+		return GameContext.get()
+			.map((ctx) -> ctx.getGameConfig().shouldPreserveExistingMapData())
+			.orElse(true);
+	}
+
+	/// True if any installed map mod reports existing data for this chunk.
+	/// Each helper returns false when its mod isn't loaded (nothing to
+	/// protect) — so this only ORs across mods the player actually has.
+	private static boolean anyMapModHasChunk(final ChunkPos pos) {
+		return XaerosWorldMapHelper.hasExistingChunkData(pos)
+			|| JourneyMapHelper.hasExistingChunkData(pos)
+			|| VoxelMapHelper.hasExistingChunkData(pos);
 	}
 }

@@ -15,6 +15,20 @@ public final class ServerConfig extends JsonConfig {
 	@Expose
 	private boolean autoConnect = false;
 
+	/// Protects local map-mod data from being overwritten by the sync server.
+	/// When true (default), MapSync refuses to render any chunk it hasn't
+	/// previously seen — preserving whatever the player had in Xaero /
+	/// JourneyMap / VoxelMap before MapSync was installed. Once the player
+	/// physically loads a chunk in-game, MapSync records its timestamp and
+	/// the chunk becomes eligible for sync-server updates under normal
+	/// "newer wins" rules.
+	///
+	/// Flip off temporarily if you want MapSync to backfill data for chunks
+	/// you've never visited. Persisted per-server because the trust decision
+	/// is server-specific.
+	@Expose
+	private boolean preserveExistingMapData = true;
+
 	public @NotNull List<@NotNull String> getSyncServerAddresses() {
 		return this.syncServerAddresses.stream()
 			.map(String::trim)
@@ -38,6 +52,16 @@ public final class ServerConfig extends JsonConfig {
 		final boolean autoConnect
 	) {
 		this.autoConnect = autoConnect;
+	}
+
+	public boolean shouldPreserveExistingMapData() {
+		return this.preserveExistingMapData;
+	}
+
+	public void setPreserveExistingMapData(
+		final boolean preserveExistingMapData
+	) {
+		this.preserveExistingMapData = preserveExistingMapData;
 	}
 
 	@Override

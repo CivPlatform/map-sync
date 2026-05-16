@@ -2,6 +2,7 @@ package gjum.minecraft.mapsync.mod.net.packet;
 
 import gjum.minecraft.mapsync.mod.net.Packet;
 import gjum.minecraft.mapsync.mod.net.buffers.BufferReader;
+import gjum.minecraft.mapsync.mod.net.buffers.BufferWriter;
 import org.jetbrains.annotations.NotNull;
 
 /// This is sent by the server to indicate a successful connection. The client should then inform the server of its
@@ -17,5 +18,12 @@ public record ClientboundWelcomePacket() implements Packet {
 		final @NotNull BufferReader reader
 	) throws Exception {
 		return new ClientboundWelcomePacket();
+	}
+
+	@Override
+	public void write(
+		final @NotNull BufferWriter writer
+	) throws Exception {
+		// no payload
 	}
 }

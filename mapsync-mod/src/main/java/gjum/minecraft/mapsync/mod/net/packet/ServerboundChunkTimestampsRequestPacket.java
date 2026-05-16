@@ -2,6 +2,7 @@ package gjum.minecraft.mapsync.mod.net.packet;
 
 import gjum.minecraft.mapsync.mod.data.RegionPos;
 import gjum.minecraft.mapsync.mod.net.Packet;
+import gjum.minecraft.mapsync.mod.net.buffers.BufferReader;
 import gjum.minecraft.mapsync.mod.net.buffers.BufferWriter;
 import gjum.minecraft.mapsync.mod.utils.Assertions;
 import org.jetbrains.annotations.NotNull;
@@ -20,6 +21,15 @@ public record ServerboundChunkTimestampsRequestPacket(
 	public ServerboundChunkTimestampsRequestPacket {
 		Assertions.assertNotNull(dimension);
 		Assertions.assertNotNull(region);
+	}
+
+	public static @NotNull Packet read(
+		final @NotNull BufferReader reader
+	) throws Exception {
+		return new ServerboundChunkTimestampsRequestPacket(
+			reader.readString(),
+			new RegionPos(reader.readInt16(), reader.readInt16())
+		);
 	}
 
 	@Override

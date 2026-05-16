@@ -2,9 +2,12 @@ package gjum.minecraft.mapsync.mod.server;
 
 import gjum.minecraft.mapsync.mod.data.GameAddress;
 import gjum.minecraft.mapsync.mod.net.Packet;
+import gjum.minecraft.mapsync.mod.net.buffers.BufferReader;
 import gjum.minecraft.mapsync.mod.net.buffers.BufferWriter;
+import gjum.minecraft.mapsync.mod.net.packet.ClientboundWelcomePacket;
 import gjum.minecraft.mapsync.mod.net.packet.ServerboundHandshakePacket;
 import java.io.ByteArrayOutputStream;
+import java.nio.ByteBuffer;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -30,30 +33,50 @@ public final class MapSyncServerMod {
 		});
 	}
 
-	/// Encodes a packet through the shared wire-protocol classes at startup so
-	/// any future client-only import sneaking into `net/buffers`, `net/packet`,
-	/// `data`, or `utils` fails loudly here rather than at the first real
-	/// websocket connection in Phase 2+.
+	/// Round-trips both directions of the wire protocol through the shared
+	/// encoder/decoder at server startup. Catches three classes of regressions
+	/// early: (1) a client-only import sneaking into `net/buffers`,
+	/// `net/packet`, `data`, or `utils` and breaking classloading; (2) a
+	/// serverbound packet missing its server-side `read()`; (3) a clientbound
+	/// packet missing its server-side `write()`. Any failure here aborts the
+	/// dedicated server boot with a clear cause.
 	private static void runSharedProtocolSanityCheck() {
 		try {
-			final var packet = new ServerboundHandshakePacket(
-				"phase-1-sanity-check",
+			// Serverbound: encode (as the client would) → decode (as the server now must).
+			final var sent = new ServerboundHandshakePacket(
+				"phase-2-sanity-check",
 				new GameAddress("localhost:25565")
 			);
-			final var sink = new ByteArrayOutputStream();
-			Packet.encodePacket(new BufferWriter(sink), packet);
-			final byte[] encoded = sink.toByteArray();
-			if (encoded.length == 0 || (encoded[0] & 0xFF) != ServerboundHandshakePacket.PACKET_ID) {
+			final var clientToServer = new ByteArrayOutputStream();
+			Packet.encodePacket(new BufferWriter(clientToServer), sent);
+			final byte[] s2s = clientToServer.toByteArray();
+			final Packet decoded = Packet.decodeServerbound(new BufferReader(ByteBuffer.wrap(s2s)));
+			if (!(decoded instanceof ServerboundHandshakePacket received)) {
+				throw new IllegalStateException("Serverbound round-trip lost type: " + decoded.getClass().getName());
+			}
+			if (!received.modVersion().equals(sent.modVersion())
+				|| !received.gameAddress().address().equals(sent.gameAddress().address())) {
+				throw new IllegalStateException("Serverbound round-trip payload mismatch");
+			}
+
+			// Clientbound: encode (the new path the server now uses).
+			final var serverToClient = new ByteArrayOutputStream();
+			Packet.encodePacket(new BufferWriter(serverToClient), new ClientboundWelcomePacket());
+			final byte[] c2c = serverToClient.toByteArray();
+			if (c2c.length != 1 || (c2c[0] & 0xFF) != ClientboundWelcomePacket.PACKET_ID) {
 				throw new IllegalStateException(
-					"Round-trip produced unexpected packet id: "
-						+ (encoded.length == 0 ? "<empty>" : Integer.toString(encoded[0] & 0xFF))
+					"Clientbound welcome did not encode to a single packet-id byte (got " + c2c.length + " bytes)"
 				);
 			}
-			logger.info("MapSync shared protocol load check OK ({} bytes encoded)", encoded.length);
+
+			logger.info(
+				"MapSync wire-protocol round-trip OK ({} bytes serverbound, {} bytes clientbound)",
+				s2s.length, c2c.length
+			);
 		}
 		catch (final Exception e) {
 			throw new RuntimeException(
-				"MapSync shared protocol sanity check failed — server-side classloading regressed",
+				"MapSync shared protocol sanity check failed — server-side classloading or wire-format regressed",
 				e
 			);
 		}

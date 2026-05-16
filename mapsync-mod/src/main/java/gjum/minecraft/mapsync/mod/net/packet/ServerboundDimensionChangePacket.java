@@ -1,6 +1,7 @@
 package gjum.minecraft.mapsync.mod.net.packet;
 
 import gjum.minecraft.mapsync.mod.net.Packet;
+import gjum.minecraft.mapsync.mod.net.buffers.BufferReader;
 import gjum.minecraft.mapsync.mod.net.buffers.BufferWriter;
 import gjum.minecraft.mapsync.mod.utils.Assertions;
 import net.minecraft.resources.Identifier;
@@ -20,6 +21,12 @@ public record ServerboundDimensionChangePacket(
 
 	public ServerboundDimensionChangePacket {
 		Assertions.assertNotNull(dimension);
+	}
+
+	public static @NotNull Packet read(
+		final @NotNull BufferReader reader
+	) throws Exception {
+		return new ServerboundDimensionChangePacket(reader.readIdentifier());
 	}
 
 	@Override

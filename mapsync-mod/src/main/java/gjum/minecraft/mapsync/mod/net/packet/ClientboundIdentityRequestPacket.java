@@ -2,6 +2,7 @@ package gjum.minecraft.mapsync.mod.net.packet;
 
 import gjum.minecraft.mapsync.mod.net.Packet;
 import gjum.minecraft.mapsync.mod.net.buffers.BufferReader;
+import gjum.minecraft.mapsync.mod.net.buffers.BufferWriter;
 import gjum.minecraft.mapsync.mod.utils.Assertions;
 import org.jetbrains.annotations.NotNull;
 
@@ -25,5 +26,12 @@ public record ClientboundIdentityRequestPacket(
 		return new ClientboundIdentityRequestPacket(
 			reader.readBytesOfLength(reader.readUnt8())
 		);
+	}
+
+	@Override
+	public void write(
+		final @NotNull BufferWriter writer
+	) throws Exception {
+		writer.writeLengthPrefixedBytes(BufferWriter::writeUnt8, this.serverSalt());
 	}
 }

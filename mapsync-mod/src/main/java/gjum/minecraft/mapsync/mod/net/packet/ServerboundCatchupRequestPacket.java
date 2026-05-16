@@ -1,9 +1,11 @@
 package gjum.minecraft.mapsync.mod.net.packet;
 
 import gjum.minecraft.mapsync.mod.net.Packet;
+import gjum.minecraft.mapsync.mod.net.buffers.BufferReader;
 import gjum.minecraft.mapsync.mod.net.buffers.BufferWriter;
 import gjum.minecraft.mapsync.mod.utils.Assertions;
 import gjum.minecraft.mapsync.mod.utils.MagicValues;
+import java.util.HashMap;
 import java.util.Map;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.level.ChunkPos;
@@ -28,6 +30,25 @@ public record ServerboundCatchupRequestPacket(
 		Assertions.assertNotNull(dimension);
 		chunks = Assertions.assertNonNullMap(chunks);
 		Assertions.assertIntRange(IntegerRange.of(1, MagicValues.REGION_GRID), chunks.size());
+	}
+
+	public static @NotNull Packet read(
+		final @NotNull BufferReader reader
+	) throws Exception {
+		final Identifier dimension = reader.readIdentifier();
+		final short regionX = (short) reader.readInt16();
+		final short regionZ = (short) reader.readInt16();
+		final int count = reader.readUnt10() + 1;
+		final int anchorX = regionX << 5;
+		final int anchorZ = regionZ << 5;
+		final Map<ChunkPos, Long> chunks = new HashMap<>(count);
+		for (int i = 0; i < count; i++) {
+			final int localX = reader.readUnt5();
+			final int localZ = reader.readUnt5();
+			final long timestamp = reader.readInt64();
+			chunks.put(new ChunkPos(anchorX + localX, anchorZ + localZ), timestamp);
+		}
+		return new ServerboundCatchupRequestPacket(dimension, regionX, regionZ, chunks);
 	}
 
 	@Override

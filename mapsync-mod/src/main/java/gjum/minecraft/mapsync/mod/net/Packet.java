@@ -22,6 +22,7 @@ public interface Packet {
 		throw new NotImplementedException();
 	}
 
+	/// Client-side decode: turns server→client bytes into a Packet record.
 	public static @NotNull Packet decodePacket(
 		final @NotNull BufferReader reader
 	) throws Exception {
@@ -32,6 +33,22 @@ public interface Packet {
 			case ClientboundWelcomePacket.PACKET_ID -> ClientboundWelcomePacket.read(reader);
 			case ClientboundChunkTimestampsResponsePacket.PACKET_ID -> ClientboundChunkTimestampsResponsePacket.read(reader);
 			case ClientboundRegionTimestampsPacket.PACKET_ID -> ClientboundRegionTimestampsPacket.read(reader);
+			default -> throw new UnexpectedPacketException((byte) packetId);
+		};
+	}
+
+	/// Server-side decode: turns client→server bytes into a Packet record.
+	public static @NotNull Packet decodeServerbound(
+		final @NotNull BufferReader reader
+	) throws Exception {
+		final int packetId = reader.readUnt8();
+		return switch (packetId) {
+			case ServerboundHandshakePacket.PACKET_ID -> ServerboundHandshakePacket.read(reader);
+			case ServerboundIdentityResponsePacket.PACKET_ID -> ServerboundIdentityResponsePacket.read(reader);
+			case ServerboundDimensionChangePacket.PACKET_ID -> ServerboundDimensionChangePacket.read(reader);
+			case ServerboundChunkTimestampsRequestPacket.PACKET_ID -> ServerboundChunkTimestampsRequestPacket.read(reader);
+			case ServerboundCatchupRequestPacket.PACKET_ID -> ServerboundCatchupRequestPacket.read(reader);
+			case ChunkTilePacket.PACKET_ID -> ChunkTilePacket.read(reader);
 			default -> throw new UnexpectedPacketException((byte) packetId);
 		};
 	}
@@ -47,6 +64,10 @@ public interface Packet {
 			case ServerboundDimensionChangePacket $ -> ServerboundDimensionChangePacket.PACKET_ID;
 			case ServerboundChunkTimestampsRequestPacket $ -> ServerboundChunkTimestampsRequestPacket.PACKET_ID;
 			case ServerboundCatchupRequestPacket $ -> ServerboundCatchupRequestPacket.PACKET_ID;
+			case ClientboundIdentityRequestPacket $ -> ClientboundIdentityRequestPacket.PACKET_ID;
+			case ClientboundWelcomePacket $ -> ClientboundWelcomePacket.PACKET_ID;
+			case ClientboundRegionTimestampsPacket $ -> ClientboundRegionTimestampsPacket.PACKET_ID;
+			case ClientboundChunkTimestampsResponsePacket $ -> ClientboundChunkTimestampsResponsePacket.PACKET_ID;
 			default -> throw new UnexpectedPacketException(packet);
 		});
 		packet.write(writer);

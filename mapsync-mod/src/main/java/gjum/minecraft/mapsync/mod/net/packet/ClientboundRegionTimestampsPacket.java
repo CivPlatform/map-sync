@@ -3,6 +3,7 @@ package gjum.minecraft.mapsync.mod.net.packet;
 import gjum.minecraft.mapsync.mod.data.RegionTimestamp;
 import gjum.minecraft.mapsync.mod.net.Packet;
 import gjum.minecraft.mapsync.mod.net.buffers.BufferReader;
+import gjum.minecraft.mapsync.mod.net.buffers.BufferWriter;
 import gjum.minecraft.mapsync.mod.utils.Assertions;
 import org.jetbrains.annotations.NotNull;
 
@@ -32,5 +33,15 @@ public record ClientboundRegionTimestampsPacket(
 				reader.readInt64()
 			)
 		);
+	}
+
+	@Override
+	public void write(
+		final @NotNull BufferWriter writer
+	) throws Exception {
+		writer.writeString(this.dimension());
+		writer.writeInt16(this.timestamp().x());
+		writer.writeInt16(this.timestamp().z());
+		writer.writeInt64(this.timestamp().timestamp());
 	}
 }

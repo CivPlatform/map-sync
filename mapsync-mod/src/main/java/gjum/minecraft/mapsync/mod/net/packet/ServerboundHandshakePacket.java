@@ -2,6 +2,7 @@ package gjum.minecraft.mapsync.mod.net.packet;
 
 import gjum.minecraft.mapsync.mod.data.GameAddress;
 import gjum.minecraft.mapsync.mod.net.Packet;
+import gjum.minecraft.mapsync.mod.net.buffers.BufferReader;
 import gjum.minecraft.mapsync.mod.net.buffers.BufferWriter;
 import gjum.minecraft.mapsync.mod.utils.Assertions;
 import org.jetbrains.annotations.NotNull;
@@ -19,6 +20,15 @@ public record ServerboundHandshakePacket(
 	public ServerboundHandshakePacket {
 		Assertions.assertNotNull(modVersion);
 		Assertions.assertNotNull(gameAddress);
+	}
+
+	public static @NotNull Packet read(
+		final @NotNull BufferReader reader
+	) throws Exception {
+		return new ServerboundHandshakePacket(
+			reader.readString(),
+			new GameAddress(reader.readString())
+		);
 	}
 
 	@Override

@@ -1,13 +1,21 @@
 package gjum.minecraft.mapsync.mod.server;
 
+import com.mojang.authlib.GameProfile;
 import gjum.minecraft.mapsync.mod.server.config.MapSyncConfig;
 import gjum.minecraft.mapsync.mod.server.config.UuidCache;
 import gjum.minecraft.mapsync.mod.server.config.Whitelist;
 import gjum.minecraft.mapsync.mod.server.db.MapSyncDatabase;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.UUID;
 import net.minecraft.server.MinecraftServer;
+import net.minecraft.server.players.NameAndId;
+import net.minecraft.server.players.PlayerList;
+import net.minecraft.server.players.ServerOpListEntry;
+import net.minecraft.server.players.UserWhiteListEntry;
 import net.minecraft.world.level.storage.LevelResource;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -21,6 +29,7 @@ import org.jetbrains.annotations.Nullable;
 /// Data lives in `<world>/mapsync/` so a server with multiple worlds — or
 /// a server that swaps worlds — gets a fresh sync database per world.
 public final class MapSyncServerState implements AutoCloseable {
+	private static final Logger logger = LogManager.getLogger(MapSyncServerState.class);
 	private static volatile @Nullable MapSyncServerState instance;
 
 	private final @NotNull Path dataDir;
@@ -78,6 +87,50 @@ public final class MapSyncServerState implements AutoCloseable {
 
 	public @NotNull MapSyncDatabase database() {
 		return this.database;
+	}
+
+	/// Folds the Minecraft server's whitelist and ops list into MapSync's
+	/// whitelist so operators don't manage two parallel allowlists. Called
+	/// at SERVER_STARTING and again on every player join to pick up live
+	/// `/whitelist add` and `/op` changes without a restart. New additions
+	/// trigger a save; if nothing changed, no IO happens.
+	public void importMinecraftAllowlist(
+		final @NotNull MinecraftServer server
+	) throws Exception {
+		final PlayerList players = server.getPlayerList();
+		int added = 0;
+		for (final UserWhiteListEntry entry : players.getWhiteList().getEntries()) {
+			final NameAndId user = entry.getUser();
+			if (user != null && this.whitelist.add(user.id())) {
+				added++;
+				logger.info("Auto-whitelisted MC-whitelisted player {} ({})", user.name(), user.id());
+			}
+		}
+		for (final ServerOpListEntry entry : players.getOps().getEntries()) {
+			final NameAndId user = entry.getUser();
+			if (user != null && this.whitelist.add(user.id())) {
+				added++;
+				logger.info("Auto-whitelisted operator {} ({})", user.name(), user.id());
+			}
+		}
+		if (added > 0) {
+			this.whitelist.save(this.dataDir.resolve("whitelist.json"));
+		}
+	}
+
+	/// Records an IGN→UUID mapping learned from a player joining the
+	/// Minecraft server. Lets operators later run `/mapsync whitelist add
+	/// <name>` for someone who's already played here even if MapSync's
+	/// websocket has never seen them.
+	public void cachePlayerProfile(
+		final @NotNull GameProfile profile
+	) throws Exception {
+		final UUID before = this.uuidCache.lookup(profile.name());
+		if (profile.id().equals(before)) {
+			return;
+		}
+		this.uuidCache.put(profile.name(), profile.id());
+		this.uuidCache.save(this.dataDir.resolve("uuid_cache.json"));
 	}
 
 	public static @Nullable MapSyncServerState current() {

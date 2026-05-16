@@ -21,6 +21,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
+import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.jetbrains.annotations.ApiStatus;
@@ -59,6 +60,35 @@ public final class MapSyncServerMod {
 				// Crash the server boot rather than continuing in a half-open
 				// state — partial persistence is worse than refusing to start.
 				throw new RuntimeException("Failed to open MapSync server state", e);
+			}
+		});
+		// Allowlist import must run after SERVER_STARTING because the player
+		// list (and thus the MC whitelist + ops) is only constructed during
+		// later server startup. SERVER_STARTED fires once that's all wired up.
+		ServerLifecycleEvents.SERVER_STARTED.register((server) -> {
+			final MapSyncServerState state = MapSyncServerState.current();
+			if (state == null) {
+				return;
+			}
+			try {
+				state.importMinecraftAllowlist(server);
+				logger.info("MapSync whitelist now has {} entries", state.whitelist().size());
+			}
+			catch (final Exception e) {
+				logger.error("Failed to import Minecraft allowlist into MapSync", e);
+			}
+		});
+		ServerPlayConnectionEvents.JOIN.register((handler, sender, server) -> {
+			final MapSyncServerState state = MapSyncServerState.current();
+			if (state == null) {
+				return;
+			}
+			try {
+				state.importMinecraftAllowlist(server);
+				state.cachePlayerProfile(handler.getPlayer().getGameProfile());
+			}
+			catch (final Exception e) {
+				logger.error("Failed to sync MapSync state on player join", e);
 			}
 		});
 		ServerLifecycleEvents.SERVER_STOPPING.register((server) -> {

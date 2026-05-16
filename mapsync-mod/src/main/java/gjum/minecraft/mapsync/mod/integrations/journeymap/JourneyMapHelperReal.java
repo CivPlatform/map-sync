@@ -38,8 +38,8 @@ public class JourneyMapHelperReal {
 		var rCoord = RegionCoord.fromChunkPos(
 			FileHandler.getJMWorldDir(mc),
 			MapType.day(chunkTile.dimension()), // type doesn't matter, only dimension is used
-			chunkMd.getCoord().x,
-			chunkMd.getCoord().z);
+			chunkMd.getCoord().x(),
+			chunkMd.getCoord().z());
 
 		final boolean renderedDay = renderWithDiagnostics(rCoord,
 			MapType.day(chunkTile.dimension()), chunkMd, "day");

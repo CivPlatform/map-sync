@@ -7,11 +7,11 @@ public record RegionPos(int x, int z) {
 	public static final int CHUNKS_IN_REGION = 32 * 32;
 
 	public static RegionPos forChunkPos(ChunkPos pos) {
-		return new RegionPos(pos.x >> 5, pos.z >> 5);
+		return new RegionPos(pos.x() >> 5, pos.z() >> 5);
 	}
 
 	public static int chunkIndex(ChunkPos pos) {
-		return (pos.x & 0b11111) + 32 * (pos.z & 0b11111);
+		return (pos.x() & 0b11111) + 32 * (pos.z() & 0b11111);
 	}
 
 }

@@ -6,7 +6,7 @@ import gjum.minecraft.mapsync.mod.sync.GameContext;
 import java.util.Arrays;
 import java.util.Objects;
 import java.util.Set;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.Checkbox;
 import net.minecraft.client.gui.components.EditBox;
@@ -117,20 +117,20 @@ public final class SyncConnectionsGui extends Screen {
 	}
 
 	@Override
-	public void render(
-		final @NotNull GuiGraphics guiGraphics,
+	public void extractRenderState(
+		final @NotNull GuiGraphicsExtractor guiGraphics,
 		final int mouseX,
 		final int mouseY,
 		final float partialTick
 	) {
-		super.render(guiGraphics, mouseX, mouseY, partialTick);
+		super.extractRenderState(guiGraphics, mouseX, mouseY, partialTick);
 
 		int top = this.offsetTop;
-		guiGraphics.drawCenteredString(this.font, this.title, this.width / 2, top, 0xFF_FF_FF);
+		guiGraphics.centeredText(this.font, this.title, this.width / 2, top, 0xFF_FF_FF);
 
 		top += 70;
 		if (this.gameContext.getDimensionState().orElse(null) instanceof final DimensionState dimensionState) {
-			guiGraphics.drawString(
+			guiGraphics.text(
 				this.font,
 				"In dimension %s, received %d chunks, rendered %d, rendering %d".formatted(
 					dimensionState.dimension.identifier(),
@@ -167,7 +167,7 @@ public final class SyncConnectionsGui extends Screen {
 					statusText += " Unknown state: " + connectionState;
 				}
 			}
-			guiGraphics.drawString(this.font, statusText, this.offsetLeft, top, statusColor);
+			guiGraphics.text(this.font, statusText, this.offsetLeft, top, statusColor);
 			top += 10;
 		}
 	}

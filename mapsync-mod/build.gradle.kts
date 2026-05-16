@@ -33,41 +33,32 @@ loom {
 
 dependencies {
 	minecraft(libs.minecraft)
-	loom {
-		mappings(layered {
-			officialMojangMappings()
-			parchment(libs.parchment)
-		})
-	}
-	modImplementation(libs.fabricLoader)
-	modImplementation(libs.fabricApi)
+	// 26.1+ ships unobfuscated; no mappings layer is required.
+	implementation(libs.fabricLoader)
+	implementation(libs.fabricApi)
 
 	project(":dep-websockets", configuration = "shadedElements").also {
 		implementation(it)
 		include(it)
 	}
 
-	modLocalDep(libs.fixChat)
-	modImplementation(libs.modmenu)
+	implementation(libs.modmenu)
 
 	libs.voxelmap.also {
-		modCompileOnly(it)
+		compileOnly(it)
 		modLocalDep(it) // Uncomment to test VoxelMap
 	}
 	libs.journeymap.also {
-		modCompileOnly(it)
+		compileOnly(it)
 		//modLocalDep(it) // Uncomment to test JourneyMap
 	}
 	libs.xaerosmap.also {
-		modCompileOnly(it)
+		compileOnly(it)
 		//modLocalDep(it) // Uncomment to test XaerosMap
 	}
 }
 
 repositories {
-	maven(url = "https://maven.parchmentmc.org") {
-		name = "ParchmentMC"
-	}
 	maven(url = "https://api.modrinth.com/maven") {
 		name = "Modrinth"
 		content {
@@ -79,17 +70,17 @@ repositories {
 
 java {
 	withSourcesJar()
-	sourceCompatibility = JavaVersion.VERSION_21
-	targetCompatibility = JavaVersion.VERSION_21
+	sourceCompatibility = JavaVersion.VERSION_25
+	targetCompatibility = JavaVersion.VERSION_25
 	toolchain {
-		languageVersion = JavaLanguageVersion.of(21)
+		languageVersion = JavaLanguageVersion.of(25)
 	}
 }
 
 tasks {
 	compileJava {
 		options.encoding = "UTF-8"
-		options.release = 21
+		options.release = 25
 	}
 	jar {
 		from(file("../LICENSE")) {
@@ -133,7 +124,7 @@ tasks {
 		dependsOn(copyRunClientDeps)
 	}
 	val copyDistJar = register<Sync>("distJar") {
-		from(remapJar)
+		from(jar)
 		into(file("dist/"))
 	}
 	build {

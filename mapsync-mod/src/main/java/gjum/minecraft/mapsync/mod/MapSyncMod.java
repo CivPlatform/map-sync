@@ -35,7 +35,7 @@ import java.util.Map;
 import java.util.Set;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientChunkEvents;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
-import net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper;
+import net.fabricmc.fabric.api.client.keymapping.v1.KeyMappingHelper;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientLevel;
@@ -62,7 +62,7 @@ public final class MapSyncMod {
 
 	@ApiStatus.Internal
 	public static void bootstrap() {
-		KeyBindingHelper.registerKeyBinding(OPEN_GUI_KEY);
+		KeyMappingHelper.registerKeyMapping(OPEN_GUI_KEY);
 
 		modConfig = ModConfig.load();
 		modConfig.save(); // creates the default file if it doesn't exist yet
@@ -91,8 +91,8 @@ public final class MapSyncMod {
 			}
 			final ChunkPos chunkPos = chunk.getPos();
 			debugLog("received mc chunk: %d,%d".formatted(
-				chunkPos.x,
-				chunkPos.z
+				chunkPos.x(),
+				chunkPos.z()
 			));
 			final ChunkTile chunkTile = chunkTileFromLevel(level, chunk);
 			// TODO handle journeymap skipping chunks due to rate limiting - probably need mixin on render function

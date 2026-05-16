@@ -30,8 +30,8 @@ public final class CatchupChunk {
 	 * calculates square of Euclidean distance to the other chunk
 	 */
 	public int getDistanceSq(ChunkPos other) {
-		int dx = other.x - chunk_x;
-		int dz = other.z - chunk_z;
+		int dx = other.x() - chunk_x;
+		int dz = other.z() - chunk_z;
 		return dx * dx + dz * dz;
 	}
 

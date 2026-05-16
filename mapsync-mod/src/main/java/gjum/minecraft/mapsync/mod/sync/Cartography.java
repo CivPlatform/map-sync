@@ -43,7 +43,7 @@ public class Cartography {
 		});
 
 		final ChunkPos chunkPos = chunk.getPos();
-		return new ChunkTile(dimension, chunkPos.x, chunkPos.z, timestamp, dataVersion, dataHash, columns);
+		return new ChunkTile(dimension, chunkPos.x(), chunkPos.z(), timestamp, dataVersion, dataHash, columns);
 	}
 
 	public static BlockColumn blockColumnFromChunk(LevelChunk chunk, BlockPos.MutableBlockPos pos) {

@@ -1,68 +1,64 @@
 # Getting Started
 
-## Installing The Server
+MapSync now ships as a single Fabric jar that serves as both the client mod and the bundled server. There's no separate server binary, no Node.js, no Docker.
 
-The MapSync server is **recommened** to be run install a docker container
+## Server install
 
-1. [Install the Docker Engine](https://docs.docker.com/engine/install/), if you haven't already.
-2. [Install Docker Compose](https://docs.docker.com/compose/install/) (We're using Docker Compose V2, so update if you haven't already done so.)
-3. Open a terminal.
-4. Clone our code.
-    - `git clone https://github.com/CivPlatform/map-sync.git`
-5. Change your working directory.
-    - `cd map-sync/`
-6. To run the server:
-    - `docker compose up -d`
-    - To stop the headless server: `docker compose down`
+1. Run a Fabric Minecraft server matching the MapSync jar's Minecraft version (see the jar filename — e.g. `MapSync-2.2.0-SNAPSHOT-26.1.2.jar` is for MC 26.1.2).
+2. Drop the MapSync jar into your server's `mods/` folder. The `fabric-api` mod must also be present.
+3. Start the server.
 
-Your MapSync server is now running!
+On first start, MapSync creates `<world>/mapsync/` containing:
 
-## Updating Your MapSync Server
+- `config.json` — port (`12312` default), host, auth toggle, whitelist toggle, advertised host.
+- `whitelist.json` — UUID allowlist. MC's `whitelist.json` and ops list are auto-imported.
+- `uuid_cache.json` — name → UUID resolution for `/mapsync whitelist add <ign>`.
+- `db.sqlite` — chunk and timestamp persistence.
 
-Updating your MapSync server is breeze!
+If you're migrating from the standalone `mapsync-server`, copy your old `db.sqlite`, `whitelist.json`, and `uuid_cache.json` into `<world>/mapsync/`. The on-disk formats are identical.
 
-1. Return to the folder you install the server too
-    - Should be the one with the `docker-compose.yaml` file
-2. Download the update and restart the server
-    - `docker compose up -d --pull "always"`
+## Client install
 
-Your now running the latest MapSync server!
+Drop the same MapSync jar into your **Fabric client's** `mods/` folder, alongside whichever map mod you use (Xaero's World Map, JourneyMap, or Voxelmap). Join the server normally — the MapSync handshake runs automatically:
 
-## Configuring MapSync
+1. The server pushes a `mapsync:sync_address` payload on join.
+2. The client opens a websocket to that address.
+3. The auth handshake runs through Mojang's session server (or offline-mode if the server is configured with `auth: false`).
+4. The server checks the connecting UUID against its whitelist.
+5. Chunks start streaming.
 
-By default, a whitelist will deny any connections, which can be turned off from the config file. (**Caution**)\
-You can also add and remove players via the commands below or via the config files
+Open the MapSync GUI in-game with the comma `,` keybind (or via Mod Menu) to see connection status, toggle auto-connect, or flip the "Preserve existing map data" safeguard.
 
-### Using the CLI
+## Operator commands
 
-If you want to manage your mapsync server via the CLI:
+All commands require op (`level 3`):
 
-1. Return to the folder you install the server too
-    - Should be the one with the `docker-compose.yaml` file
-2. Attach to the container
-    - `docker compose run --rm -it -p 12312:12312 map-sync`
-3. Run any of these commands as you wish:
+| Command | Effect |
+|---|---|
+| `/mapsync status` | Listening address, client count, config flags, on-disk path. |
+| `/mapsync whitelist list` | All whitelisted entries with cached IGNs. |
+| `/mapsync whitelist add <uuid-or-ign>` | Add to whitelist; IGN must have joined the MC server before. |
+| `/mapsync whitelist remove <uuid-or-ign>` | Remove from whitelist. |
+| `/mapsync whitelist reload` | Re-read `whitelist.json` and re-import MC's allowlist. |
+| `/mapsync clients list` | Connected MapSync clients with auth state, dimension, game address. |
+| `/mapsync clients kick <id>` | Close one connection. |
 
+## Configuration
+
+`<world>/mapsync/config.json`:
+
+```json
+{
+  "host": "0.0.0.0",
+  "port": 12312,
+  "whitelist": true,
+  "auth": true,
+  "advertisedHost": ""
+}
 ```
-help -- prints more info about below commands
-whitelist_load -- reload whitelist
-whitelist_save -- force whitelist to save
-whitelist_add_ign <name> -- requires the player to have connected in the past
-whitelist_remove_ign <name> -- requires the player to have connected in the past
-whitelist_add <uuid> -- add to whitelist by UUID
-whitelist_remove <uuid> -- remove from whitelist by UUID
-list -- lists players
-send <uuid/name> -- sends all available data to player
-kick <uuid/name> -- kicks player from sync server
-```
 
-4. When your down, use the key sequence to detach from the contaier
-    - `CTRL-p CTRL-q`
-    - **DO NOT USE** `CTRL-c`, this will stop the server
-        - If you did accidentally stop the server, run `docker compose up -d`
-
-### Editing The Config Files
-
-You can control who has access to a Sync Server by editing its `allowed-users.txt`. If someone connects who is not allowed access yet, their name and UUID gets written to `denied-users.txt`, from where you can just cut+paste it into `allowed-users.txt` and restart the server to grant access.
-
-These files can be found in the `data` directory
+- `host`: bind address for the websocket. `0.0.0.0` accepts from anywhere.
+- `port`: TCP port for the websocket. Default `12312`.
+- `whitelist`: if `true`, only UUIDs in `whitelist.json` (or MC's whitelist/ops) can connect.
+- `auth`: if `true`, run Mojang session-server auth on connection. Disable only for offline-mode servers.
+- `advertisedHost`: hostname the client should connect to. Empty (default) means "use the same host as the MC server" — fine for single-host deployments. Override if MapSync runs behind a reverse proxy with a separate hostname.

@@ -42,6 +42,13 @@ dependencies {
 		include(it)
 	}
 
+	// Bundled server uses SQLite for chunk persistence. JIJ so we don't fight
+	// with other mods' classloader instances of the driver.
+	libs.sqliteJdbc.also {
+		implementation(it)
+		include(it)
+	}
+
 	implementation(libs.modmenu)
 
 	libs.voxelmap.also {

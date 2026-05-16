@@ -19,6 +19,8 @@ journeymap = { group = "maven.modrinth", name = "journeymap", version = "m5NUJY9
 xaerosmap = { group = "maven.modrinth", name = "xaeros-world-map", version = "D0plbArp" }
 # https://mvnrepository.com/artifact/org.java-websocket/Java-WebSocket
 java-ws = { group = "org.java-websocket", name = "Java-WebSocket", version = "1.6.0" }
+# https://mvnrepository.com/artifact/org.xerial/sqlite-jdbc
+sqliteJdbc = { group = "org.xerial", name = "sqlite-jdbc", version = "3.53.1.0" }
 
 [plugins]
 fabricLoom = { id = "net.fabricmc.fabric-loom", version.ref = "fabricLoom" }

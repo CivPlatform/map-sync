@@ -7,10 +7,12 @@ import gjum.minecraft.mapsync.mod.data.ChunkTile;
 import gjum.minecraft.mapsync.mod.data.GameAddress;
 import gjum.minecraft.mapsync.mod.data.RegionPos;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicReference;
 import net.minecraft.client.Minecraft;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.Level;
+import org.jetbrains.annotations.NotNull;
 
 /**
  * contains any background processes and data structures, to be able to easily tear down when leaving the dimension
@@ -26,6 +28,8 @@ public class DimensionState {
 	private final CatchupLogic catchup;
 	private int numChunksReceived = 0;
 	private int numChunksRendered = 0;
+	private final AtomicReference<XaeroBackfillStatus> backfillStatus =
+		new AtomicReference<>(new XaeroBackfillStatus.NotNeeded("pending"));
 
 	DimensionState(GameAddress gameAddress, ResourceKey<Level> dimension) {
 		this.dimension = dimension;
@@ -34,8 +38,9 @@ public class DimensionState {
 		catchup = new CatchupLogic(this);
 		// One-shot import of Xaero region-cache mtimes into chunkMeta. No-op
 		// if a marker file from a previous session is already present, or if
-		// Xaero isn't installed.
-		XaeroMtimeBackfill.runIfNeeded(chunkMeta);
+		// Xaero isn't installed. Status flows into backfillStatus so the
+		// MapSync GUI can render progress.
+		XaeroMtimeBackfill.runIfNeeded(chunkMeta, this.backfillStatus::set);
 	}
 
 	public synchronized void shutDown() {
@@ -68,6 +73,18 @@ public class DimensionState {
 
 	public int getRenderQueueSize() {
 		return renderQueue.getQueueSize();
+	}
+
+	public long getTrackedChunkCount() {
+		return this.chunkMeta.getTrackedChunkCount();
+	}
+
+	public int getLoadedRegionCount() {
+		return this.chunkMeta.getLoadedRegionCount();
+	}
+
+	public @NotNull XaeroBackfillStatus getBackfillStatus() {
+		return this.backfillStatus.get();
 	}
 
 	public void addCatchupChunks(List<CatchupChunk> catchupChunks) {

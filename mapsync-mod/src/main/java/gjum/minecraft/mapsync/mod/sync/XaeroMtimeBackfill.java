@@ -6,6 +6,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Instant;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Consumer;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -26,7 +27,8 @@ import org.slf4j.LoggerFactory;
 /// Runs once per `(server, dimension)` and tracks completion via a
 /// `.xaero-backfilled` marker file next to the chunkmeta. Skips silently
 /// when Xaero isn't installed (other map mods retain the basic NULLISH
-/// safeguard as a backstop).
+/// safeguard as a backstop). Status flows through the caller-supplied
+/// consumer so SyncConnectionsGui can render live progress.
 public final class XaeroMtimeBackfill {
 	private static final Logger logger = LoggerFactory.getLogger(XaeroMtimeBackfill.class);
 	private static final String MARKER_FILENAME = ".xaero-backfilled";
@@ -36,21 +38,27 @@ public final class XaeroMtimeBackfill {
 	private XaeroMtimeBackfill() {
 	}
 
-	/// Schedules the backfill on a daemon thread. Returns immediately. If
-	/// the marker already exists or Xaero isn't installed, the schedule is
-	/// a no-op.
+	/// Schedules the backfill on a daemon thread. Returns immediately. The
+	/// status consumer is invoked at least once before this method returns
+	/// (with NotNeeded / WaitingForXaero) and again at each phase transition
+	/// from the worker thread. Callers can stash the latest status in an
+	/// AtomicReference for the renderer to read.
 	public static void runIfNeeded(
-		final @NotNull DimensionChunkMeta meta
+		final @NotNull DimensionChunkMeta meta,
+		final @NotNull Consumer<XaeroBackfillStatus> statusListener
 	) {
 		if (XaerosWorldMapHelper.isXaerosWorldMapNotAvailable) {
+			statusListener.accept(new XaeroBackfillStatus.NotNeeded("Xaero not installed"));
 			return;
 		}
 		final Path markerPath = meta.getDimensionDirPath().resolve(MARKER_FILENAME);
 		if (Files.exists(markerPath)) {
+			statusListener.accept(new XaeroBackfillStatus.NotNeeded("marker exists"));
 			return;
 		}
+		statusListener.accept(new XaeroBackfillStatus.WaitingForXaero());
 		final Thread worker = new Thread(
-			() -> runBackfill(meta, markerPath),
+			() -> runBackfill(meta, markerPath, statusListener),
 			"MapSync-Xaero-Backfill"
 		);
 		worker.setDaemon(true);
@@ -59,26 +67,33 @@ public final class XaeroMtimeBackfill {
 
 	private static void runBackfill(
 		final @NotNull DimensionChunkMeta meta,
-		final @NotNull Path markerPath
+		final @NotNull Path markerPath,
+		final @NotNull Consumer<XaeroBackfillStatus> statusListener
 	) {
 		try {
 			if (!waitForXaeroDetection()) {
-				logger.warn(
-					"Xaero region detection still incomplete after {}ms — skipping mtime backfill for {}",
-					DETECTION_TIMEOUT_MS,
-					meta.getDimensionDirPath()
-				);
+				final String reason = "Xaero region detection still incomplete after "
+					+ DETECTION_TIMEOUT_MS + "ms";
+				logger.warn("{} — skipping mtime backfill for {}", reason, meta.getDimensionDirPath());
+				statusListener.accept(new XaeroBackfillStatus.Failed(reason));
 				return;
 			}
 			// Re-check the marker after the wait: a fast dimension swap can
 			// schedule two backfills for the same dim before either runs.
 			if (Files.exists(markerPath)) {
+				statusListener.accept(new XaeroBackfillStatus.NotNeeded("marker appeared mid-wait"));
 				return;
 			}
 			final int[] regionCount = {0};
+			statusListener.accept(new XaeroBackfillStatus.Backfilling(0));
 			XaerosWorldMapHelper.iterateExistingRegions((rx, rz, mtime) -> {
 				meta.bulkSetRegionTimestamp(new RegionPos(rx, rz), mtime);
 				regionCount[0]++;
+				// Don't push on every region for very large caches — every 25
+				// keeps the GUI responsive without thrashing AtomicReference.
+				if (regionCount[0] % 25 == 0) {
+					statusListener.accept(new XaeroBackfillStatus.Backfilling(regionCount[0]));
+				}
 			});
 			Files.createDirectories(markerPath.getParent());
 			Files.writeString(markerPath, Instant.now().toString());
@@ -87,13 +102,16 @@ public final class XaeroMtimeBackfill {
 				regionCount[0],
 				meta.getDimensionDirPath()
 			);
+			statusListener.accept(new XaeroBackfillStatus.Completed(regionCount[0]));
 		}
 		catch (final InterruptedException e) {
 			Thread.currentThread().interrupt();
+			statusListener.accept(new XaeroBackfillStatus.Failed("interrupted"));
 		}
 		catch (final Exception e) {
 			// Don't write the marker — the next session will retry.
 			logger.warn("Xaero mtime backfill failed for {}", meta.getDimensionDirPath(), e);
+			statusListener.accept(new XaeroBackfillStatus.Failed(e.getMessage() != null ? e.getMessage() : e.toString()));
 		}
 	}
 

@@ -33,6 +33,10 @@ public class DimensionChunkMeta {
 	public final GameAddress gameAddress;
 	private final Path dimensionDirPath;
 	private final Map<RegionPos, long[]> regionsTimestamps;
+	// Running count of non-NULLISH chunk timestamps across regions currently
+	// held in memory. Maintained at every mutation so the GUI can read it in
+	// O(1) instead of scanning regions * 1024 entries per frame.
+	private long nonNullishCount = 0L;
 
 	DimensionChunkMeta(
 		final @NotNull GameAddress gameAddress,
@@ -64,6 +68,13 @@ public class DimensionChunkMeta {
 		final var regionPos = RegionPos.forChunkPos(chunkPos);
 		final long[] regionTimestamps = regionsTimestamps.computeIfAbsent(regionPos, this::readRegionTimestampsFile);
 		final int chunkNr = RegionPos.chunkIndex(chunkPos);
+		final long previous = regionTimestamps[chunkNr];
+		if (previous == NULLISH_TIMESTAMP && timestamp != NULLISH_TIMESTAMP) {
+			this.nonNullishCount++;
+		}
+		else if (previous != NULLISH_TIMESTAMP && timestamp == NULLISH_TIMESTAMP) {
+			this.nonNullishCount--;
+		}
 		regionTimestamps[chunkNr] = timestamp;
 		writeRegionTimestampsFile(regionPos, regionTimestamps);
 	}
@@ -83,14 +94,15 @@ public class DimensionChunkMeta {
 		final long timestamp
 	) {
 		final long[] regionTimestamps = regionsTimestamps.computeIfAbsent(regionPos, this::readRegionTimestampsFile);
-		boolean changed = false;
+		int filled = 0;
 		for (int i = 0; i < regionTimestamps.length; i++) {
 			if (regionTimestamps[i] == NULLISH_TIMESTAMP) {
 				regionTimestamps[i] = timestamp;
-				changed = true;
+				filled++;
 			}
 		}
-		if (changed) {
+		if (filled > 0) {
+			this.nonNullishCount += filled;
 			writeRegionTimestampsFile(regionPos, regionTimestamps);
 		}
 	}
@@ -105,12 +117,28 @@ public class DimensionChunkMeta {
 	// Only call this to clear memory and file-cache
 	public synchronized void purgeRegionTimestamps() {
 		this.regionsTimestamps.clear();
+		this.nonNullishCount = 0L;
 		try {
 			FileUtils.deleteDirectory(this.dimensionDirPath.toFile());
 		}
 		catch (final IOException e) {
 			LOGGER.warn("Failed to purge region timestamps!", e);
 		}
+	}
+
+	/// O(1) snapshot of chunks currently carrying a non-NULLISH timestamp,
+	/// across every region loaded into memory. Surfaced by the GUI as
+	/// "tracked chunks". Note: regions on disk that haven't been touched
+	/// yet don't count until something reads them in.
+	public synchronized long getTrackedChunkCount() {
+		return this.nonNullishCount;
+	}
+
+	/// Number of region timestamp arrays currently held in memory. Useful
+	/// in the GUI alongside [getTrackedChunkCount] to give a sense of how
+	/// much of the world's metadata MapSync has lazily loaded.
+	public synchronized int getLoadedRegionCount() {
+		return this.regionsTimestamps.size();
 	}
 
 	private long @NotNull [] readRegionTimestampsFile(
@@ -126,6 +154,14 @@ public class DimensionChunkMeta {
 		catch (final FileNotFoundException | NoSuchFileException ignored) {}
 		catch (final Exception e) {
 			LOGGER.warn("Failed to read region timestamps file for {}", regionPos, e);
+		}
+		// Seed the running counter with whatever this region brought in. This
+		// runs inside `computeIfAbsent` so the caller is already holding the
+		// instance lock; no extra synchronization needed.
+		for (final long ts : timestamps) {
+			if (ts != NULLISH_TIMESTAMP) {
+				this.nonNullishCount++;
+			}
 		}
 		return timestamps;
 	}

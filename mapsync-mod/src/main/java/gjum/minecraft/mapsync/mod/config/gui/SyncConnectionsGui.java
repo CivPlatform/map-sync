@@ -3,6 +3,7 @@ package gjum.minecraft.mapsync.mod.config.gui;
 import gjum.minecraft.mapsync.mod.sync.DimensionState;
 import gjum.minecraft.mapsync.mod.net.SyncClient;
 import gjum.minecraft.mapsync.mod.sync.GameContext;
+import gjum.minecraft.mapsync.mod.sync.XaeroBackfillStatus;
 import java.util.Arrays;
 import java.util.Objects;
 import java.util.Set;
@@ -160,6 +161,46 @@ public final class SyncConnectionsGui extends Screen {
 				top,
 				0x88_88_88
 			);
+			top += 10;
+
+			guiGraphics.text(
+				this.font,
+				"Tracked chunks: %,d across %,d regions".formatted(
+					dimensionState.getTrackedChunkCount(),
+					dimensionState.getLoadedRegionCount()
+				),
+				this.offsetLeft,
+				top,
+				0x88_88_88
+			);
+			top += 10;
+
+			final XaeroBackfillStatus backfill = dimensionState.getBackfillStatus();
+			final String backfillLine;
+			final int backfillColor;
+			switch (backfill) {
+				case final XaeroBackfillStatus.WaitingForXaero $ -> {
+					backfillLine = "Xaero backfill: waiting for region detection...";
+					backfillColor = 0xFFffcc66;
+				}
+				case final XaeroBackfillStatus.Backfilling b -> {
+					backfillLine = "Xaero backfill: seeding %,d regions...".formatted(b.regionsDone());
+					backfillColor = 0xFFffcc66;
+				}
+				case final XaeroBackfillStatus.Completed c -> {
+					backfillLine = "Xaero backfill: done (%,d regions seeded)".formatted(c.regionsDone());
+					backfillColor = 0xFF88ff88;
+				}
+				case final XaeroBackfillStatus.Failed f -> {
+					backfillLine = "Xaero backfill: failed (" + f.reason() + ")";
+					backfillColor = 0xFFff8888;
+				}
+				case final XaeroBackfillStatus.NotNeeded n -> {
+					backfillLine = "Xaero backfill: skipped (" + n.reason() + ")";
+					backfillColor = 0x88_88_88;
+				}
+			}
+			guiGraphics.text(this.font, backfillLine, this.offsetLeft, top, backfillColor);
 			top += 20;
 		}
 

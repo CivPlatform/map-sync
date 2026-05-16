@@ -8,11 +8,15 @@ import com.mojang.brigadier.exceptions.SimpleCommandExceptionType;
 import gjum.minecraft.mapsync.mod.server.MapSyncServerState;
 import gjum.minecraft.mapsync.mod.server.config.Whitelist;
 import java.nio.file.Path;
+import java.util.List;
+import java.util.Map;
 import java.util.UUID;
+import net.minecraft.ChatFormatting;
 import net.minecraft.commands.CommandBuildContext;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.server.permissions.Permissions;
 import org.jetbrains.annotations.NotNull;
 
@@ -21,9 +25,9 @@ import org.jetbrains.annotations.NotNull;
 /// connected-clients are deferred until Phase 2E adds the websocket server.
 public final class MapSyncCommand {
 	private static final SimpleCommandExceptionType NO_STATE =
-		new SimpleCommandExceptionType(Component.literal("MapSync state is not loaded yet"));
+		new SimpleCommandExceptionType(text("MapSync state is not loaded yet", ChatFormatting.RED));
 	private static final SimpleCommandExceptionType UNKNOWN_PLAYER =
-		new SimpleCommandExceptionType(Component.literal("No UUID known for that name (player has not joined yet)"));
+		new SimpleCommandExceptionType(text("No UUID known for that name (player has not joined yet)", ChatFormatting.RED));
 
 	private MapSyncCommand() {
 	}
@@ -80,15 +84,17 @@ public final class MapSyncCommand {
 		final @NotNull CommandContext<CommandSourceStack> ctx
 	) throws CommandSyntaxException {
 		final MapSyncServerState state = requireState();
-		ctx.getSource().sendSuccess(() -> Component.literal(
-			"MapSync state: dir=" + state.dataDir()
-				+ "; port=" + state.config().port
-				+ "; auth=" + state.config().auth
-				+ "; whitelist=" + state.config().whitelist
-				+ " (" + state.whitelist().size() + " entries)"
-				+ "; uuidCache=" + state.uuidCache().size() + " entries"
-				+ "; websocket=not-yet-implemented"
-		), false);
+		final CommandSourceStack src = ctx.getSource();
+		src.sendSuccess(() -> header("MapSync status"), false);
+		src.sendSuccess(() -> kv("data dir", state.dataDir().toString()), false);
+		src.sendSuccess(() -> kv("port", Integer.toString(state.config().port)), false);
+		src.sendSuccess(() -> kv("auth", state.config().auth).append(
+			text("  ", ChatFormatting.DARK_GRAY)
+		).append(kv("whitelist", state.config().whitelist)), false);
+		src.sendSuccess(() -> kv("whitelist entries", Integer.toString(state.whitelist().size())), false);
+		src.sendSuccess(() -> kv("uuid cache entries", Integer.toString(state.uuidCache().size())), false);
+		src.sendSuccess(() -> text("websocket: ", ChatFormatting.AQUA)
+			.append(text("not yet implemented", ChatFormatting.YELLOW)), false);
 		return 1;
 	}
 
@@ -96,11 +102,34 @@ public final class MapSyncCommand {
 		final @NotNull CommandContext<CommandSourceStack> ctx
 	) throws CommandSyntaxException {
 		final MapSyncServerState state = requireState();
-		final int size = state.whitelist().size();
-		ctx.getSource().sendSuccess(() -> Component.literal(
-			"MapSync whitelist: " + size + " entries (see " + state.dataDir().resolve("whitelist.json") + ")"
-		), false);
-		return size;
+		final Map<UUID, String> names = state.uuidCache().namesByUuid();
+		final List<UUID> entries = state.whitelist().sortedSnapshot(
+			(uuid) -> names.getOrDefault(uuid, uuid.toString())
+		);
+		final CommandSourceStack src = ctx.getSource();
+		src.sendSuccess(() -> header("MapSync whitelist")
+			.append(text(" (" + entries.size() + ")", ChatFormatting.GRAY)), false);
+		if (entries.isEmpty()) {
+			src.sendSuccess(() -> text("  (empty — only ops + MC-whitelist sync in)", ChatFormatting.DARK_GRAY), false);
+		}
+		else {
+			for (final UUID uuid : entries) {
+				final String name = names.get(uuid);
+				final MutableComponent line = text("  • ", ChatFormatting.DARK_GRAY);
+				if (name != null) {
+					line.append(text(name, ChatFormatting.WHITE))
+						.append(text("  " + uuid, ChatFormatting.DARK_GRAY));
+				}
+				else {
+					line.append(text(uuid.toString(), ChatFormatting.GRAY))
+						.append(text("  (no cached name)", ChatFormatting.DARK_GRAY));
+				}
+				src.sendSuccess(() -> line, false);
+			}
+		}
+		final Path file = state.dataDir().resolve("whitelist.json");
+		src.sendSuccess(() -> muted("source: " + file), false);
+		return entries.size();
 	}
 
 	private static int handleWhitelistAdd(
@@ -109,19 +138,24 @@ public final class MapSyncCommand {
 		final MapSyncServerState state = requireState();
 		final String input = StringArgumentType.getString(ctx, "player");
 		final UUID uuid = resolvePlayer(state, input);
+		final CommandSourceStack src = ctx.getSource();
 		final boolean added = state.whitelist().add(uuid);
 		if (!added) {
-			ctx.getSource().sendSuccess(() -> Component.literal("Already whitelisted: " + uuid), false);
+			src.sendSuccess(() -> text("Already whitelisted: ", ChatFormatting.YELLOW)
+				.append(text(uuid.toString(), ChatFormatting.WHITE)), false);
 			return 0;
 		}
 		try {
 			state.whitelist().save(state.dataDir().resolve("whitelist.json"));
 		}
 		catch (final Exception e) {
-			ctx.getSource().sendFailure(Component.literal("Whitelist saved in memory but failed to persist: " + e.getMessage()));
+			src.sendFailure(text("Whitelist saved in memory but failed to persist: " + e.getMessage(), ChatFormatting.RED));
 			return 0;
 		}
-		ctx.getSource().sendSuccess(() -> Component.literal("Whitelisted " + uuid), true);
+		final String name = state.uuidCache().namesByUuid().get(uuid);
+		src.sendSuccess(() -> text("Whitelisted ", ChatFormatting.GREEN)
+			.append(text(name != null ? name : uuid.toString(), ChatFormatting.WHITE))
+			.append(name != null ? text("  " + uuid, ChatFormatting.DARK_GRAY) : Component.empty()), true);
 		return 1;
 	}
 
@@ -131,19 +165,24 @@ public final class MapSyncCommand {
 		final MapSyncServerState state = requireState();
 		final String input = StringArgumentType.getString(ctx, "player");
 		final UUID uuid = resolvePlayer(state, input);
+		final CommandSourceStack src = ctx.getSource();
 		final boolean removed = state.whitelist().remove(uuid);
 		if (!removed) {
-			ctx.getSource().sendSuccess(() -> Component.literal("Was not on the whitelist: " + uuid), false);
+			src.sendSuccess(() -> text("Was not on the whitelist: ", ChatFormatting.YELLOW)
+				.append(text(uuid.toString(), ChatFormatting.WHITE)), false);
 			return 0;
 		}
 		try {
 			state.whitelist().save(state.dataDir().resolve("whitelist.json"));
 		}
 		catch (final Exception e) {
-			ctx.getSource().sendFailure(Component.literal("Whitelist updated in memory but failed to persist: " + e.getMessage()));
+			src.sendFailure(text("Whitelist updated in memory but failed to persist: " + e.getMessage(), ChatFormatting.RED));
 			return 0;
 		}
-		ctx.getSource().sendSuccess(() -> Component.literal("Removed from whitelist: " + uuid), true);
+		final String name = state.uuidCache().namesByUuid().get(uuid);
+		src.sendSuccess(() -> text("Removed from whitelist: ", ChatFormatting.GREEN)
+			.append(text(name != null ? name : uuid.toString(), ChatFormatting.WHITE))
+			.append(name != null ? text("  " + uuid, ChatFormatting.DARK_GRAY) : Component.empty()), true);
 		return 1;
 	}
 
@@ -151,19 +190,58 @@ public final class MapSyncCommand {
 		final @NotNull CommandContext<CommandSourceStack> ctx
 	) throws CommandSyntaxException {
 		final MapSyncServerState state = requireState();
+		final CommandSourceStack src = ctx.getSource();
 		try {
 			final Path file = state.dataDir().resolve("whitelist.json");
 			final Whitelist reloaded = Whitelist.loadOrCreate(file);
 			state.whitelist().replaceAll(reloaded.snapshot());
-			state.importMinecraftAllowlist(ctx.getSource().getServer());
-			ctx.getSource().sendSuccess(() -> Component.literal(
-				"Reloaded MapSync whitelist (" + state.whitelist().size() + " entries)"
-			), true);
-			return state.whitelist().size();
+			state.importMinecraftAllowlist(src.getServer());
+			final int size = state.whitelist().size();
+			src.sendSuccess(() -> text("Reloaded MapSync whitelist ", ChatFormatting.GREEN)
+				.append(text("(" + size + " entries)", ChatFormatting.GRAY)), true);
+			return size;
 		}
 		catch (final Exception e) {
-			ctx.getSource().sendFailure(Component.literal("Reload failed: " + e.getMessage()));
+			src.sendFailure(text("Reload failed: " + e.getMessage(), ChatFormatting.RED));
 			return 0;
 		}
+	}
+
+	// ============================================================
+	// Formatting helpers
+	// ============================================================
+
+	private static @NotNull MutableComponent text(
+		final @NotNull String value,
+		final @NotNull ChatFormatting color
+	) {
+		return Component.literal(value).withStyle(color);
+	}
+
+	private static @NotNull MutableComponent header(
+		final @NotNull String label
+	) {
+		return text("[MapSync] ", ChatFormatting.GOLD).append(text(label, ChatFormatting.YELLOW));
+	}
+
+	private static @NotNull MutableComponent kv(
+		final @NotNull String key,
+		final @NotNull String value
+	) {
+		return text(key + ": ", ChatFormatting.AQUA).append(text(value, ChatFormatting.WHITE));
+	}
+
+	private static @NotNull MutableComponent kv(
+		final @NotNull String key,
+		final boolean value
+	) {
+		return text(key + ": ", ChatFormatting.AQUA)
+			.append(text(Boolean.toString(value), value ? ChatFormatting.GREEN : ChatFormatting.RED));
+	}
+
+	private static @NotNull MutableComponent muted(
+		final @NotNull String value
+	) {
+		return text(value, ChatFormatting.DARK_GRAY);
 	}
 }

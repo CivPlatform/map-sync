@@ -37,6 +37,19 @@ public final class UuidCache {
 		return this.byName.size();
 	}
 
+	/// Snapshot of UUID → IGN, built from the IGN → UUID cache. Used by
+	/// `/mapsync whitelist list` to render entries with human-readable names.
+	/// If the same UUID has cached multiple names (after a rename), the most
+	/// recently inserted name wins — HashMap iteration order is undefined but
+	/// the override on collision is deterministic for the caller.
+	public synchronized @NotNull Map<UUID, String> namesByUuid() {
+		final Map<UUID, String> out = new HashMap<>(this.byName.size());
+		for (final var entry : this.byName.entrySet()) {
+			out.put(entry.getValue(), entry.getKey());
+		}
+		return out;
+	}
+
 	public static @NotNull UuidCache loadOrCreate(
 		final @NotNull Path path
 	) throws Exception {

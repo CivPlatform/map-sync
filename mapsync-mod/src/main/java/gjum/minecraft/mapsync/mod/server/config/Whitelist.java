@@ -6,10 +6,14 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonParser;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Comparator;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 import java.util.UUID;
+import java.util.function.Function;
 import org.jetbrains.annotations.NotNull;
 
 /// JSON-backed UUID allowlist for the bundled server. Persisted as an array
@@ -68,6 +72,21 @@ public final class Whitelist {
 	public @NotNull Set<UUID> snapshot() {
 		synchronized (this.uuids) {
 			return new HashSet<>(this.uuids);
+		}
+	}
+
+	/// UUIDs sorted by a caller-supplied display key (typically the cached
+	/// IGN). Used by `/mapsync whitelist list` so each invocation prints in
+	/// the same order. Stable secondary sort by UUID prevents jitter when
+	/// two entries share a key.
+	public @NotNull List<UUID> sortedSnapshot(
+		final @NotNull Function<@NotNull UUID, @NotNull String> sortKey
+	) {
+		synchronized (this.uuids) {
+			final List<UUID> out = new ArrayList<>(this.uuids);
+			out.sort(Comparator.<UUID, String>comparing(sortKey, String.CASE_INSENSITIVE_ORDER)
+				.thenComparing(UUID::toString));
+			return out;
 		}
 	}
 

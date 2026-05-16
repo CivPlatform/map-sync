@@ -13,7 +13,7 @@ private val project_home_url: String by project
 private val project_source_url: String by project
 private val project_issues_url: String by project
 
-version = "${mapsync_version}-${libs.versions.minecraft.get()}"
+version = "${mapsync_version}-mc${libs.versions.minecraft.get()}"
 group = project_group
 
 private val modLocalDep: Configuration by configurations.creating

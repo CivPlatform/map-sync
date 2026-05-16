@@ -5,6 +5,8 @@ import gjum.minecraft.mapsync.mod.server.config.MapSyncConfig;
 import gjum.minecraft.mapsync.mod.server.config.UuidCache;
 import gjum.minecraft.mapsync.mod.server.config.Whitelist;
 import gjum.minecraft.mapsync.mod.server.db.MapSyncDatabase;
+import gjum.minecraft.mapsync.mod.server.net.MapSyncWsServer;
+import gjum.minecraft.mapsync.mod.server.net.ProtocolHandler;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.UUID;
@@ -37,6 +39,8 @@ public final class MapSyncServerState implements AutoCloseable {
 	private final @NotNull Whitelist whitelist;
 	private final @NotNull UuidCache uuidCache;
 	private final @NotNull MapSyncDatabase database;
+	private final @NotNull ProtocolHandler protocolHandler;
+	private volatile @Nullable MapSyncWsServer wsServer;
 
 	private MapSyncServerState(
 		final @NotNull Path dataDir,
@@ -50,6 +54,7 @@ public final class MapSyncServerState implements AutoCloseable {
 		this.whitelist = whitelist;
 		this.uuidCache = uuidCache;
 		this.database = database;
+		this.protocolHandler = new ProtocolHandler(this);
 	}
 
 	public static @NotNull MapSyncServerState open(
@@ -66,7 +71,41 @@ public final class MapSyncServerState implements AutoCloseable {
 
 	@Override
 	public void close() throws Exception {
+		final MapSyncWsServer running = this.wsServer;
+		if (running != null) {
+			try {
+				running.stop(2000);
+				logger.info("MapSync websocket server stopped");
+			}
+			catch (final Exception e) {
+				logger.warn("Failed to stop MapSync websocket server cleanly", e);
+			}
+			this.wsServer = null;
+		}
+		this.protocolHandler.shutdown();
 		this.database.close();
+	}
+
+	/// Constructs and starts the websocket server. Called from
+	/// SERVER_STARTED so the player list and whitelist are already populated
+	/// — the first authenticating client must be checked against a complete
+	/// whitelist or it gets rejected for no reason.
+	public void startWebsocket() {
+		if (this.wsServer != null) {
+			throw new IllegalStateException("websocket server already started");
+		}
+		final MapSyncWsServer ws = new MapSyncWsServer(this, this.protocolHandler);
+		this.protocolHandler.install(ws);
+		ws.start();
+		this.wsServer = ws;
+	}
+
+	public @Nullable MapSyncWsServer wsServer() {
+		return this.wsServer;
+	}
+
+	public @NotNull ProtocolHandler protocolHandler() {
+		return this.protocolHandler;
 	}
 
 	public @NotNull Path dataDir() {

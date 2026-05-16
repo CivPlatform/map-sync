@@ -1,13 +1,18 @@
 package gjum.minecraft.mapsync.mod.server.commands;
 
 import com.mojang.brigadier.CommandDispatcher;
+import com.mojang.brigadier.arguments.LongArgumentType;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import com.mojang.brigadier.exceptions.SimpleCommandExceptionType;
 import gjum.minecraft.mapsync.mod.server.MapSyncServerState;
 import gjum.minecraft.mapsync.mod.server.config.Whitelist;
+import gjum.minecraft.mapsync.mod.server.net.MapSyncWsServer;
+import gjum.minecraft.mapsync.mod.server.net.WsServerClient;
+import gjum.minecraft.mapsync.mod.server.net.auth.ServerAuthState;
 import java.nio.file.Path;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -28,6 +33,10 @@ public final class MapSyncCommand {
 		new SimpleCommandExceptionType(text("MapSync state is not loaded yet", ChatFormatting.RED));
 	private static final SimpleCommandExceptionType UNKNOWN_PLAYER =
 		new SimpleCommandExceptionType(text("No UUID known for that name (player has not joined yet)", ChatFormatting.RED));
+	private static final SimpleCommandExceptionType NO_WS_SERVER =
+		new SimpleCommandExceptionType(text("MapSync websocket server is not running", ChatFormatting.RED));
+	private static final SimpleCommandExceptionType UNKNOWN_CLIENT =
+		new SimpleCommandExceptionType(text("No connected MapSync client with that id", ChatFormatting.RED));
 
 	private MapSyncCommand() {
 	}
@@ -53,7 +62,22 @@ public final class MapSyncCommand {
 							.executes(MapSyncCommand::handleWhitelistRemove)))
 					.then(Commands.literal("reload")
 						.executes(MapSyncCommand::handleWhitelistReload)))
+				.then(Commands.literal("clients")
+					.then(Commands.literal("list")
+						.executes(MapSyncCommand::handleClientsList))
+					.then(Commands.literal("kick")
+						.then(Commands.argument("id", LongArgumentType.longArg(1))
+							.executes(MapSyncCommand::handleClientsKick))))
 		);
+	}
+
+	private static @NotNull MapSyncWsServer requireWsServer() throws CommandSyntaxException {
+		final MapSyncServerState state = requireState();
+		final MapSyncWsServer ws = state.wsServer();
+		if (ws == null) {
+			throw NO_WS_SERVER.create();
+		}
+		return ws;
 	}
 
 	private static @NotNull MapSyncServerState requireState() throws CommandSyntaxException {
@@ -93,8 +117,74 @@ public final class MapSyncCommand {
 		).append(kv("whitelist", state.config().whitelist)), false);
 		src.sendSuccess(() -> kv("whitelist entries", Integer.toString(state.whitelist().size())), false);
 		src.sendSuccess(() -> kv("uuid cache entries", Integer.toString(state.uuidCache().size())), false);
-		src.sendSuccess(() -> text("websocket: ", ChatFormatting.AQUA)
-			.append(text("not yet implemented", ChatFormatting.YELLOW)), false);
+		final MapSyncWsServer ws = state.wsServer();
+		if (ws != null) {
+			final int clientCount = ws.activeClients().size();
+			src.sendSuccess(() -> text("websocket: ", ChatFormatting.AQUA)
+				.append(text("listening on " + ws.getAddress(), ChatFormatting.GREEN))
+				.append(text("  (" + clientCount + " connected)", ChatFormatting.GRAY)), false);
+		}
+		else {
+			src.sendSuccess(() -> text("websocket: ", ChatFormatting.AQUA)
+				.append(text("not started", ChatFormatting.YELLOW)), false);
+		}
+		return 1;
+	}
+
+	private static int handleClientsList(
+		final @NotNull CommandContext<CommandSourceStack> ctx
+	) throws CommandSyntaxException {
+		final MapSyncWsServer ws = requireWsServer();
+		final List<WsServerClient> clients = ws.activeClients().stream()
+			.sorted(Comparator.comparingLong((WsServerClient c) -> c.id))
+			.toList();
+		final CommandSourceStack src = ctx.getSource();
+		src.sendSuccess(() -> header("MapSync clients")
+			.append(text(" (" + clients.size() + ")", ChatFormatting.GRAY)), false);
+		if (clients.isEmpty()) {
+			src.sendSuccess(() -> text("  (none connected)", ChatFormatting.DARK_GRAY), false);
+			return 0;
+		}
+		for (final WsServerClient client : clients) {
+			final String authLabel;
+			final ChatFormatting authColor;
+			switch (client.auth) {
+				case final ServerAuthState.Welcomed welcomed -> {
+					authLabel = welcomed.name() + (welcomed.authed() ? " (authed)" : " (offline)");
+					authColor = welcomed.authed() ? ChatFormatting.GREEN : ChatFormatting.YELLOW;
+				}
+				case final ServerAuthState.AwaitingIdentityResponse $ -> {
+					authLabel = "awaiting identity";
+					authColor = ChatFormatting.YELLOW;
+				}
+				default -> {
+					authLabel = "pre-handshake";
+					authColor = ChatFormatting.GRAY;
+				}
+			}
+			final String dim = client.dimension != null ? client.dimension.toString() : "—";
+			final String addr = client.gameAddress != null ? client.gameAddress : "—";
+			src.sendSuccess(() -> text("  #" + client.id + " ", ChatFormatting.DARK_GRAY)
+				.append(text(authLabel, authColor))
+				.append(text("  dim=", ChatFormatting.DARK_GRAY))
+				.append(text(dim, ChatFormatting.WHITE))
+				.append(text("  via=", ChatFormatting.DARK_GRAY))
+				.append(text(addr, ChatFormatting.WHITE)), false);
+		}
+		return clients.size();
+	}
+
+	private static int handleClientsKick(
+		final @NotNull CommandContext<CommandSourceStack> ctx
+	) throws CommandSyntaxException {
+		final MapSyncWsServer ws = requireWsServer();
+		final long targetId = LongArgumentType.getLong(ctx, "id");
+		final WsServerClient target = ws.activeClients().stream()
+			.filter((c) -> c.id == targetId)
+			.findFirst()
+			.orElseThrow(UNKNOWN_CLIENT::create);
+		target.kick("operator-issued /mapsync clients kick");
+		ctx.getSource().sendSuccess(() -> text("Kicked client #" + targetId, ChatFormatting.GREEN), true);
 		return 1;
 	}
 

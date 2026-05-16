@@ -77,6 +77,8 @@ public final class MapSyncServerMod {
 		// Allowlist import must run after SERVER_STARTING because the player
 		// list (and thus the MC whitelist + ops) is only constructed during
 		// later server startup. SERVER_STARTED fires once that's all wired up.
+		// The websocket listener also starts here so the first authenticating
+		// client sees a fully-populated whitelist.
 		ServerLifecycleEvents.SERVER_STARTED.register((server) -> {
 			final MapSyncServerState state = MapSyncServerState.current();
 			if (state == null) {
@@ -88,6 +90,12 @@ public final class MapSyncServerMod {
 			}
 			catch (final Exception e) {
 				logger.error("Failed to import Minecraft allowlist into MapSync", e);
+			}
+			try {
+				state.startWebsocket();
+			}
+			catch (final Exception e) {
+				logger.error("Failed to start MapSync websocket server", e);
 			}
 		});
 		ServerPlayConnectionEvents.JOIN.register((handler, sender, server) -> {

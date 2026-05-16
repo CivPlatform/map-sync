@@ -12,10 +12,13 @@
 	},
 	"license": "${mod_copyright}",
 	"icon": "assets/mapsync/icon.png",
-	"environment": "client",
+	"environment": "*",
 	"entrypoints": {
 		"client": [
 			"gjum.minecraft.mapsync.mod.MapSyncMod::bootstrap"
+		],
+		"main": [
+			"gjum.minecraft.mapsync.mod.server.MapSyncServerMod::bootstrap"
 		],
 		"modmenu": [
 			"gjum.minecraft.mapsync.mod.integrations.modmenu.ModMenuIntegration"

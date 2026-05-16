@@ -44,7 +44,36 @@ public final class MapSyncServerMod {
 		runPersistenceSanityCheck();
 		runConfigSanityCheck();
 		ServerLifecycleEvents.SERVER_STARTING.register((server) -> {
-			logger.info("MapSync server-side initialized (no-op stub — Phase 2)");
+			try {
+				final MapSyncServerState state = MapSyncServerState.open(server);
+				MapSyncServerState.install(state);
+				logger.info(
+					"MapSync state opened at {} (port {}, auth {}, whitelist {})",
+					state.dataDir(),
+					state.config().port,
+					state.config().auth,
+					state.config().whitelist
+				);
+			}
+			catch (final Exception e) {
+				// Crash the server boot rather than continuing in a half-open
+				// state — partial persistence is worse than refusing to start.
+				throw new RuntimeException("Failed to open MapSync server state", e);
+			}
+		});
+		ServerLifecycleEvents.SERVER_STOPPING.register((server) -> {
+			final MapSyncServerState state = MapSyncServerState.current();
+			if (state == null) {
+				return;
+			}
+			MapSyncServerState.uninstall();
+			try {
+				state.close();
+				logger.info("MapSync state closed");
+			}
+			catch (final Exception e) {
+				logger.error("Failed to close MapSync state cleanly", e);
+			}
 		});
 	}
 

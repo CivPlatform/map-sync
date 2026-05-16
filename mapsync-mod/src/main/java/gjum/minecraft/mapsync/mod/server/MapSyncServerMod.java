@@ -7,10 +7,15 @@ import gjum.minecraft.mapsync.mod.net.buffers.BufferReader;
 import gjum.minecraft.mapsync.mod.net.buffers.BufferWriter;
 import gjum.minecraft.mapsync.mod.net.packet.ClientboundWelcomePacket;
 import gjum.minecraft.mapsync.mod.net.packet.ServerboundHandshakePacket;
+import gjum.minecraft.mapsync.mod.server.config.MapSyncConfig;
+import gjum.minecraft.mapsync.mod.server.config.UuidCache;
+import gjum.minecraft.mapsync.mod.server.config.Whitelist;
 import gjum.minecraft.mapsync.mod.server.db.MapSyncDatabase;
 import gjum.minecraft.mapsync.mod.server.db.StoredChunk;
 import java.io.ByteArrayOutputStream;
 import java.nio.ByteBuffer;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.sql.DriverManager;
 import java.util.List;
 import java.util.Optional;
@@ -19,6 +24,7 @@ import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.jetbrains.annotations.ApiStatus;
+import org.jetbrains.annotations.NotNull;
 
 /// Server-side (dedicated server) entrypoint. Phase 0 made the mod load on a
 /// dedicated server; Phase 1 cements which classes are safe to use here. The
@@ -36,6 +42,7 @@ public final class MapSyncServerMod {
 	public static void bootstrap() {
 		runSharedProtocolSanityCheck();
 		runPersistenceSanityCheck();
+		runConfigSanityCheck();
 		ServerLifecycleEvents.SERVER_STARTING.register((server) -> {
 			logger.info("MapSync server-side initialized (no-op stub — Phase 2)");
 		});
@@ -133,6 +140,68 @@ public final class MapSyncServerMod {
 				"MapSync persistence sanity check failed — sqlite-jdbc or schema regressed",
 				e
 			);
+		}
+	}
+
+	/// Round-trips the bundled-server config, whitelist, and UUID cache
+	/// through a temp directory. Catches Gson packaging or JSON-schema
+	/// regressions before the dedicated server has any chance to corrupt a
+	/// real per-world config file in a later phase.
+	private static void runConfigSanityCheck() {
+		Path scratch = null;
+		try {
+			scratch = Files.createTempDirectory("mapsync-config-check");
+			final var cfg = MapSyncConfig.loadOrCreate(scratch.resolve("config.json"));
+			cfg.port = 12399;
+			cfg.save(scratch.resolve("config.json"));
+			final var reloaded = MapSyncConfig.loadOrCreate(scratch.resolve("config.json"));
+			if (reloaded.port != 12399 || reloaded.auth != cfg.auth) {
+				throw new IllegalStateException("Config did not round-trip");
+			}
+
+			final var wl = Whitelist.loadOrCreate(scratch.resolve("whitelist.json"));
+			final var probe = UUID.randomUUID();
+			wl.add(probe);
+			wl.save(scratch.resolve("whitelist.json"));
+			final var wlReloaded = Whitelist.loadOrCreate(scratch.resolve("whitelist.json"));
+			if (!wlReloaded.isWhitelisted(probe) || wlReloaded.size() != 1) {
+				throw new IllegalStateException("Whitelist did not round-trip");
+			}
+
+			final var cache = UuidCache.loadOrCreate(scratch.resolve("uuid_cache.json"));
+			cache.put("Tester", probe);
+			cache.save(scratch.resolve("uuid_cache.json"));
+			final var cacheReloaded = UuidCache.loadOrCreate(scratch.resolve("uuid_cache.json"));
+			if (!probe.equals(cacheReloaded.lookup("Tester"))) {
+				throw new IllegalStateException("UUID cache did not round-trip");
+			}
+			logger.info("MapSync config round-trip OK (scratch dir: {})", scratch);
+		}
+		catch (final Exception e) {
+			throw new RuntimeException(
+				"MapSync config sanity check failed — JSON serialization regressed",
+				e
+			);
+		}
+		finally {
+			if (scratch != null) {
+				deleteRecursively(scratch);
+			}
+		}
+	}
+
+	private static void deleteRecursively(final @NotNull Path root) {
+		try (final var paths = Files.walk(root)) {
+			paths.sorted((a, b) -> b.getNameCount() - a.getNameCount())
+				.forEach((p) -> {
+					try {
+						Files.deleteIfExists(p);
+					}
+					catch (final Exception ignored) {
+					}
+				});
+		}
+		catch (final Exception ignored) {
 		}
 	}
 }

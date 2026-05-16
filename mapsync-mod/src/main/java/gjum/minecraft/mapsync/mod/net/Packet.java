@@ -41,7 +41,17 @@ public interface Packet {
 	public static @NotNull Packet decodeServerbound(
 		final @NotNull BufferReader reader
 	) throws Exception {
-		final int packetId = reader.readUnt8();
+		return decodeServerboundFromId(reader.readUnt8(), reader);
+	}
+
+	/// Same as [decodeServerbound] but with the packet-id byte already peeled
+	/// off the reader. The bundled server reads the id first so it can branch
+	/// out ChunkTilePackets — those carry parsed BlockColumns that pull in
+	/// client-only state — before falling back to the generic switch.
+	public static @NotNull Packet decodeServerboundFromId(
+		final int packetId,
+		final @NotNull BufferReader reader
+	) throws Exception {
 		return switch (packetId) {
 			case ServerboundHandshakePacket.PACKET_ID -> ServerboundHandshakePacket.read(reader);
 			case ServerboundIdentityResponsePacket.PACKET_ID -> ServerboundIdentityResponsePacket.read(reader);

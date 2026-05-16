@@ -7,6 +7,7 @@ import gjum.minecraft.mapsync.mod.net.buffers.BufferReader;
 import gjum.minecraft.mapsync.mod.net.buffers.BufferWriter;
 import gjum.minecraft.mapsync.mod.net.packet.ClientboundWelcomePacket;
 import gjum.minecraft.mapsync.mod.net.packet.ServerboundHandshakePacket;
+import gjum.minecraft.mapsync.mod.server.commands.MapSyncCommand;
 import gjum.minecraft.mapsync.mod.server.config.MapSyncConfig;
 import gjum.minecraft.mapsync.mod.server.config.UuidCache;
 import gjum.minecraft.mapsync.mod.server.config.Whitelist;
@@ -20,6 +21,7 @@ import java.sql.DriverManager;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
 import org.apache.logging.log4j.LogManager;
@@ -44,6 +46,7 @@ public final class MapSyncServerMod {
 		runSharedProtocolSanityCheck();
 		runPersistenceSanityCheck();
 		runConfigSanityCheck();
+		CommandRegistrationCallback.EVENT.register(MapSyncCommand::register);
 		ServerLifecycleEvents.SERVER_STARTING.register((server) -> {
 			try {
 				final MapSyncServerState state = MapSyncServerState.open(server);

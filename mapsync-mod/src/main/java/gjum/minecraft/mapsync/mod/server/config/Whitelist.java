@@ -6,6 +6,7 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonParser;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Collection;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.UUID;
@@ -47,6 +48,26 @@ public final class Whitelist {
 	public int size() {
 		synchronized (this.uuids) {
 			return this.uuids.size();
+		}
+	}
+
+	/// Replaces the live whitelist contents in place. Used by
+	/// `/mapsync whitelist reload` to pick up manual edits to whitelist.json
+	/// without invalidating references the websocket auth handler holds.
+	public void replaceAll(
+		final @NotNull Collection<UUID> replacement
+	) {
+		synchronized (this.uuids) {
+			this.uuids.clear();
+			this.uuids.addAll(replacement);
+		}
+	}
+
+	/// Snapshot of the current whitelisted UUIDs. Used by reload to source
+	/// values from a freshly-loaded Whitelist into the live one.
+	public @NotNull Set<UUID> snapshot() {
+		synchronized (this.uuids) {
+			return new HashSet<>(this.uuids);
 		}
 	}
 

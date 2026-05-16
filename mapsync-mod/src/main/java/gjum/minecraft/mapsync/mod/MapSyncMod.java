@@ -11,6 +11,7 @@ import gjum.minecraft.mapsync.mod.data.RegionPos;
 import gjum.minecraft.mapsync.mod.net.CloseContext;
 import gjum.minecraft.mapsync.mod.net.Packet;
 import gjum.minecraft.mapsync.mod.net.SyncClient;
+import gjum.minecraft.mapsync.mod.net.discovery.SyncAddressClientHandler;
 import gjum.minecraft.mapsync.mod.net.packet.ServerboundDimensionChangePacket;
 import gjum.minecraft.mapsync.mod.sync.DimensionState;
 import gjum.minecraft.mapsync.mod.sync.GameContext;
@@ -63,6 +64,7 @@ public final class MapSyncMod {
 	@ApiStatus.Internal
 	public static void bootstrap() {
 		KeyMappingHelper.registerKeyMapping(OPEN_GUI_KEY);
+		SyncAddressClientHandler.register();
 
 		modConfig = ModConfig.load();
 		modConfig.save(); // creates the default file if it doesn't exist yet

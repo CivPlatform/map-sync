@@ -19,6 +19,11 @@ public final class MapSyncConfig {
 	public int port = 12312;
 	public boolean whitelist = true;
 	public boolean auth = true;
+	/// Host (or hostname) clients should use to reach the MapSync websocket.
+	/// Empty means "client falls back to the MC server's own host." Override
+	/// only when MapSync runs on a different host than the MC server — e.g.
+	/// behind a reverse proxy with a separate DNS entry.
+	public @NotNull String advertisedHost = "";
 
 	public static @NotNull MapSyncConfig loadOrCreate(
 		final @NotNull Path configPath
@@ -36,6 +41,7 @@ public final class MapSyncConfig {
 		if (raw.has("port")) config.port = raw.get("port").getAsInt();
 		if (raw.has("whitelist")) config.whitelist = raw.get("whitelist").getAsBoolean();
 		if (raw.has("auth")) config.auth = raw.get("auth").getAsBoolean();
+		if (raw.has("advertisedHost")) config.advertisedHost = raw.get("advertisedHost").getAsString();
 		validate(config);
 		return config;
 	}

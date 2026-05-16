@@ -5,6 +5,7 @@ import gjum.minecraft.mapsync.mod.data.RegionTimestamp;
 import gjum.minecraft.mapsync.mod.net.Packet;
 import gjum.minecraft.mapsync.mod.net.buffers.BufferReader;
 import gjum.minecraft.mapsync.mod.net.buffers.BufferWriter;
+import gjum.minecraft.mapsync.mod.net.discovery.SyncAddressPayload;
 import gjum.minecraft.mapsync.mod.net.packet.ClientboundWelcomePacket;
 import gjum.minecraft.mapsync.mod.net.packet.ServerboundHandshakePacket;
 import gjum.minecraft.mapsync.mod.server.commands.MapSyncCommand;
@@ -23,7 +24,10 @@ import java.util.Optional;
 import java.util.UUID;
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
+import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
+import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
+import net.minecraft.server.level.ServerPlayer;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.jetbrains.annotations.ApiStatus;
@@ -46,6 +50,11 @@ public final class MapSyncServerMod {
 		runSharedProtocolSanityCheck();
 		runPersistenceSanityCheck();
 		runConfigSanityCheck();
+		// Registered from the `main` entrypoint because it runs on both
+		// dedicated and integrated servers, and PayloadTypeRegistry is a
+		// shared singleton — registering from the `client` entrypoint too
+		// would double-register on an integrated server.
+		PayloadTypeRegistry.clientboundPlay().register(SyncAddressPayload.TYPE, SyncAddressPayload.CODEC);
 		CommandRegistrationCallback.EVENT.register(MapSyncCommand::register);
 		ServerLifecycleEvents.SERVER_STARTING.register((server) -> {
 			try {
@@ -93,6 +102,7 @@ public final class MapSyncServerMod {
 			catch (final Exception e) {
 				logger.error("Failed to sync MapSync state on player join", e);
 			}
+			advertiseSyncAddress(state, handler.getPlayer());
 		});
 		ServerLifecycleEvents.SERVER_STOPPING.register((server) -> {
 			final MapSyncServerState state = MapSyncServerState.current();
@@ -108,6 +118,32 @@ public final class MapSyncServerMod {
 				logger.error("Failed to close MapSync state cleanly", e);
 			}
 		});
+	}
+
+	/// Pushes the configured MapSync websocket endpoint to the player so their
+	/// client can auto-connect without GUI interaction. Skipped silently when
+	/// whitelist mode is enabled and the player isn't whitelisted — there's no
+	/// useful address to give them. `advertisedHost` is sent verbatim (empty
+	/// means "client falls back to the MC server's own host"). Failure to send
+	/// is logged but does not break the join.
+	private static void advertiseSyncAddress(
+		final @NotNull MapSyncServerState state,
+		final @NotNull ServerPlayer player
+	) {
+		final MapSyncConfig config = state.config();
+		if (config.whitelist && !state.whitelist().isWhitelisted(player.getUUID())) {
+			return;
+		}
+		if (!ServerPlayNetworking.canSend(player, SyncAddressPayload.TYPE)) {
+			// Vanilla client or MapSync-less modded client — nothing to do.
+			return;
+		}
+		try {
+			ServerPlayNetworking.send(player, new SyncAddressPayload(config.advertisedHost, config.port));
+		}
+		catch (final Exception e) {
+			logger.warn("Failed to advertise MapSync address to {}", player.getGameProfile().name(), e);
+		}
 	}
 
 	/// Round-trips both directions of the wire protocol through the shared

@@ -13,7 +13,7 @@ public final class ServerConfig extends JsonConfig {
 	private ArrayList<String> syncServerAddresses = new ArrayList<>();
 
 	@Expose
-	private boolean autoConnect = false;
+	private boolean autoConnect = true;
 
 	/// Protects local map-mod data from being overwritten by the sync server.
 	/// When true (default), MapSync refuses to render any chunk it hasn't

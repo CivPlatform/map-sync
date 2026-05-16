@@ -34,4 +34,31 @@ public class XaerosWorldMapHelper {
 		if (isXaerosWorldMapNotAvailable) return false;
 		return XaerosWorldMapHelperReal.hasExistingChunkData(chunkPos);
 	}
+
+	/// Whether Xaero has finished scanning its region cache directory for the
+	/// current dimension. The backfill runner waits on this before iterating
+	/// regions, otherwise it would race against Xaero's own startup probe and
+	/// miss files that hadn't been registered yet.
+	public static boolean hasDoneRegionDetection() {
+		if (isXaerosWorldMapNotAvailable) return false;
+		return XaerosWorldMapHelperReal.hasDoneRegionDetection();
+	}
+
+	/// Iterates every region Xaero has detected on disk for the current
+	/// dimension, exposing the region coords and the cache file's mtime to
+	/// the callback. Returns the number of regions visited (0 when Xaero
+	/// isn't installed, not yet mapping, or hasn't finished detection).
+	public static int iterateExistingRegions(
+		final ExistingRegionConsumer callback
+	) {
+		if (isXaerosWorldMapNotAvailable) return 0;
+		return XaerosWorldMapHelperReal.iterateExistingRegions(callback);
+	}
+
+	/// Region-iteration callback. Coords are in Xaero's region-coordinate
+	/// space, which matches MapSync's (one region = 32x32 chunks).
+	@FunctionalInterface
+	public interface ExistingRegionConsumer {
+		void accept(int regionX, int regionZ, long mtimeMillis);
+	}
 }

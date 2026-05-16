@@ -68,6 +68,40 @@ public class DimensionChunkMeta {
 		writeRegionTimestampsFile(regionPos, regionTimestamps);
 	}
 
+	/// Fills every chunk slot in this region with the same timestamp and
+	/// writes the region file once. Used by the one-shot Xaero-mtime
+	/// backfill — calling setTimestamp 1024 times per region would rewrite
+	/// the file 1024 times, while a player's full Xaero cache can run into
+	/// thousands of regions.
+	///
+	/// Existing per-chunk timestamps for NULLISH slots are overwritten with
+	/// the new baseline; non-NULLISH slots are preserved so a chunk already
+	/// touched by the live MapSync session (real explore time) wins over
+	/// the file-mtime baseline.
+	public synchronized void bulkSetRegionTimestamp(
+		final @NotNull RegionPos regionPos,
+		final long timestamp
+	) {
+		final long[] regionTimestamps = regionsTimestamps.computeIfAbsent(regionPos, this::readRegionTimestampsFile);
+		boolean changed = false;
+		for (int i = 0; i < regionTimestamps.length; i++) {
+			if (regionTimestamps[i] == NULLISH_TIMESTAMP) {
+				regionTimestamps[i] = timestamp;
+				changed = true;
+			}
+		}
+		if (changed) {
+			writeRegionTimestampsFile(regionPos, regionTimestamps);
+		}
+	}
+
+	/// Per-dimension data directory. Exposed so the backfill runner can drop
+	/// its `.xaero-backfilled` marker next to the chunkmeta files without
+	/// having to recompute the path scheme.
+	public @NotNull Path getDimensionDirPath() {
+		return this.dimensionDirPath;
+	}
+
 	// Only call this to clear memory and file-cache
 	public synchronized void purgeRegionTimestamps() {
 		this.regionsTimestamps.clear();

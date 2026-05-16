@@ -46,6 +46,59 @@ public class XaerosWorldMapHelperReal {
 		}
 	}
 
+	/// Whether Xaero's startup region-cache scan has completed for the
+	/// current dimension. The backfill runner waits on this so it doesn't
+	/// race the scan and miss freshly-detected regions.
+	static boolean hasDoneRegionDetection() {
+		try {
+			if (!isMapping()) return false;
+			final MapDimension dim = WorldMapSession.getCurrentSession()
+				.getMapProcessor()
+				.getMapWorld()
+				.getCurrentDimension();
+			return dim != null && dim.hasDoneRegionDetection();
+		}
+		catch (final Exception e) {
+			return false;
+		}
+	}
+
+	/// Walks the regions Xaero already cached for the current dimension and
+	/// hands `(rx, rz, cacheFileMtime)` for each to the callback. Used by
+	/// the one-shot mtime backfill so MapSync's per-chunk timestamps gain a
+	/// realistic baseline on first install — without it, every chunk Xaero
+	/// has stays NULLISH-skipped forever (or until the player visits it).
+	///
+	/// Regions whose cache file is missing on disk are skipped (Xaero may
+	/// hold stale entries). Iteration errors fail soft — return whatever
+	/// count we managed so the backfill marker reflects partial progress.
+	static int iterateExistingRegions(
+		final XaerosWorldMapHelper.ExistingRegionConsumer callback
+	) {
+		if (!isMapping()) return 0;
+		try {
+			final MapDimension dim = WorldMapSession.getCurrentSession()
+				.getMapProcessor()
+				.getMapWorld()
+				.getCurrentDimension();
+			if (dim == null || !dim.hasDoneRegionDetection()) return 0;
+			int count = 0;
+			for (final RegionDetection detection : dim.getLinkedWorldSaveDetectedRegions()) {
+				final File cacheFile = detection.getCacheFile();
+				if (cacheFile == null) continue;
+				final long mtime = cacheFile.lastModified();
+				if (mtime <= 0L) continue; // file vanished or never existed
+				callback.accept(detection.getRegionX(), detection.getRegionZ(), mtime);
+				count++;
+			}
+			return count;
+		}
+		catch (final Exception e) {
+			debugLog("Xaero region iteration threw: " + e);
+			return 0;
+		}
+	}
+
 	/// Whether Xaero already holds data for the chunk's enclosing region.
 	/// Checked at *region* granularity: a region covers 32x32 chunks
 	/// (512x512 blocks), so any prior exploration anywhere in the region

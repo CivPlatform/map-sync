@@ -32,6 +32,10 @@ public class DimensionState {
 		chunkMeta = new DimensionChunkMeta(gameAddress, dimension.identifier());
 		renderQueue = new RenderQueue(this);
 		catchup = new CatchupLogic(this);
+		// One-shot import of Xaero region-cache mtimes into chunkMeta. No-op
+		// if a marker file from a previous session is already present, or if
+		// Xaero isn't installed.
+		XaeroMtimeBackfill.runIfNeeded(chunkMeta);
 	}
 
 	public synchronized void shutDown() {

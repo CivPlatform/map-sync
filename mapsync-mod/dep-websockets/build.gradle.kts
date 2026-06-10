@@ -3,11 +3,12 @@ plugins {
 	alias(libs.plugins.shadow)
 }
 
-group = libs.java.ws.get().group
-version = libs.java.ws.get().version!!
+// https://mvnrepository.com/artifact/org.java-websocket/Java-WebSocket
+group = "org.java-websocket"
+version = "1.6.0"
 
 dependencies {
-	implementation(libs.java.ws)
+	implementation("${project.group}:Java-WebSocket:${project.version}")
 }
 
 repositories {

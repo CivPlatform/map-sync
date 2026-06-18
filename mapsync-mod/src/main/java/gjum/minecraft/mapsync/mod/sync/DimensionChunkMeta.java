@@ -54,17 +54,15 @@ public class DimensionChunkMeta {
 	}
 
 	public synchronized long getTimestamp(ChunkPos chunkPos) {
-		final var regionPos = RegionPos.forChunkPos(chunkPos);
+		final var regionPos = new RegionPos(chunkPos);
 		final long[] regionTimestamps = regionsTimestamps.computeIfAbsent(regionPos, this::readRegionTimestampsFile);
-		final int chunkNr = RegionPos.chunkIndex(chunkPos);
-		return regionTimestamps[chunkNr];
+		return regionTimestamps[chunkIndex(chunkPos)];
 	}
 
 	public synchronized void setTimestamp(ChunkPos chunkPos, long timestamp) {
-		final var regionPos = RegionPos.forChunkPos(chunkPos);
+		final var regionPos = new RegionPos(chunkPos);
 		final long[] regionTimestamps = regionsTimestamps.computeIfAbsent(regionPos, this::readRegionTimestampsFile);
-		final int chunkNr = RegionPos.chunkIndex(chunkPos);
-		regionTimestamps[chunkNr] = timestamp;
+		regionTimestamps[chunkIndex(chunkPos)] = timestamp;
 		writeRegionTimestampsFile(regionPos, regionTimestamps);
 	}
 
@@ -82,7 +80,7 @@ public class DimensionChunkMeta {
 	private long @NotNull [] readRegionTimestampsFile(
 		final @NotNull RegionPos regionPos
 	) {
-		final var timestamps = new long[RegionPos.CHUNKS_IN_REGION];
+		final var timestamps = new long[MagicValues.REGION_GRID];
 		Arrays.fill(timestamps, NULLISH_TIMESTAMP);
 		try {
 			final byte[] bytes = Files.readAllBytes(this.dimensionDirPath.resolve(getRegionFileName(regionPos)));
@@ -112,7 +110,13 @@ public class DimensionChunkMeta {
 		}
 	}
 
-	private @NotNull String getRegionFileName(
+	private static int chunkIndex(
+		final @NotNull ChunkPos pos
+	) {
+		return (pos.x & 0b11111) + 32 * (pos.z & 0b11111);
+	}
+
+	private static @NotNull String getRegionFileName(
 		final @NotNull RegionPos regionPos
 	) {
 		return "r%d,%d.chunkmeta".formatted(

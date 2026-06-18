@@ -8,6 +8,7 @@ import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.Level;
+import org.jetbrains.annotations.NotNull;
 
 public record ChunkTile(
 		ResourceKey<Level> dimension,
@@ -24,6 +25,13 @@ public record ChunkTile(
 
 	public ChunkPos chunkPos() {
 		return new ChunkPos(x, z);
+	}
+
+	public @NotNull RegionPos regionPos() {
+		return new RegionPos(
+			RegionPos.chunkCoordToRegionCoord(this.x()),
+			RegionPos.chunkCoordToRegionCoord(this.z())
+		);
 	}
 
 	public void write(BufferWriter writer) throws Exception {

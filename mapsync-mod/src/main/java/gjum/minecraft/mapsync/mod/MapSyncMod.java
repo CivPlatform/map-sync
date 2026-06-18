@@ -241,7 +241,7 @@ public final class MapSyncMod {
 			final Map<RegionPos, Object2LongMap<ChunkPos>> regionChunkRequests = new HashMap<>();
 			for (final CatchupChunk catchupChunk : byServerEntry.getValue()) {
 				regionChunkRequests
-					.computeIfAbsent(RegionPos.forChunkPos(catchupChunk.chunkPos()), (regionPos) -> new Object2LongArrayMap<>())
+					.computeIfAbsent(new RegionPos(catchupChunk.chunkPos()), (regionPos) -> new Object2LongArrayMap<>())
 					.mergeLong(catchupChunk.chunkPos(), catchupChunk.timestamp(), Math::max);
 			}
 			for (final var byRegionEntry : regionChunkRequests.entrySet()) {

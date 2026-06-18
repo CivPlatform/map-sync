@@ -41,8 +41,8 @@ final class VoxelMapInternals {
 			final String worldName = waypointManager.getCurrentWorldName();
 			final String subWorldName = waypointManager.getCurrentSubworldDescriptor(false);
 
-			final int regionX = chunkTile.x() >> 4;
-			final int regionZ = chunkTile.z() >> 4;
+			// Do NOT switch this to RegionPos: VoxelMap uses 16x16 regions, not Minecraft's 32x32 regions!
+			final int regionX = chunkTile.x() >> 4, regionZ = chunkTile.z() >> 4;
 			final String regionKey = regionX + "," + regionZ;
 
 			final ConcurrentHashMap<String, CachedRegion> cachedRegions = mapAccessor.mapsync$getCachedRegions();

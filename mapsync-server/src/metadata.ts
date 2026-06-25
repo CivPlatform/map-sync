@@ -48,7 +48,7 @@ function parseConfigFile<T>(
         return parser(json.parse(fileContents));
     } catch (e) {
         if (e instanceof z.ZodError) {
-            throw "Could not parse " + file + ": " + z.fromZodError(e);
+            throw "Could not parse " + file + ": " + z.prettifyError(e);
         }
         throw e;
     }
@@ -127,7 +127,7 @@ export async function saveWhitelist() {
 
 const UUID_CACHE_FILE = "uuid_cache.json";
 const UUID_CACHE_MUTEX = new Mutex();
-const UUID_CACHE_SCHEMA = z.record(z.offlineUuid());
+const UUID_CACHE_SCHEMA = z.record(z.string(), z.offlineUuid());
 //                         IGN     UUID
 const uuid_cache = new Map<string, string>();
 

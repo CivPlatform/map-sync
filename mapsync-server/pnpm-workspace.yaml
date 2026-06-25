@@ -1,9 +1,7 @@
 allowBuilds:
-  better-sqlite3: true
   bufferutil: true
 
 onlyBuiltDependencies:
-  - better-sqlite3
   - bufferutil
 
 blockExoticSubdeps: true

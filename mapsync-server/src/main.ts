@@ -29,7 +29,7 @@ import { createOfflineUuid } from "./deps/uuid.ts";
 let config: metadata.Config = null!;
 let main: ProtocolHandler = null!;
 Promise.resolve().then(async () => {
-    await database.setup();
+    database.setup();
 
     config = metadata.getConfig();
 
@@ -187,9 +187,7 @@ export class ProtocolHandler {
 
         client.dimension = pkt.dimension;
 
-        for (const region of await database.getRegionTimestamps(
-            client.dimension!,
-        )) {
+        for (const region of database.getRegionTimestamps(client.dimension!)) {
             client.send(
                 new ClientboundRegionTimestampsPacket(
                     client.dimension!,
@@ -216,18 +214,16 @@ export class ProtocolHandler {
 
         // TODO ignore if same chunk hash exists in db
 
-        await database
-            .storeChunkData(
-                pkt.dimension,
-                pkt.chunkX,
-                pkt.chunkZ,
-                welcome.uuid,
-                pkt.timestamp,
-                pkt.dataVersion,
-                pkt.dataHash,
-                pkt.data,
-            )
-            .catch(console.error);
+        database.storeChunkData(
+            pkt.dimension,
+            pkt.chunkX,
+            pkt.chunkZ,
+            welcome.uuid,
+            pkt.timestamp,
+            pkt.dataVersion,
+            pkt.dataHash,
+            pkt.data,
+        );
 
         // TODO small timeout, then skip if other client already has it
         for (const otherClient of this.server.clients.values()) {
@@ -254,7 +250,7 @@ export class ProtocolHandler {
         }
 
         for (const req of pkt.chunks) {
-            let chunk = await database.getChunkData(
+            let chunk = database.getChunkData(
                 pkt.dimension,
                 req.chunkX,
                 req.chunkZ,
@@ -297,7 +293,7 @@ export class ProtocolHandler {
             return;
         }
 
-        const chunks = await database.getChunkTimestamps(
+        const chunks = database.getChunkTimestamps(
             pkt.dimension,
             pkt.regionX,
             pkt.regionZ,

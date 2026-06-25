@@ -152,7 +152,7 @@ async function handle_input(input: string): Promise<void> {
             return;
         }
 
-        const regions = await database.getRegionTimestamps(client.dimension!);
+        const regions = database.getRegionTimestamps(client.dimension!);
         await Promise.allSettled(
             regions.map((region) =>
                 client.send(

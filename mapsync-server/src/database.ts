@@ -1,156 +1,111 @@
-import * as kysely from "kysely";
-import sqlite from "better-sqlite3";
+import { DatabaseSync } from "node:sqlite";
 import { DATA_FOLDER } from "./metadata.ts";
-import {
-    asInt16,
-    asInt32,
-    asInt64,
-    asUnt16,
-    type int16,
-    type int32,
-    type int64,
-    type unt16,
-} from "./deps/ints.ts";
+import { type int16, type int32, type int64, type unt16 } from "./deps/ints.ts";
 import type { CatchupChunk, CatchupRegion, StoredChunk } from "./model.ts";
 
-let database: kysely.Kysely<Database> | null = null;
-
-export interface Database {
-    chunk_data: {
-        hash: Buffer;
-        version: bigint;
-        data: Buffer;
-    };
-    player_chunk: {
-        world: string;
-        chunk_x: bigint;
-        chunk_z: bigint;
-        uuid: string;
-        ts: bigint;
-        hash: Buffer;
-    };
-}
+let database: DatabaseSync | null = null;
 
 export function get() {
     if (!database) {
-        database = new kysely.Kysely<Database>({
-            dialect: new kysely.SqliteDialect({
-                database: async () => {
-                    const conn = sqlite(
-                        process.env["SQLITE_PATH"] ??
-                            `${DATA_FOLDER}/db.sqlite`,
-                        {},
-                    );
-                    conn.defaultSafeIntegers(true);
-                    return conn;
-                },
-            }),
-        });
+        database = new DatabaseSync(
+            process.env["SQLITE_PATH"] ?? `${DATA_FOLDER}/db.sqlite`,
+            {
+                readBigInts: true,
+            },
+        );
     }
     return database;
 }
 
-export async function setup() {
-    await get()
-        .schema.createTable("chunk_data")
-        .ifNotExists()
-        .addColumn("hash", "blob", (col) => col.notNull().primaryKey())
-        .addColumn("version", "integer", (col) => col.notNull())
-        .addColumn("data", "blob", (col) => col.notNull())
-        .execute();
-    await get()
-        .schema.createTable("player_chunk")
-        .ifNotExists()
-        .addColumn("world", "text", (col) => col.notNull())
-        .addColumn("chunk_x", "integer", (col) => col.notNull())
-        .addColumn("chunk_z", "integer", (col) => col.notNull())
-        .addColumn("uuid", "text", (col) => col.notNull())
-        .addColumn("ts", "bigint", (col) => col.notNull())
-        .addColumn("hash", "blob", (col) => col.notNull())
-        .addPrimaryKeyConstraint("PK_coords_and_player", [
-            "world",
-            "chunk_x",
-            "chunk_z",
-            "uuid",
-        ])
-        .addForeignKeyConstraint(
-            "FK_chunk_ref",
-            ["hash"],
-            "chunk_data",
-            ["hash"],
-            (fk) => fk.onUpdate("no action").onDelete("no action"),
+export function setup() {
+    get().exec(`
+        CREATE TABLE IF NOT EXISTS "chunk_data" (
+            "hash" blob NOT NULL PRIMARY KEY,
+            "version" INTEGER NOT NULL,
+            "data" blob NOT NULL
         )
-        .execute();
+    `);
+    get().exec(`
+        CREATE TABLE IF NOT EXISTS "player_chunk" (
+            "world" TEXT NOT NULL,
+            "chunk_x" INTEGER NOT NULL,
+            "chunk_z" INTEGER NOT NULL,
+            "uuid" TEXT NOT NULL,
+            "ts" BIGINT NOT NULL,
+            "hash" blob NOT NULL,
+            CONSTRAINT "PK_coords_and_player" PRIMARY KEY ("world", "chunk_x", "chunk_z", "uuid"),
+            CONSTRAINT "FK_chunk_ref" FOREIGN KEY ("hash") REFERENCES "chunk_data" ("hash") ON DELETE NO ACTION ON UPDATE NO ACTION
+        )
+    `);
 }
 
 /**
  * Converts the entire database of player chunks into regions, with each region
  * having the highest (aka newest) timestamp.
  */
-export async function getRegionTimestamps(
-    dimension: string,
-): Promise<CatchupRegion[]> {
-    // computing region coordinates in SQL requires truncating, not rounding
+export function getRegionTimestamps(dimension: string): CatchupRegion[] {
     return get()
-        .selectFrom("player_chunk")
-        .select([
-            (eb) =>
-                kysely.sql<bigint>`floor(${eb.ref("chunk_x")} / 32.0)`.as(
-                    "regionX",
-                ),
-            (eb) =>
-                kysely.sql<bigint>`floor(${eb.ref("chunk_z")} / 32.0)`.as(
-                    "regionZ",
-                ),
-            (eb) => eb.fn.max("ts").as("timestamp"),
-        ])
-        .where("world", "=", dimension)
-        .groupBy(["regionX", "regionZ"])
-        .orderBy("regionX", "desc")
-        .execute()
-        .then(async (regions) =>
-            regions.map((region) => ({
-                regionX: asInt16(region.regionX),
-                regionZ: asInt16(region.regionZ),
-                timestamp: asInt64(region.timestamp),
-            })),
-        );
+        .prepare(
+            `
+            SELECT
+                FLOOR("chunk_x" / 32.0) AS "regionX",
+                FLOOR("chunk_z" / 32.0) AS "regionZ",
+                MAX("ts") AS "timestamp"
+            FROM
+                "player_chunk"
+            WHERE
+                "world" = ?
+            GROUP BY
+                "regionX",
+                "regionZ"
+            ORDER BY
+                "regionX" DESC
+        `,
+        )
+        .all(dimension) as unknown as CatchupRegion[];
 }
 
 /**
  * Converts an array of region coords into an array of timestamped chunk coords.
  */
-export async function getChunkTimestamps(
+export function getChunkTimestamps(
     dimension: string,
     regionX: int16,
     regionZ: int16,
-): Promise<CatchupChunk[]> {
+): CatchupChunk[] {
     const minChunkX = regionX << 5n,
         maxChunkX = minChunkX + 32n;
     const minChunkZ = regionZ << 5n,
         maxChunkZ = minChunkZ + 32n;
     return get()
-        .selectFrom("player_chunk")
-        .select([
-            "chunk_x as chunkX",
-            "chunk_z as chunkZ",
-            (eb) => eb.fn.max("ts").as("timestamp"),
-        ])
-        .where("world", "=", dimension)
-        .where("chunk_x", ">=", minChunkX)
-        .where("chunk_x", "<", maxChunkX)
-        .where("chunk_z", ">=", minChunkZ)
-        .where("chunk_z", "<", maxChunkZ)
-        .groupBy(["chunk_x", "chunk_z"])
-        .orderBy("ts", "desc")
-        .execute()
-        .then(async (chunks) =>
-            chunks.map((chunk) => ({
-                chunkX: asInt32(chunk.chunkX),
-                chunkZ: asInt32(chunk.chunkZ),
-                timestamp: asInt64(chunk.timestamp),
-            })),
-        );
+        .prepare(
+            `
+            SELECT
+                "chunk_x" AS "chunkX",
+                "chunk_z" AS "chunkZ",
+                MAX("ts") AS "timestamp"
+            FROM
+                "player_chunk"
+            WHERE
+                "world" = ?
+                AND "chunk_x" >= ?
+                AND "chunk_x" < ?
+                AND "chunk_z" >= ?
+                AND "chunk_z" < ?
+            GROUP BY
+                "chunk_x",
+                "chunk_z"
+            ORDER BY
+                "ts" DESC
+        `,
+        )
+        .all(
+            dimension,
+            minChunkX,
+            maxChunkX,
+            minChunkZ,
+            maxChunkZ,
+        ) as unknown as CatchupChunk[];
 }
 
 /**
@@ -159,42 +114,39 @@ export async function getChunkTimestamps(
  * TODO: May want to consider making world, x, z, and timestamp a unique in the
  *       database table... may help performance.
  */
-export async function getChunkData(
+export function getChunkData(
     dimension: string,
     chunkX: int32,
     chunkZ: int32,
-): Promise<StoredChunk | null> {
-    return get()
-        .selectFrom("player_chunk")
-        .innerJoin("chunk_data", "chunk_data.hash", "player_chunk.hash")
-        .select([
-            "chunk_data.hash as hash",
-            "chunk_data.version as version",
-            "chunk_data.data as data",
-            "player_chunk.ts as ts",
-        ])
-        .where("player_chunk.world", "=", dimension)
-        .where("player_chunk.chunk_x", "=", chunkX)
-        .where("player_chunk.chunk_z", "=", chunkZ)
-        .orderBy("player_chunk.ts", "desc")
-        .limit(1)
-        .executeTakeFirst()
-        .then(async (chunk) =>
-            chunk
-                ? {
-                      hash: chunk.hash,
-                      version: asUnt16(chunk.version),
-                      timestamp: asInt64(chunk.ts),
-                      data: chunk.data,
-                  }
-                : null,
-        );
+): StoredChunk | null {
+    return (get()
+        .prepare(
+            `
+            SELECT
+                "chunk_data"."hash" AS "hash",
+                "chunk_data"."version" AS "version",
+                "chunk_data"."data" AS "data",
+                "player_chunk"."ts" AS "timestamp"
+            FROM
+                "player_chunk"
+                INNER JOIN "chunk_data" ON "chunk_data"."hash" = "player_chunk"."hash"
+            WHERE
+                "player_chunk"."world" = ?
+                AND "player_chunk"."chunk_x" = ?
+                AND "player_chunk"."chunk_z" = ?
+            ORDER BY
+                "player_chunk"."ts" DESC
+            LIMIT 1
+        `,
+        )
+        .get(dimension, chunkX, chunkZ) ??
+        null) as unknown as StoredChunk | null;
 }
 
 /**
  * Stores a player's chunk data.
  */
-export async function storeChunkData(
+export function storeChunkData(
     dimension: string,
     chunkX: int32,
     chunkZ: int32,
@@ -204,20 +156,31 @@ export async function storeChunkData(
     hash: Buffer,
     data: Buffer,
 ) {
-    await get()
-        .insertInto("chunk_data")
-        .values({ hash, version, data })
-        .onConflict((oc) => oc.column("hash").doNothing())
-        .execute();
-    await get()
-        .replaceInto("player_chunk")
-        .values({
-            world: dimension,
-            chunk_x: chunkX,
-            chunk_z: chunkZ,
-            uuid,
-            ts: timestamp,
-            hash,
-        })
-        .execute();
+    get()
+        .prepare(
+            `
+        INSERT INTO
+            "chunk_data" ("hash", "version", "data")
+        VALUES
+            (?, ?, ?)
+        ON CONFLICT ("hash") DO NOTHING
+    `,
+        )
+        .run(hash, version, data);
+    get()
+        .prepare(
+            `
+        REPLACE INTO "player_chunk" (
+            "world",
+            "chunk_x",
+            "chunk_z",
+            "uuid",
+            "ts",
+            "hash"
+        )
+        VALUES
+            (?, ?, ?, ?, ?, ?)
+    `,
+        )
+        .run(dimension, chunkX, chunkZ, uuid, timestamp, hash);
 }

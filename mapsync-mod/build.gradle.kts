@@ -24,9 +24,8 @@ base {
 
 loom {
 	runConfigs.configureEach {
-		programArgs += buildList {
-			// Use same username between runClient runs
-			addAll(listOf("--username", "LocalModTester"))
+		programArguments.also {
+			it.addAll(listOf("--username", "LocalModTester"))
 		}
 	}
 }

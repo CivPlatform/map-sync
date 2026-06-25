@@ -15,20 +15,20 @@
         "start:dev": "tsc && node --inspect --enable-source-maps dist/main.js"
     },
     "dependencies": {
-        "async-mutex": "0.5.0",
-        "uuid": "^14.0.0",
-        "ws": "8.20.0",
-        "zod": "3.25.76",
-        "zod-validation-error": "1.5.0"
+        "async-mutex": "^0.5.0",
+        "uuid": "^14.0.1",
+        "ws": "^8.21.0",
+        "zod": "^3.25.76",
+        "zod-validation-error": "^1.5.0"
     },
     "devDependencies": {
         "@types/node": "^26.0.0",
-        "@types/ws": "8.18.1",
-        "prettier": "3.8.1",
-        "typescript": "6.0.2"
+        "@types/ws": "^8.18.1",
+        "prettier": "^3.8.4",
+        "typescript": "^6.0.3"
     },
     "optionalDependencies": {
-        "bufferutil": "4.1.0"
+        "bufferutil": "^4.1.0"
     },
     "engines": {
         "node": "26.x"

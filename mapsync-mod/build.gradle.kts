@@ -3,23 +3,23 @@ plugins {
 }
 
 // gradle.properties
-private val project_name: String by project
-private val project_group: String by project
-private val mapsync_version: String by project
-private val project_description: String by project
-private val project_authors: String by project
-private val project_copyright: String by project
-private val project_home_url: String by project
-private val project_source_url: String by project
-private val project_issues_url: String by project
+private val projectName = providers.gradleProperty("project_name").get()
+private val projectGroup = providers.gradleProperty("project_group").get()
+private val projectVersion = providers.gradleProperty("mapsync_version").get()
+private val projectDescription = providers.gradleProperty("project_description").get()
+private val projectAuthors = providers.gradleProperty("project_authors").get().split(',')
+private val projectCopyright = providers.gradleProperty("project_copyright").get()
+private val projectHomeUrl = providers.gradleProperty("project_home_url").get()
+private val projectSourceUrl = providers.gradleProperty("project_source_url").get()
+private val projectIssuesUrl = providers.gradleProperty("project_issues_url").get()
 
-version = "${mapsync_version}-${libs.versions.minecraft.get()}"
-group = project_group
+version = "${projectVersion}-${libs.versions.minecraft.get()}"
+group = projectGroup
 
-private val modLocalDep: Configuration by configurations.creating
+private val modLocalDep: Configuration = configurations.create("modLocalDep")
 
 base {
-	archivesName = project_name
+	archivesName = projectName
 }
 
 loom {
@@ -93,18 +93,18 @@ tasks {
 	}
 	jar {
 		from(file("../LICENSE")) {
-			rename { "LICENSE_${project_name}" }
+			rename { "LICENSE_${projectName}" }
 		}
 	}
 	processResources {
 		val expansions: Map<String, Any> = buildMap expansions@{
-			this@expansions["mod_name"] = project_name
+			this@expansions["mod_name"] = projectName
 			this@expansions["mod_version"] = project.version
-			this@expansions["mod_description"] = project_description
-			this@expansions["mod_copyright"] = project_copyright
-			this@expansions["mod_home_url"] = project_home_url
-			this@expansions["mod_source_url"] = project_source_url
-			this@expansions["mod_issues_url"] = project_issues_url
+			this@expansions["mod_description"] = projectDescription
+			this@expansions["mod_copyright"] = projectCopyright
+			this@expansions["mod_home_url"] = projectHomeUrl
+			this@expansions["mod_source_url"] = projectSourceUrl
+			this@expansions["mod_issues_url"] = projectIssuesUrl
 			this@expansions["minecraft_version"] = libs.versions.minecraft.get()
 			this@expansions["fabric_loader_version"] = libs.versions.fabricLoader.get()
 		}
@@ -114,7 +114,7 @@ tasks {
 			filter {
 				it.replace(
 					"\"%FABRIC_AUTHORS_ARRAY%\"",
-					groovy.json.JsonBuilder(project_authors.split(",")).toString()
+					groovy.json.JsonBuilder(projectAuthors).toString()
 				)
 			}
 		}

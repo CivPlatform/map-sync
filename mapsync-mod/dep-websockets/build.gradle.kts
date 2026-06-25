@@ -26,7 +26,7 @@ tasks {
 	}
 }
 
-val shadedElements by configurations.creating {
+private val shadedElements = configurations.create("shadedElements") {
 	isCanBeConsumed = true
 	isCanBeResolved = false
 }

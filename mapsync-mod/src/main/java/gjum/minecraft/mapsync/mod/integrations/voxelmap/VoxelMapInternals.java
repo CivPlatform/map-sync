@@ -1,15 +1,19 @@
 package gjum.minecraft.mapsync.mod.integrations.voxelmap;
+
 import com.mamiyaotaru.voxelmap.VoxelConstants;
+import com.mamiyaotaru.voxelmap.VoxelMap;
 import com.mamiyaotaru.voxelmap.WaypointManager;
 import com.mamiyaotaru.voxelmap.persistent.CachedRegion;
 import com.mamiyaotaru.voxelmap.persistent.CompressibleMapData;
 import com.mamiyaotaru.voxelmap.persistent.EmptyCachedRegion;
 import com.mamiyaotaru.voxelmap.persistent.PersistentMap;
+import gjum.minecraft.mapsync.mod.Utils;
 import gjum.minecraft.mapsync.mod.data.BlockColumn;
 import gjum.minecraft.mapsync.mod.data.BlockInfo;
 import gjum.minecraft.mapsync.mod.data.ChunkTile;
 import gjum.minecraft.mapsync.mod.mixins.voxelmap.CachedRegionAccessor;
 import gjum.minecraft.mapsync.mod.mixins.voxelmap.PersistentMapAccessor;
+import gjum.minecraft.mapsync.mod.utils.MagicValues;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.locks.ReentrantLock;
@@ -17,7 +21,6 @@ import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.tags.BlockTags;
 import net.minecraft.world.level.block.Blocks;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 
 final class VoxelMapInternals {
 	static boolean isMapping() {
@@ -29,109 +32,151 @@ final class VoxelMapInternals {
 	static boolean updateWithChunkTile(
 		final @NotNull ChunkTile chunkTile
 	) {
-		final PersistentMap map = VoxelConstants.getVoxelMapInstance().getPersistentMap();
-		final var mapAccessor = (PersistentMapAccessor) map;
-		final ClientLevel currentLevel = mapAccessor.mapsync$getWorld();
-		if (currentLevel == null) {
+		final VoxelMap mod = VoxelConstants.getVoxelMapInstance();
+		if (!(mod.getPersistentMap() instanceof final PersistentMap map)) {
 			return false;
 		}
 
-		@Nullable CachedRegion cachedRegion; {
-			final WaypointManager waypointManager = VoxelConstants.getVoxelMapInstance().getWaypointManager();
-			final String worldName = waypointManager.getCurrentWorldName();
-			final String subWorldName = waypointManager.getCurrentSubworldDescriptor(false);
-
-			// Do NOT switch this to RegionPos: VoxelMap uses 16x16 regions, not Minecraft's 32x32 regions!
-			final int regionX = chunkTile.x() >> 4, regionZ = chunkTile.z() >> 4;
-			final String regionKey = regionX + "," + regionZ;
-
-			final ConcurrentHashMap<String, CachedRegion> cachedRegions = mapAccessor.mapsync$getCachedRegions();
-			synchronized (cachedRegions) {
-				cachedRegion = cachedRegions.get(regionKey);
-				// could be race condition if the region is not fully loaded at this point
-				if (cachedRegion == null || cachedRegion instanceof EmptyCachedRegion) {
-					cachedRegions.put(regionKey, cachedRegion = new CachedRegion(
-						map,
-						regionKey,
-						currentLevel,
-						worldName,
-						subWorldName,
-						regionX,
-						regionZ
-					));
-
-					final List<CachedRegion> cachedRegionsPool = mapAccessor.mapsync$getCachedRegionsPool();
-					synchronized (cachedRegionsPool) {
-						cachedRegionsPool.add(cachedRegion);
-					}
-				}
-			}
+		final var mapAccessor = (PersistentMapAccessor) map;
+		final ClientLevel currentLevel = mapAccessor.mapsync$getWorld();
+		if (currentLevel == null || !Utils.isSameDimension(currentLevel, chunkTile)) {
+			return false;
 		}
 
+		final CachedRegion cachedRegion = getCachedRegion(
+			mod.getWaypointManager(),
+			map,
+			mapAccessor,
+			currentLevel,
+			chunkTile.x(),
+			chunkTile.z()
+		);
+
 		final var regionAccessor = (CachedRegionAccessor) cachedRegion;
-		if (!regionAccessor.mapsync$isLoaded()) {
+		if (!cachedRegion.isLoaded()) {
 			regionAccessor.mapsync$load();
 		}
 
 		final ReentrantLock lock = regionAccessor.mapsync$getThreadLock(); lock.lock(); try {
-			final CompressibleMapData data = regionAccessor.mapsync$getData();
-
-			final int x0 = (chunkTile.x() << 4) & 0xFF;
-			final int z0 = (chunkTile.z() << 4) & 0xFF;
-
-			int i = 0;
-			for (int z = z0; z < z0 + 16; ++z) for (int x = x0; x < x0 + 16; ++x) {
-				final BlockColumn blockColumn = chunkTile.columns()[i++];
-				if (blockColumn.layers().isEmpty()) {
-					continue;
-				}
-
-				data.setBiome(x, z, blockColumn.biome());
-
-				final int light = 0xF0 | blockColumn.light();
-				data.setLight(x, z, light);
-				data.setTransparentLight(x, z, light);
-				data.setFoliageLight(x, z, light);
-				data.setOceanFloorLight(x, z, light);
-
-				BlockInfo transparent = newAirBlock();
-				BlockInfo foliage = newAirBlock();
-				BlockInfo surface = newAirBlock();
-				BlockInfo seafloor = newAirBlock();
-
-				final List<BlockInfo> blockColumnLayers = blockColumn.layers();
-
-				// XXX
-				final BlockInfo zerothBlock = blockColumnLayers.getFirst();
-				if (blockColumnLayers.size() > 1) {
-					transparent = zerothBlock;
-				}
-				surface = blockColumnLayers.getLast();
-				// trees hack
-				if (zerothBlock.state().is(BlockTags.LEAVES)) {
-					surface = zerothBlock;
-				}
-
-				data.setTransparentHeight(x, z, transparent.y());
-				data.setTransparentBlockstate(x, z, transparent.state());
-				data.setFoliageHeight(x, z, foliage.y());
-				data.setFoliageBlockstate(x, z, foliage.state());
-				data.setHeight(x, z, surface.y());
-				data.setBlockstate(x, z, surface.state());
-				data.setOceanFloorHeight(x, z, seafloor.y());
-				data.setOceanFloorBlockstate(x, z, seafloor.state());
-			}
-
-			regionAccessor.mapsync$setLiveChunksUpdated(true);
-			regionAccessor.mapsync$setDataUpdated(true);
-
-			// render imagery
-			cachedRegion.refresh(false);
+			renderChunk(cachedRegion, regionAccessor, chunkTile);
 		}
 		finally {
 			lock.unlock();
 		}
 		return true;
+	}
+
+	/// @see PersistentMap#doProcessChunk
+	private static @NotNull CachedRegion getCachedRegion(
+		final @NotNull WaypointManager waypointManager,
+		final @NotNull PersistentMap map,
+		final @NotNull PersistentMapAccessor mapAccessor,
+		final @NotNull ClientLevel currentLevel,
+		final int chunkX,
+		final int chunkZ
+	) {
+		// Do NOT switch this to RegionPos: VoxelMap uses 16x16 regions, not Minecraft's 32x32 regions!
+		final int regionX = chunkX >> 4, regionZ = chunkZ >> 4;
+		final String regionKey = regionX + "," + regionZ;
+
+		final ConcurrentHashMap<String, CachedRegion> cachedRegions = mapAccessor.mapsync$getCachedRegions();
+		synchronized (cachedRegions) {
+			CachedRegion cachedRegion = cachedRegions.get(regionKey);
+			// could be race condition if the region is not fully loaded at this point
+			if (cachedRegion == null || cachedRegion instanceof EmptyCachedRegion) {
+				cachedRegions.put(regionKey, cachedRegion = new CachedRegion(
+					map,
+					regionKey,
+					currentLevel,
+					waypointManager.getCurrentWorldName(),
+					waypointManager.getCurrentSubworldDescriptor(false),
+					regionX,
+					regionZ
+				));
+
+				final List<CachedRegion> cachedRegionsPool = mapAccessor.mapsync$getCachedRegionsPool();
+				synchronized (cachedRegionsPool) {
+					cachedRegionsPool.add(cachedRegion);
+				}
+			}
+			return cachedRegion;
+		}
+	}
+
+	/// @see CachedRegion#doLoadChunkData
+	private static void renderChunk(
+		final @NotNull CachedRegion cachedRegion,
+		final @NotNull CachedRegionAccessor regionAccessor,
+		final @NotNull ChunkTile chunk
+	) {
+		final CompressibleMapData data = cachedRegion.getMapData();
+
+		// Converts the absolute chunk pos to a VoxelMap-region internal block pos (0..255)
+		final int
+			minBlockX = (chunk.x() << 4) & MagicValues.UNT8_MASK,
+			maxBlockX = minBlockX + MagicValues.CHUNK_AXIS,
+			minBlockZ = (chunk.z() << 4) & MagicValues.UNT8_MASK,
+			maxBlockZ = minBlockZ + MagicValues.CHUNK_AXIS;
+
+		final BlockColumn[] columns = chunk.columns();
+		int i = 0;
+		for (int z = minBlockZ; z < maxBlockZ; ++z) for (int x = minBlockX; x < maxBlockX; ++x) {
+			final BlockColumn blockColumn = columns[i++];
+			renderBlockColumn(data, x, z, blockColumn);
+		}
+
+		regionAccessor.mapsync$setIsEmpty(false);
+		regionAccessor.mapsync$setLiveChunksUpdated(true);
+		regionAccessor.mapsync$setDataUpdated(true);
+
+		// render imagery
+		cachedRegion.refresh(false);
+	}
+
+	/// @see PersistentMap#getAndStoreData
+	private static void renderBlockColumn(
+		final @NotNull CompressibleMapData data,
+		final int blockX,
+		final int blockZ,
+		final @NotNull BlockColumn column
+	) {
+		final List<BlockInfo> layers = column.layers();
+		if (layers.isEmpty()) {
+			return;
+		}
+
+		data.setBiome(blockX, blockZ, column.biome());
+
+		final int light = 0xF0 | column.light();
+		data.setLight(blockX, blockZ, light);
+		data.setTransparentLight(blockX, blockZ, light);
+		data.setFoliageLight(blockX, blockZ, light);
+		data.setOceanFloorLight(blockX, blockZ, light);
+
+		BlockInfo transparent = newAirBlock();
+		BlockInfo foliage = newAirBlock();
+		BlockInfo surface = newAirBlock();
+		BlockInfo seafloor = newAirBlock();
+
+		// XXX
+		final BlockInfo zerothBlock = layers.getFirst();
+		if (layers.size() > 1) {
+			transparent = zerothBlock;
+		}
+		surface = layers.getLast();
+		// trees hack
+		if (zerothBlock.state().is(BlockTags.LEAVES)) {
+			surface = zerothBlock;
+		}
+
+		data.setTransparentHeight(blockX, blockZ, transparent.y());
+		data.setTransparentBlockstate(blockX, blockZ, transparent.state());
+		data.setFoliageHeight(blockX, blockZ, foliage.y());
+		data.setFoliageBlockstate(blockX, blockZ, foliage.state());
+		data.setHeight(blockX, blockZ, surface.y());
+		data.setBlockstate(blockX, blockZ, surface.state());
+		data.setOceanFloorHeight(blockX, blockZ, seafloor.y());
+		data.setOceanFloorBlockstate(blockX, blockZ, seafloor.state());
 	}
 
 	private static @NotNull BlockInfo newAirBlock() {

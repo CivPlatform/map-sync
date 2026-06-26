@@ -20,6 +20,8 @@ public final class MagicValues {
 		}
 	}
 
+	public static final int CHUNK_AXIS = 16;
+	public static final int CHUNK_GRID = CHUNK_AXIS * CHUNK_AXIS;
 	public static final int REGION_AXIS = 32;
 	public static final int REGION_GRID = REGION_AXIS * REGION_AXIS;
 

@@ -7,6 +7,7 @@ import { WSServer } from "./server.ts";
 import * as database from "./database.ts";
 import { ClientboundRegionTimestampsPacket } from "./packets.ts";
 import { Welcomed } from "./auth.ts";
+import { UNKNOWN_SEED } from "./constants.ts";
 
 //idk where these come from lol
 interface TerminalExtras {
@@ -152,7 +153,10 @@ async function handle_input(input: string): Promise<void> {
             return;
         }
 
-        const regions = database.getRegionTimestamps(client.dimension!);
+        const regions = database.getRegionTimestamps(
+            client.dimension!,
+            UNKNOWN_SEED,
+        );
         await Promise.allSettled(
             regions.map((region) =>
                 client.send(

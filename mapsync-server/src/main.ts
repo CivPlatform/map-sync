@@ -23,7 +23,7 @@ import {
     AwaitingIdentityResponse,
     Welcomed,
 } from "./auth.ts";
-import { SUPPORTED_VERSIONS } from "./constants.ts";
+import { SUPPORTED_VERSIONS, UNKNOWN_SEED } from "./constants.ts";
 import { createOfflineUuid } from "./deps/uuid.ts";
 
 let config: metadata.Config = null!;
@@ -187,7 +187,10 @@ export class ProtocolHandler {
 
         client.dimension = pkt.dimension;
 
-        for (const region of database.getRegionTimestamps(client.dimension!)) {
+        for (const region of database.getRegionTimestamps(
+            client.dimension!,
+            UNKNOWN_SEED,
+        )) {
             client.send(
                 new ClientboundRegionTimestampsPacket(
                     client.dimension!,
@@ -216,6 +219,7 @@ export class ProtocolHandler {
 
         database.storeChunkData(
             pkt.dimension,
+            UNKNOWN_SEED,
             pkt.chunkX,
             pkt.chunkZ,
             welcome.uuid,
@@ -252,6 +256,7 @@ export class ProtocolHandler {
         for (const req of pkt.chunks) {
             let chunk = database.getChunkData(
                 pkt.dimension,
+                UNKNOWN_SEED,
                 req.chunkX,
                 req.chunkZ,
             );
@@ -295,6 +300,7 @@ export class ProtocolHandler {
 
         const chunks = database.getChunkTimestamps(
             pkt.dimension,
+            UNKNOWN_SEED,
             pkt.regionX,
             pkt.regionZ,
         );

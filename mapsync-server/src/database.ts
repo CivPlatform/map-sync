@@ -28,6 +28,7 @@ export function setup() {
     get().exec(`
         CREATE TABLE IF NOT EXISTS "player_chunk" (
             "world" TEXT NOT NULL,
+            "seed" INTEGER NOT NULL,
             "chunk_x" INTEGER NOT NULL,
             "chunk_z" INTEGER NOT NULL,
             "uuid" TEXT NOT NULL,
@@ -43,7 +44,10 @@ export function setup() {
  * Converts the entire database of player chunks into regions, with each region
  * having the highest (aka newest) timestamp.
  */
-export function getRegionTimestamps(dimension: string): CatchupRegion[] {
+export function getRegionTimestamps(
+    dimension: string,
+    seed: int64,
+): CatchupRegion[] {
     return get()
         .prepare(
             `
@@ -55,6 +59,7 @@ export function getRegionTimestamps(dimension: string): CatchupRegion[] {
                 "player_chunk"
             WHERE
                 "world" = ?
+                "seed" = ?
             GROUP BY
                 "regionX",
                 "regionZ"
@@ -62,7 +67,7 @@ export function getRegionTimestamps(dimension: string): CatchupRegion[] {
                 "regionX" DESC
         `,
         )
-        .all(dimension) as unknown as CatchupRegion[];
+        .all(dimension, seed) as unknown as CatchupRegion[];
 }
 
 /**
@@ -70,6 +75,7 @@ export function getRegionTimestamps(dimension: string): CatchupRegion[] {
  */
 export function getChunkTimestamps(
     dimension: string,
+    seed: int64,
     regionX: int16,
     regionZ: int16,
 ): CatchupChunk[] {
@@ -88,6 +94,7 @@ export function getChunkTimestamps(
                 "player_chunk"
             WHERE
                 "world" = ?
+                "seed" = ?
                 AND "chunk_x" >= ?
                 AND "chunk_x" < ?
                 AND "chunk_z" >= ?
@@ -101,6 +108,7 @@ export function getChunkTimestamps(
         )
         .all(
             dimension,
+            seed,
             minChunkX,
             maxChunkX,
             minChunkZ,
@@ -116,6 +124,7 @@ export function getChunkTimestamps(
  */
 export function getChunkData(
     dimension: string,
+    seed: int64,
     chunkX: int32,
     chunkZ: int32,
 ): StoredChunk | null {
@@ -132,6 +141,7 @@ export function getChunkData(
                 INNER JOIN "chunk_data" ON "chunk_data"."hash" = "player_chunk"."hash"
             WHERE
                 "player_chunk"."world" = ?
+                "player_chunk"."seed" = ?
                 AND "player_chunk"."chunk_x" = ?
                 AND "player_chunk"."chunk_z" = ?
             ORDER BY
@@ -139,7 +149,7 @@ export function getChunkData(
             LIMIT 1
         `,
         )
-        .get(dimension, chunkX, chunkZ) ??
+        .get(dimension, seed, chunkX, chunkZ) ??
         null) as unknown as StoredChunk | null;
 }
 
@@ -148,6 +158,7 @@ export function getChunkData(
  */
 export function storeChunkData(
     dimension: string,
+    seed: int64,
     chunkX: int32,
     chunkZ: int32,
     uuid: string,
@@ -172,6 +183,7 @@ export function storeChunkData(
             `
         REPLACE INTO "player_chunk" (
             "world",
+            "seed",
             "chunk_x",
             "chunk_z",
             "uuid",
@@ -182,5 +194,5 @@ export function storeChunkData(
             (?, ?, ?, ?, ?, ?)
     `,
         )
-        .run(dimension, chunkX, chunkZ, uuid, timestamp, hash);
+        .run(dimension, seed, chunkX, chunkZ, uuid, timestamp, hash);
 }

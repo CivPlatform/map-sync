@@ -1,5 +1,6 @@
 package gjum.minecraft.mapsync.mod.net.packet;
 
+import gjum.minecraft.mapsync.mod.data.DimensionKey;
 import gjum.minecraft.mapsync.mod.data.RegionTimestamp;
 import gjum.minecraft.mapsync.mod.net.Packet;
 import gjum.minecraft.mapsync.mod.net.buffers.BufferReader;
@@ -11,7 +12,7 @@ import org.jetbrains.annotations.NotNull;
 ///
 /// - Next: [ServerboundChunkTimestampsRequestPacket]
 public record ClientboundRegionTimestampsPacket(
-	@NotNull String dimension,
+	@NotNull DimensionKey dimension,
 	@NotNull RegionTimestamp timestamp
 ) implements Packet {
 	public static final int PACKET_ID = 7;
@@ -25,7 +26,7 @@ public record ClientboundRegionTimestampsPacket(
 		final @NotNull BufferReader reader
 	) throws Exception {
 		return new ClientboundRegionTimestampsPacket(
-			reader.readString(),
+			new DimensionKey(reader.readString()),
 			new RegionTimestamp(
 				(short) reader.readInt16(),
 				(short) reader.readInt16(),

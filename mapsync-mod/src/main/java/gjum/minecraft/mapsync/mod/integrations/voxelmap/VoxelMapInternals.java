@@ -7,10 +7,10 @@ import com.mamiyaotaru.voxelmap.persistent.CachedRegion;
 import com.mamiyaotaru.voxelmap.persistent.CompressibleMapData;
 import com.mamiyaotaru.voxelmap.persistent.EmptyCachedRegion;
 import com.mamiyaotaru.voxelmap.persistent.PersistentMap;
-import gjum.minecraft.mapsync.mod.Utils;
 import gjum.minecraft.mapsync.mod.data.BlockColumn;
 import gjum.minecraft.mapsync.mod.data.BlockInfo;
 import gjum.minecraft.mapsync.mod.data.ChunkTile;
+import gjum.minecraft.mapsync.mod.data.DimensionKey;
 import gjum.minecraft.mapsync.mod.mixins.voxelmap.CachedRegionAccessor;
 import gjum.minecraft.mapsync.mod.mixins.voxelmap.PersistentMapAccessor;
 import gjum.minecraft.mapsync.mod.utils.MagicValues;
@@ -39,7 +39,7 @@ final class VoxelMapInternals {
 
 		final var mapAccessor = (PersistentMapAccessor) map;
 		final ClientLevel currentLevel = mapAccessor.mapsync$getWorld();
-		if (currentLevel == null || !Utils.isSameDimension(currentLevel, chunkTile)) {
+		if (!DimensionKey.matches(currentLevel, chunkTile.dimension())) {
 			return false;
 		}
 

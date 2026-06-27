@@ -3,11 +3,14 @@ package gjum.minecraft.mapsync.mod.integrations.journeymap;
 import gjum.minecraft.mapsync.mod.data.BlockColumn;
 import gjum.minecraft.mapsync.mod.data.BlockInfo;
 import gjum.minecraft.mapsync.mod.data.ChunkTile;
+import gjum.minecraft.mapsync.mod.data.DimensionKey;
 import journeymap.client.JourneymapClient;
 import journeymap.client.io.FileHandler;
 import journeymap.client.model.chunk.ChunkMD;
 import journeymap.client.model.map.MapType;
 import journeymap.client.model.region.RegionCoord;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
 import net.minecraft.core.registries.Registries;
@@ -17,6 +20,7 @@ import net.minecraft.world.level.biome.Biome;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.chunk.LevelChunk;
+import org.jetbrains.annotations.NotNull;
 
 import static gjum.minecraft.mapsync.mod.MapSyncMod.logger;
 import static gjum.minecraft.mapsync.mod.Utils.getBiomeRegistry;
@@ -33,20 +37,25 @@ public class JourneyMapHelperReal {
 		var renderController = JourneymapClient.getInstance().getChunkRenderController();
 		if (renderController == null) return false;
 
-		var chunkMd = new TileChunkMD(chunkTile);
+		final ClientLevel level = Minecraft.getInstance().level;
+		if (!DimensionKey.matches(level, chunkTile.dimension())) {
+			return false;
+		}
+
+		var chunkMd = new TileChunkMD(level, chunkTile);
 
 		var rCoord = RegionCoord.fromChunkPos(
 			FileHandler.getJMWorldDir(mc),
-			MapType.day(chunkTile.dimension()), // type doesn't matter, only dimension is used
+			MapType.day(level.dimension()), // type doesn't matter, only dimension is used
 			chunkMd.getCoord().x,
 			chunkMd.getCoord().z);
 
 		final boolean renderedDay = renderWithDiagnostics(rCoord,
-			MapType.day(chunkTile.dimension()), chunkMd, "day");
+			MapType.day(level.dimension()), chunkMd, "day");
 		final boolean renderedBiome = renderWithDiagnostics(rCoord,
-			MapType.biome(chunkTile.dimension()), chunkMd, "biome");
+			MapType.biome(level.dimension()), chunkMd, "biome");
 		final boolean renderedTopo = renderWithDiagnostics(rCoord,
-			MapType.topo(chunkTile.dimension()), chunkMd, "topo");
+			MapType.topo(level.dimension()), chunkMd, "topo");
 
 		if (!renderedDay || !renderedBiome || !renderedTopo) {
 			logger.warn("[JourneyMap] chunk render debug {} -> day={}, biome={}, topo={}",
@@ -80,10 +89,15 @@ public class JourneyMapHelperReal {
 	 */
 	private static class TileChunkMD extends ChunkMD {
 		private final ChunkTile chunkTile;
+		private final ResourceKey<Level> resourceKey;
 
-		public TileChunkMD(ChunkTile chunkTile) {
-			super(new LevelChunk(mc.level, chunkTile.chunkPos()));
+		public TileChunkMD(
+			final @NotNull ClientLevel level,
+			final @NotNull ChunkTile chunkTile
+		) {
+			super(new LevelChunk(level, chunkTile.chunkPos()));
 			this.chunkTile = chunkTile;
+			this.resourceKey = level.dimension();
 		}
 
 		@Override
@@ -150,7 +164,7 @@ public class JourneyMapHelperReal {
 
 		@Override
 		public ResourceKey<Level> getDimension() {
-			return chunkTile.dimension();
+			return this.resourceKey;
 		}
 
 		@Override

@@ -139,7 +139,7 @@ public final class MapSyncMod {
 	) {
 		if (client.gameContext.getDimensionState().orElse(null) instanceof final DimensionState dimensionState) {
 			client.send(new ServerboundDimensionChangePacket(
-				dimensionState.dimension.identifier()
+				dimensionState.dimensionKey
 			));
 		}
 	}
@@ -159,10 +159,11 @@ public final class MapSyncMod {
 	public static void handleDimensionChange(
 		final @NotNull Minecraft minecraft,
 		final @NotNull ClientLevel level,
-		final @NotNull GameContext gameContext
+		final @NotNull GameContext gameContext,
+		final @NotNull DimensionState dimensionState
 	) {
 		gameContext.getSyncConnections().broadcast(new ServerboundDimensionChangePacket(
-			level.dimension().identifier()
+			dimensionState.dimensionKey
 		));
 	}
 
@@ -176,16 +177,15 @@ public final class MapSyncMod {
 
 	public static void handleRegionTimestamps(SyncClient client, ClientboundRegionTimestampsPacket packet) {
 		client.authState.requireWelcomed();
-		DimensionState dimension = client.gameContext.getDimensionState().orElse(null);
-		if (dimension == null) return;
-		if (!dimension.dimension.identifier().toString().equals(packet.dimension())) {
+		DimensionState dimensionState = client.gameContext.getDimensionState().orElse(null);
+		if (dimensionState == null || !dimensionState.dimensionKey.equals(packet.dimension())) {
 			return;
 		}
 
 		var regionTs = packet.timestamp();
 
 		var regionPos = new RegionPos(regionTs.x(), regionTs.z());
-		long oldestChunkTs = dimension.getOldestChunkTsInRegion(regionPos);
+		long oldestChunkTs = dimensionState.getOldestChunkTsInRegion(regionPos);
 		boolean requiresUpdate = regionTs.timestamp() > oldestChunkTs;
 
 		debugLog("region " + regionPos
@@ -247,7 +247,7 @@ public final class MapSyncMod {
 			for (final var byRegionEntry : regionChunkRequests.entrySet()) {
 				final RegionPos regionPos = byRegionEntry.getKey();
 				syncConnection.send(new ServerboundCatchupRequestPacket(
-					dimensionState.dimension.identifier(),
+					dimensionState.dimensionKey,
 					(short) regionPos.x(),
 					(short) regionPos.z(),
 					byRegionEntry.getValue()

@@ -3,6 +3,7 @@ package gjum.minecraft.mapsync.mod.sync;
 import gjum.minecraft.mapsync.mod.data.BlockColumn;
 import gjum.minecraft.mapsync.mod.data.BlockInfo;
 import gjum.minecraft.mapsync.mod.data.ChunkTile;
+import gjum.minecraft.mapsync.mod.data.DimensionKey;
 import gjum.minecraft.mapsync.mod.net.buffers.BufferWriter;
 import java.io.ByteArrayOutputStream;
 import java.security.MessageDigest;
@@ -19,7 +20,6 @@ import org.apache.commons.lang3.function.Failable;
 public class Cartography {
 	public static ChunkTile chunkTileFromLevel(Level level, LevelChunk chunk) {
 		long timestamp = System.currentTimeMillis();
-		var dimension = level.dimension();
 
 		var columns = new BlockColumn[256];
 		var pos = new BlockPos.MutableBlockPos(0, 0, 0);
@@ -43,7 +43,7 @@ public class Cartography {
 		});
 
 		final ChunkPos chunkPos = chunk.getPos();
-		return new ChunkTile(dimension, chunkPos.x, chunkPos.z, timestamp, dataVersion, dataHash, columns);
+		return new ChunkTile(new DimensionKey(level), chunkPos.x, chunkPos.z, timestamp, dataVersion, dataHash, columns);
 	}
 
 	public static BlockColumn blockColumnFromChunk(LevelChunk chunk, BlockPos.MutableBlockPos pos) {

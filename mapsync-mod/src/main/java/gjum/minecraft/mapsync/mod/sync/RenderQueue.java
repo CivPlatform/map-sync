@@ -3,12 +3,14 @@ package gjum.minecraft.mapsync.mod.sync;
 import static gjum.minecraft.mapsync.mod.MapSyncMod.debugLog;
 
 import gjum.minecraft.mapsync.mod.data.ChunkTile;
+import gjum.minecraft.mapsync.mod.data.DimensionKey;
 import gjum.minecraft.mapsync.mod.integrations.journeymap.JourneyMapHelper;
 import gjum.minecraft.mapsync.mod.integrations.voxelmap.VoxelMapHelper;
 import gjum.minecraft.mapsync.mod.integrations.xaerosmap.XaerosWorldMapHelper;
 import java.util.Comparator;
 import java.util.concurrent.PriorityBlockingQueue;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.multiplayer.ClientLevel;
 import org.jetbrains.annotations.NotNull;
 
 public class RenderQueue {
@@ -51,7 +53,8 @@ public class RenderQueue {
 			while (true) {
 				Thread.sleep(0); // allow stopping via thread.interrupt()
 
-				if (Minecraft.getInstance().level == null) {
+				final ClientLevel level = Minecraft.getInstance().level;
+				if (level == null) {
 					return; // world closed; all queued chunks can't be rendered
 				}
 
@@ -67,7 +70,7 @@ public class RenderQueue {
 				var chunkTile = queue.poll();
 				if (chunkTile == null) return;
 
-				if (chunkTile.dimension() != Minecraft.getInstance().level.dimension()) {
+				if (!DimensionKey.matches(level, chunkTile.dimension())) {
 					debugLog("skipping render wrong dim " + chunkTile.chunkPos());
 					continue; // mod renderers would render this to the wrong dimension
 				}

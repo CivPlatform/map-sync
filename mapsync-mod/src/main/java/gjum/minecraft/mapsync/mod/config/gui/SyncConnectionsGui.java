@@ -1,5 +1,6 @@
 package gjum.minecraft.mapsync.mod.config.gui;
 
+import gjum.minecraft.mapsync.mod.data.DimensionKey;
 import gjum.minecraft.mapsync.mod.sync.DimensionState;
 import gjum.minecraft.mapsync.mod.net.SyncClient;
 import gjum.minecraft.mapsync.mod.sync.GameContext;
@@ -133,7 +134,7 @@ public final class SyncConnectionsGui extends Screen {
 			guiGraphics.drawString(
 				this.font,
 				"In dimension %s, received %d chunks, rendered %d, rendering %d".formatted(
-					dimensionState.dimension.identifier(),
+					dimensionState.dimensionKey,
 					dimensionState.getNumChunksReceived(),
 					dimensionState.getNumChunksRendered(),
 					dimensionState.getRenderQueueSize()

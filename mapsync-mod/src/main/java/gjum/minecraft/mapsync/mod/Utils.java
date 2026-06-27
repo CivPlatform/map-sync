@@ -1,12 +1,9 @@
 package gjum.minecraft.mapsync.mod;
 
-import gjum.minecraft.mapsync.mod.data.ChunkTile;
 import java.util.HashMap;
-import java.util.Objects;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.Registry;
 import net.minecraft.core.registries.Registries;
-import net.minecraft.world.level.Level;
 import net.minecraft.world.level.biome.Biome;
 import org.jetbrains.annotations.NotNull;
 
@@ -29,15 +26,5 @@ public class Utils {
 		} catch (Throwable e2) {
 			e2.printStackTrace();
 		}
-	}
-
-	public static boolean isSameDimension(
-		final @NotNull Level level,
-		final @NotNull ChunkTile chunkTile
-	) {
-		return Objects.equals(
-			level.dimension().identifier(),
-			chunkTile.dimension().identifier()
-		);
 	}
 }

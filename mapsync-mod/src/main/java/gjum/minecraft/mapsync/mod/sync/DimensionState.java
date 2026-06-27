@@ -4,13 +4,14 @@ import static gjum.minecraft.mapsync.mod.MapSyncMod.debugLog;
 
 import gjum.minecraft.mapsync.mod.data.CatchupChunk;
 import gjum.minecraft.mapsync.mod.data.ChunkTile;
+import gjum.minecraft.mapsync.mod.data.DimensionKey;
 import gjum.minecraft.mapsync.mod.data.GameAddress;
 import gjum.minecraft.mapsync.mod.data.RegionPos;
 import java.util.List;
 import net.minecraft.client.Minecraft;
-import net.minecraft.resources.ResourceKey;
+import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.world.level.ChunkPos;
-import net.minecraft.world.level.Level;
+import org.jetbrains.annotations.NotNull;
 
 /**
  * contains any background processes and data structures, to be able to easily tear down when leaving the dimension
@@ -18,7 +19,7 @@ import net.minecraft.world.level.Level;
 public class DimensionState {
 	private static final Minecraft mc = Minecraft.getInstance();
 
-	public final ResourceKey<Level> dimension;
+	public final DimensionKey dimensionKey;
 	boolean hasShutDown = false;
 
 	private final DimensionChunkMeta chunkMeta;
@@ -27,9 +28,12 @@ public class DimensionState {
 	private int numChunksReceived = 0;
 	private int numChunksRendered = 0;
 
-	DimensionState(GameAddress gameAddress, ResourceKey<Level> dimension) {
-		this.dimension = dimension;
-		chunkMeta = new DimensionChunkMeta(gameAddress, dimension.identifier());
+	DimensionState(
+		final @NotNull GameAddress gameAddress,
+		final @NotNull ClientLevel dimension
+	) {
+		this.dimensionKey = new DimensionKey(dimension);
+		chunkMeta = new DimensionChunkMeta(gameAddress, dimension.dimension().identifier());
 		renderQueue = new RenderQueue(this);
 		catchup = new CatchupLogic(this);
 	}
@@ -72,16 +76,10 @@ public class DimensionState {
 
 	public void processSharedChunk(ChunkTile chunkTile) {
 		if (hasShutDown) return;
-		if (mc.level == null) return;
-		if (dimension != mc.level.dimension()) {
-			debugLog("Dropping chunk tile: mc changed dimension");
-			shutDown(); // player entered different dimension
-			return;
-		}
-
-		if (chunkTile.dimension() != dimension) {
+		final ClientLevel level = mc.level;
+		if (!DimensionKey.matches(level, chunkTile.dimension())) {
 			debugLog("Dropping chunk tile: wrong dimension "
-					+ chunkTile.dimension() + " wanted " + dimension);
+					+ chunkTile.dimension() + " wanted " + new DimensionKey(level));
 			return; // don't render tile to the wrong dimension
 		}
 

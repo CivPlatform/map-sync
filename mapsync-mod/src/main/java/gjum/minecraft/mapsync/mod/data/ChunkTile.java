@@ -4,14 +4,11 @@ import gjum.minecraft.mapsync.mod.net.buffers.BufferReader;
 import gjum.minecraft.mapsync.mod.net.buffers.BufferWriter;
 import gjum.minecraft.mapsync.mod.utils.Assertions;
 import gjum.minecraft.mapsync.mod.utils.MagicValues;
-import net.minecraft.core.registries.Registries;
-import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.level.ChunkPos;
-import net.minecraft.world.level.Level;
 import org.jetbrains.annotations.NotNull;
 
 public record ChunkTile(
-		ResourceKey<Level> dimension,
+		DimensionKey dimension,
 		int x, int z,
 		long timestamp,
 		int dataVersion,
@@ -43,7 +40,7 @@ public record ChunkTile(
 	 * without columns
 	 */
 	public void writeMetadata(BufferWriter writer) throws Exception {
-		writer.writeString(dimension.identifier().toString());
+		writer.writeString(dimension.internal());
 		writer.writeInt32(x);
 		writer.writeInt32(z);
 		writer.writeInt64(timestamp);
@@ -59,7 +56,7 @@ public record ChunkTile(
 	}
 
 	public static ChunkTile read(BufferReader reader) throws Exception {
-		final ResourceKey<Level> dimension = reader.readResourceKey(Registries.DIMENSION);
+		final var dimension = new DimensionKey(reader.readString());
 		int x = reader.readInt32();
 		int z = reader.readInt32();
 		long timestamp = reader.readInt64();

@@ -9,7 +9,8 @@
 		"voxelmap.PersistentMapAccessor",
 		"voxelmap.VoxelMapMixin",
 
-		"MixinClientPacketListener"
+		"MixinClientPacketListener",
+		"LevelSeedMixin"
 	],
 	"injectors": {
 		"defaultRequire": 1

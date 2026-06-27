@@ -6,6 +6,8 @@ import static gjum.minecraft.mapsync.mod.MapSyncMod.logger;
 import gjum.minecraft.mapsync.mod.MapSyncMod;
 import gjum.minecraft.mapsync.mod.data.CatchupChunk;
 import gjum.minecraft.mapsync.mod.data.ChunkTile;
+import gjum.minecraft.mapsync.mod.data.DimensionKey;
+import it.unimi.dsi.fastutil.objects.Object2IntArrayMap;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
@@ -34,19 +36,22 @@ public class CatchupLogic {
 
 	public void addCatchupChunks(List<CatchupChunk> catchupChunks) {
 		if (catchupChunks.isEmpty()) return;
-		var catchupDim = catchupChunks.get(0).dimension();
-		if (!dimensionState.dimension.equals(catchupDim)) {
-			logger.warn("Catchup chunks from wrong dimension " + catchupDim + ", expected " + dimensionState.dimension);
-			return;
-		}
 		synchronized (this.catchupChunks) {
+			final var skippedChunks = new Object2IntArrayMap<DimensionKey>();
 			for (CatchupChunk chunk : catchupChunks) {
+				if (!this.dimensionState.dimensionKey.equals(chunk.dimension())) {
+					skippedChunks.mergeInt(chunk.dimension(), 1, Integer::sum);
+					continue;
+				}
 				// only include catchup chunks that are newer than the corresponding chunk we have locally
 				var current_timestamp = dimensionState.getChunkTimestamp(chunk.chunkPos());
 				debugLog("COMPARING " + (current_timestamp < chunk.timestamp()) + " for " + chunk.chunk_x() + " " + chunk.chunk_z());
 				if (current_timestamp < chunk.timestamp()) {
 					this.catchupChunks.add(chunk);
 				}
+			}
+			if (!skippedChunks.isEmpty()) {
+				logger.warn("Skipped catchup chunks from wrong dimension: expected {}, got {}", this.dimensionState.dimensionKey, skippedChunks);
 			}
 			debugLog("now have " + this.catchupChunks.size() + " catchup chunks");
 		}

@@ -1,12 +1,10 @@
 package gjum.minecraft.mapsync.mod.data;
 
 import gjum.minecraft.mapsync.mod.net.SyncClient;
-import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.level.ChunkPos;
-import net.minecraft.world.level.Level;
 
 public final class CatchupChunk {
-	private final ResourceKey<Level> dimension;
+	private final DimensionKey dimension;
 	private final int chunk_x;
 	private final int chunk_z;
 	private final long timestamp;
@@ -16,7 +14,7 @@ public final class CatchupChunk {
 	public SyncClient syncClient;
 
 	public CatchupChunk(
-			ResourceKey<Level> dimension,
+			DimensionKey dimension,
 			int chunk_x, int chunk_z,
 			long timestamp
 	) {
@@ -39,7 +37,7 @@ public final class CatchupChunk {
 		return new ChunkPos(chunk_x, chunk_z);
 	}
 
-	public ResourceKey<Level> dimension() {
+	public DimensionKey dimension() {
 		return dimension;
 	}
 

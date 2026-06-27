@@ -5,9 +5,6 @@ import gjum.minecraft.mapsync.mod.utils.MagicValues;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.util.Objects;
-import net.minecraft.core.Registry;
-import net.minecraft.resources.Identifier;
-import net.minecraft.resources.ResourceKey;
 import org.jetbrains.annotations.NotNull;
 
 public final class BufferReader {
@@ -67,17 +64,5 @@ public final class BufferReader {
 			this.readBytesOfLength(this.readUnt8()),
 			StandardCharsets.UTF_8
 		);
-	}
-
-	/// Convenience function
-	public @NotNull Identifier readIdentifier() throws Exception {
-		return Identifier.parse(this.readString());
-	}
-
-	/// Convenience function
-	public <T, R extends ResourceKey<Registry<T>>> @NotNull ResourceKey<T> readResourceKey(
-		final @NotNull R registry
-	) throws Exception {
-		return ResourceKey.create(registry, this.readIdentifier());
 	}
 }

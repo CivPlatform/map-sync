@@ -1,9 +1,9 @@
 package gjum.minecraft.mapsync.mod.net.packet;
 
+import gjum.minecraft.mapsync.mod.data.DimensionKey;
 import gjum.minecraft.mapsync.mod.net.Packet;
 import gjum.minecraft.mapsync.mod.net.buffers.BufferWriter;
 import gjum.minecraft.mapsync.mod.utils.Assertions;
-import net.minecraft.resources.Identifier;
 import org.jetbrains.annotations.NotNull;
 
 /// The client should send this to the server:
@@ -14,7 +14,7 @@ import org.jetbrains.annotations.NotNull;
 /// - Prev: [ClientboundWelcomePacket]
 /// - Next: [ClientboundRegionTimestampsPacket]
 public record ServerboundDimensionChangePacket(
-	@NotNull Identifier dimension
+	@NotNull DimensionKey dimension
 ) implements Packet {
 	public static final int PACKET_ID = 10;
 
@@ -26,6 +26,6 @@ public record ServerboundDimensionChangePacket(
 	public void write(
 		final @NotNull BufferWriter writer
 	) throws Exception {
-		writer.writeString(this.dimension().toString());
+		writer.writeString(this.dimension().internal());
 	}
 }

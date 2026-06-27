@@ -1,11 +1,11 @@
 package gjum.minecraft.mapsync.mod.net.packet;
 
+import gjum.minecraft.mapsync.mod.data.DimensionKey;
 import gjum.minecraft.mapsync.mod.net.Packet;
 import gjum.minecraft.mapsync.mod.net.buffers.BufferWriter;
 import gjum.minecraft.mapsync.mod.utils.Assertions;
 import gjum.minecraft.mapsync.mod.utils.MagicValues;
 import java.util.Map;
-import net.minecraft.resources.Identifier;
 import net.minecraft.world.level.ChunkPos;
 import org.apache.commons.lang3.IntegerRange;
 import org.jetbrains.annotations.NotNull;
@@ -17,7 +17,7 @@ import org.jetbrains.annotations.NotNull;
 /// - Prev: [ClientboundChunkTimestampsResponsePacket]
 /// - Next: [ChunkTilePacket]
 public record ServerboundCatchupRequestPacket(
-	@NotNull Identifier dimension,
+	@NotNull DimensionKey dimension,
 	short regionX,
 	short regionZ,
 	@NotNull Map<@NotNull ChunkPos, @NotNull Long> chunks
@@ -34,7 +34,7 @@ public record ServerboundCatchupRequestPacket(
 	public void write(
 		final @NotNull BufferWriter writer
 	) throws Exception {
-		writer.writeString(this.dimension().toString());
+		writer.writeString(this.dimension().internal());
 		writer.writeInt16(this.regionX());
 		writer.writeInt16(this.regionZ());
 		writer.writeUnt10(this.chunks().size() - 1);
